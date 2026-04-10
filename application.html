@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrackFlow - Solicitud de servicio</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Importa TailwindCSS (framework de estilos rápidos) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "TrackFlow",
+            "url": "https://trackflow.com",
+            "description": "Soluciones inteligentes de logística de última milla para e-commerce.",
+            "email": "info@trackflow.com",
+            "telephone": "+1-213-555-0147",
+            "address": [
+                {
+                    "@type": "PostalAddress",
+                    "addressLocality": "Los Angeles",
+                    "addressCountry": "US"
+                },
+                {
+                    "@type": "PostalAddress",
+                    "addressLocality": "Zaragoza",
+                    "addressCountry": "ES"
+                }
+            ],
+            "sameAs": []
+        }
+    </script>
+</head>
+
+<body class="min-h-screen bg-gray-100 text-gray-800">
+    <a href="#main-content"
+        class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-white px-3 py-2 rounded shadow">
+        Saltar al contenido principal
+    </a>
+    <header role="banner" class="flex items-center justify-between bg-white shadow-md px-6 py-4">
+        <h1 class="text-2xl font-bold text-blue-600 tracking-wide">
+            Track<span class="text-gray-800">Flow</span>
+        </h1>
+
+        <nav role="navigation" aria-label="Navegación principal">
+            <ul class="flex items-center gap-6">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="projects.html">Proyectos</a></li>
+                <li><a href="tasks.html">Tareas</a></li>
+                <li><a href="reports.html">Reportes</a></li>
+                <li><a href="application.html" aria-current="page">Inscribirse</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main id="main-content" role="main" aria-labelledby="form-title" class="py-16 px-6 bg-gray-100">
+        <div class="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-md">
+
+            <!-- Título -->
+            <h2 id="form-title" class="text-3xl font-bold text-gray-900 mb-2 text-center">
+                Solicitud de servicio
+            </h2>
+            <p id="form-description" class="text-gray-600 text-center mb-3">
+                Cuéntanos sobre tu operación y te ayudaremos a optimizar tu logística.
+            </p>
+            <p id="required-note" class="text-gray-600 text-sm text-center mb-8">
+                Los campos marcados con * son obligatorios.
+            </p>
+
+            <form id="service-form" class="space-y-8" aria-labelledby="form-title"
+                aria-describedby="form-description required-note" novalidate>
+                <p id="form-status" class="hidden text-sm font-medium text-center mt-2" role="status" aria-live="polite"></p>
+
+                <!-- Información de empresa -->
+                <fieldset class="space-y-4">
+                    <legend class="text-lg font-semibold text-gray-900">
+                        Información de la empresa
+                    </legend>
+
+                    <div>
+                        <label for="company" class="block text-sm font-medium text-gray-700">
+                            Nombre de la empresa *
+                        </label>
+                        <input type="text" id="company" name="company" required aria-required="true"
+                            autocomplete="organization"
+                            class="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label for="industry" class="block text-sm font-medium text-gray-700">
+                            Sector
+                        </label>
+                        <input type="text" id="industry" name="industry" placeholder="Ej: E-commerce, Retail..."
+                            class="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label for="country" class="block text-sm font-medium text-gray-700">
+                            País de operación *
+                        </label>
+                        <select id="country" name="country" required aria-required="true" autocomplete="country-name"
+                            class="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option value="">Selecciona una opción</option>
+                            <option>Estados Unidos</option>
+                            <option>España</option>
+                            <option>Otro</option>
+                        </select>
+                    </div>
+                </fieldset>
+
+                <!-- Contacto -->
+                <fieldset class="space-y-4">
+                    <legend class="text-lg font-semibold text-gray-900">
+                        Información de contacto
+                    </legend>
+
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-700">
+                            Nombre completo *
+                        </label>
+                        <input type="text" id="name" name="name" required aria-required="true" autocomplete="name"
+                            class="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700">
+                                Email *
+                            </label>
+                            <input type="email" id="email" name="email" required aria-required="true"
+                                autocomplete="email"
+                                class="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+
+                        <div>
+                            <label for="phone" class="block text-sm font-medium text-gray-700">
+                                Teléfono
+                            </label>
+                            <input type="tel" id="phone" name="phone" autocomplete="tel"
+                                class="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Operación logística -->
+                <fieldset class="space-y-4">
+                    <legend class="text-lg font-semibold text-gray-900">
+                        Operación logística
+                    </legend>
+
+                    <div>
+                        <label for="volume" class="block text-sm font-medium text-gray-700">
+                            Volumen mensual de pedidos *
+                        </label>
+                        <input type="number" id="volume" name="volume" required aria-required="true" min="0"
+                            placeholder="Ej: 5000"
+                            class="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label for="warehouses" class="block text-sm font-medium text-gray-700">
+                            Número de almacenes
+                        </label>
+                        <input type="number" id="warehouses" name="warehouses" min="1"
+                            class="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label for="services" class="block text-sm font-medium text-gray-700">
+                            Servicios de interés
+                        </label>
+                        <select id="services" name="services"
+                            class="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option>Gestión de almacén</option>
+                            <option>Envíos última milla</option>
+                            <option>Logística inversa</option>
+                            <option>Solución completa</option>
+                        </select>
+                    </div>
+                </fieldset>
+
+                <!-- Mensaje -->
+                <fieldset class="space-y-4">
+                    <legend class="text-lg font-semibold text-gray-900">
+                        Detalles adicionales
+                    </legend>
+
+                    <div>
+                        <label for="message" class="block text-sm font-medium text-gray-700">
+                            Cuéntanos más sobre tu operación
+                        </label>
+                        <textarea id="message" name="message" rows="4"
+                            placeholder="Describe tus necesidades logísticas..."
+                            class="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                    </div>
+                </fieldset>
+
+                <!-- Submit -->
+                <div class="text-center">
+                    <button type="submit"
+                        class="bg-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-700 transition w-full md:w-auto">
+                        Enviar solicitud
+                    </button>
+
+                    <button type="reset"
+                        class="bg-gray-500 text-white px-8 py-3 rounded-lg font-medium hover:bg-gray-600 transition w-full md:w-auto mt-2 md:mt-0 md:ml-2">
+                        Restablecer
+                    </button>
+
+                </div>
+
+            </form>
+        </div>
+    </main>
+
+    <footer role="contentinfo" class="bg-white border-t py-10 px-6">
+        <div class="max-w-6xl mx-auto grid md:grid-cols-3 gap-8 text-center md:text-left">
+
+            <!-- Logo + descripción -->
+            <div>
+                <h2 class="text-xl font-bold text-blue-600">
+                    Track<span class="text-gray-800">Flow</span>
+                </h2>
+                <p class="text-gray-600 mt-2">
+                    Soluciones inteligentes de logística de última milla para e-commerce.
+                </p>
+            </div>
+
+            <!-- Contacto -->
+            <div>
+                <h3 class="font-semibold text-gray-900 mb-2">Contacto</h3>
+                <p class="text-gray-600"><a href="mailto:info@trackflow.com">info@trackflow.com</a></p>
+                <p class="text-gray-600"><a href="tel:+12135550147">+1 (213) 555-0147</a></p>
+            </div>
+
+            <!-- Ubicación -->
+            <div>
+                <h3 class="font-semibold text-gray-900 mb-2">Ubicaciones</h3>
+                <p class="text-gray-600">Los Ángeles, USA</p>
+                <p class="text-gray-600">Zaragoza, España</p>
+            </div>
+
+        </div>
+
+        <!-- Bottom -->
+        <div class="mt-10 text-center text-gray-500 text-sm">
+            © 2026 TrackFlow. Todos los derechos reservados.
+        </div>
+    </footer>
+
+    <script src="validation.js" defer></script>
+</body>
+
+</html>

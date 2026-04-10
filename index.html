@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrackFlow - Inicio</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Importa TailwindCSS (framework de estilos rápidos) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "TrackFlow",
+            "url": "https://trackflow.com",
+            "description": "Soluciones inteligentes de logística de última milla para e-commerce.",
+            "email": "info@trackflow.com",
+            "telephone": "+1-213-555-0147",
+            "address": [
+                {
+                    "@type": "PostalAddress",
+                    "addressLocality": "Los Angeles",
+                    "addressCountry": "US"
+                },
+                {
+                    "@type": "PostalAddress",
+                    "addressLocality": "Zaragoza",
+                    "addressCountry": "ES"
+                }
+            ],
+            "sameAs": []
+        }
+    </script>
+</head>
+
+<body class="min-h-screen bg-gray-100 text-gray-800">
+    <a href="#main-content"
+        class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-white px-3 py-2 rounded shadow">
+        Saltar al contenido principal
+    </a>
+    <header role="banner" class="flex items-center justify-between bg-white shadow-md px-6 py-4">
+        <!-- Logo -->
+        <h1 class="text-2xl font-bold text-blue-600 tracking-wide">
+            Track<span class="text-gray-800">Flow</span>
+        </h1>
+
+        <!-- Navegación -->
+        <nav role="navigation" aria-label="Navegación principal">
+            <ul class="flex items-center gap-6">
+                <li><a href="index.html" aria-current="page">Inicio</a></li>
+                <li><a href="projects.html">Proyectos</a></li>
+                <li><a href="tasks.html">Tareas</a></li>
+                <li><a href="reports.html">Reportes</a></li>
+                <li><a href="application.html">Inscribirse</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main id="main-content" role="main">
+
+        <!-- Sección: Hero presentación -->
+        <section aria-labelledby="hero-title" class="bg-gray-100 py-20 px-6">
+            <div class="max-w-6xl mx-auto text-center">
+
+                <!-- Badge -->
+                <span class="inline-block bg-blue-100 text-blue-600 text-sm font-semibold px-4 py-1 rounded-full mb-6">
+                    AI Engineering · Logística Inteligente
+                </span>
+
+                <!-- Título -->
+                <h1 id="hero-title" class="text-4xl md:text-5xl font-bold text-gray-900 leading-tight mb-6">
+                    Bienvenido a
+                    <span class="text-blue-600">Track</span><span class="text-gray-800">Flow</span>
+                </h1>
+
+                <!-- Subtítulo -->
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto mb-8">
+                    Impulsamos la logística de última milla para marcas de e-commerce.
+                    Desde el almacén hasta la puerta del cliente, automatizamos cada paso
+                    con tecnología, datos e inteligencia artificial.
+                </p>
+
+                <!-- CTA -->
+                <div class="flex justify-center gap-4">
+                    <a href="/dashboard"
+                        class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition">
+                        Ir al Dashboard
+                    </a>
+
+                    <a href="/projects"
+                        class="bg-white border border-gray-300 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition">
+                        Ver Proyectos
+                    </a>
+                </div>
+
+                <!-- Stats -->
+                <div class="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                    <div>
+                        <p class="text-3xl font-bold text-gray-900">130+</p>
+                        <p class="text-gray-500">Empleados</p>
+                    </div>
+                    <div>
+                        <p class="text-3xl font-bold text-gray-900">2</p>
+                        <p class="text-gray-500">Países</p>
+                    </div>
+                    <div>
+                        <p class="text-3xl font-bold text-gray-900">9M€</p>
+                        <p class="text-gray-500">Facturación</p>
+                    </div>
+                    <div>
+                        <p class="text-3xl font-bold text-gray-900">8</p>
+                        <p class="text-gray-500">Transportistas</p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Sección: Características -->
+        <section aria-labelledby="features-title" class="bg-white py-20 px-6">
+            <div class="max-w-6xl mx-auto text-center">
+
+                <h2 id="features-title" class="text-3xl font-bold text-gray-900 mb-4">
+                    Características principales
+                </h2>
+                <p class="text-gray-600 max-w-2xl mx-auto mb-12">
+                    Una plataforma diseñada para automatizar y escalar cada parte de tu operación logística.
+                </p>
+
+                <div class="grid md:grid-cols-3 gap-8 text-left">
+
+                    <div class="p-6 border rounded-xl hover:shadow-md transition">
+                        <h3 class="text-xl font-semibold mb-2">📦 Gestión de inventario en tiempo real</h3>
+                        <p class="text-gray-600">
+                            Visualiza el stock de todos tus almacenes en una sola plataforma con datos actualizados al
+                            instante.
+                        </p>
+                    </div>
+
+                    <div class="p-6 border rounded-xl hover:shadow-md transition">
+                        <h3 class="text-xl font-semibold mb-2">🚚 Selección inteligente de transportistas</h3>
+                        <p class="text-gray-600">
+                            Algoritmos que eligen automáticamente el mejor transportista según coste, tiempo y destino.
+                        </p>
+                    </div>
+
+                    <div class="p-6 border rounded-xl hover:shadow-md transition">
+                        <h3 class="text-xl font-semibold mb-2">📊 Dashboard unificado</h3>
+                        <p class="text-gray-600">
+                            KPIs en tiempo real sobre envíos, entregas, devoluciones y rendimiento operativo.
+                        </p>
+                    </div>
+
+                    <div class="p-6 border rounded-xl hover:shadow-md transition">
+                        <h3 class="text-xl font-semibold mb-2">🤖 Automatización con IA</h3>
+                        <p class="text-gray-600">
+                            Procesamiento automático de pedidos, clasificación de devoluciones y atención al cliente
+                            inteligente.
+                        </p>
+                    </div>
+
+                    <div class="p-6 border rounded-xl hover:shadow-md transition">
+                        <h3 class="text-xl font-semibold mb-2">🔄 Gestión de devoluciones</h3>
+                        <p class="text-gray-600">
+                            Flujos automatizados para aprobar, recoger y procesar devoluciones sin intervención manual.
+                        </p>
+                    </div>
+
+                    <div class="p-6 border rounded-xl hover:shadow-md transition">
+                        <h3 class="text-xl font-semibold mb-2">🌐 Tracking unificado</h3>
+                        <p class="text-gray-600">
+                            Consulta el estado de cualquier envío desde una sola interfaz, sin importar el
+                            transportista.
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+
+        <!-- Sección: Beneficios -->
+        <section aria-labelledby="benefits-title" class="bg-gray-100 py-20 px-6">
+            <div class="max-w-6xl mx-auto text-center">
+
+                <h2 id="benefits-title" class="text-3xl font-bold text-gray-900 mb-4">
+                    ¿Por qué elegir TrackFlow?
+                </h2>
+                <p class="text-gray-600 max-w-2xl mx-auto mb-12">
+                    Más eficiencia, menos errores y una mejor experiencia para tus clientes.
+                </p>
+
+                <div class="grid md:grid-cols-3 gap-8">
+
+                    <div class="p-6">
+                        <h3 class="text-xl font-semibold mb-2">⚡ Ahorro de tiempo</h3>
+                        <p class="text-gray-600">
+                            Automatiza tareas repetitivas y reduce horas de trabajo manual en operaciones y soporte.
+                        </p>
+                    </div>
+
+                    <div class="p-6">
+                        <h3 class="text-xl font-semibold mb-2">📉 Reducción de errores</h3>
+                        <p class="text-gray-600">
+                            Minimiza fallos humanos con sistemas inteligentes y procesos estandarizados.
+                        </p>
+                    </div>
+
+                    <div class="p-6">
+                        <h3 class="text-xl font-semibold mb-2">📦 Escalabilidad</h3>
+                        <p class="text-gray-600">
+                            Crece sin fricciones operativas, gestionando más pedidos sin aumentar costes
+                            proporcionalmente.
+                        </p>
+                    </div>
+
+                    <div class="p-6">
+                        <h3 class="text-xl font-semibold mb-2">😊 Mejor experiencia del cliente</h3>
+                        <p class="text-gray-600">
+                            Seguimiento en tiempo real y respuestas rápidas que aumentan la satisfacción del usuario
+                            final.
+                        </p>
+                    </div>
+
+                    <div class="p-6">
+                        <h3 class="text-xl font-semibold mb-2">🌍 Operación global</h3>
+                        <p class="text-gray-600">
+                            Gestiona múltiples países, almacenes y transportistas desde una única plataforma.
+                        </p>
+                    </div>
+
+                    <div class="p-6">
+                        <h3 class="text-xl font-semibold mb-2">📊 Decisiones basadas en datos</h3>
+                        <p class="text-gray-600">
+                            Accede a métricas clave en tiempo real para tomar decisiones estratégicas con confianza.
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer role="contentinfo" class="bg-white border-t py-10 px-6">
+        <div class="max-w-6xl mx-auto grid md:grid-cols-3 gap-8 text-center md:text-left">
+
+            <!-- Logo + descripción -->
+            <div>
+                <h2 class="text-xl font-bold text-blue-600">
+                    Track<span class="text-gray-800">Flow</span>
+                </h2>
+                <p class="text-gray-600 mt-2">
+                    Soluciones inteligentes de logística de última milla para e-commerce.
+                </p>
+            </div>
+
+            <!-- Contacto -->
+            <div>
+                <h3 class="font-semibold text-gray-900 mb-2">Contacto</h3>
+                <p class="text-gray-600"><a href="mailto:info@trackflow.com">info@trackflow.com</a></p>
+                <p class="text-gray-600"><a href="tel:+12135550147">+1 (213) 555-0147</a></p>
+            </div>
+
+            <!-- Ubicación -->
+            <div>
+                <h3 class="font-semibold text-gray-900 mb-2">Ubicaciones</h3>
+                <p class="text-gray-600">Los Ángeles, USA</p>
+                <p class="text-gray-600">Zaragoza, España</p>
+            </div>
+
+        </div>
+
+        <!-- Bottom -->
+        <div class="mt-10 text-center text-gray-500 text-sm">
+            © 2026 TrackFlow. Todos los derechos reservados.
+        </div>
+    </footer>
+
+    <script src="validation.js" defer></script>
+</body>
+
+</html>
