@@ -3,6 +3,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const form = document.querySelector("form");
     const formStatus = document.getElementById("form-status");
+    const step1 = document.getElementById("step-1");
+    const step2 = document.getElementById("step-2");
+    const nextStepBtn = document.getElementById("next-step");
+    const prevStepBtn = document.getElementById("prev-step");
+    const stepIndicator1 = document.getElementById("step-indicator-1");
+    const stepIndicator2 = document.getElementById("step-indicator-2");
 
     // Inputs
     const company = document.getElementById("company");
@@ -12,6 +18,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Regex simple para email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    function setStep(step) {
+        const isStep1 = step === 1;
+
+        step1.classList.toggle("hidden", !isStep1);
+        step1.toggleAttribute("hidden", !isStep1);
+        step2.classList.toggle("hidden", isStep1);
+        step2.toggleAttribute("hidden", isStep1);
+
+        stepIndicator1.classList.toggle("bg-blue-600", isStep1);
+        stepIndicator1.classList.toggle("text-white", isStep1);
+        stepIndicator1.classList.toggle("bg-gray-200", !isStep1);
+        stepIndicator1.classList.toggle("text-gray-700", !isStep1);
+        if (isStep1) {
+            stepIndicator1.setAttribute("aria-current", "step");
+            stepIndicator2.removeAttribute("aria-current");
+        }
+
+        stepIndicator2.classList.toggle("bg-blue-600", !isStep1);
+        stepIndicator2.classList.toggle("text-white", !isStep1);
+        stepIndicator2.classList.toggle("bg-gray-200", isStep1);
+        stepIndicator2.classList.toggle("text-gray-700", isStep1);
+        if (!isStep1) {
+            stepIndicator2.setAttribute("aria-current", "step");
+            stepIndicator1.removeAttribute("aria-current");
+        }
+    }
 
     // Función para mostrar error visual
     function showError(input, message) {
@@ -94,11 +127,40 @@ document.addEventListener("DOMContentLoaded", () => {
         return true;
     }
 
+    function validateStep1() {
+        return validateCompany() && validateName() && validateEmail();
+    }
+
     // Validación en tiempo real (UX mejor)
     company.addEventListener("input", validateCompany);
     name.addEventListener("input", validateName);
     email.addEventListener("input", validateEmail);
     volume.addEventListener("input", validateVolume);
+
+    nextStepBtn?.addEventListener("click", () => {
+        if (!validateStep1()) {
+            if (formStatus) {
+                formStatus.classList.remove("hidden");
+                formStatus.textContent = "Completa correctamente los campos obligatorios del paso 1.";
+                formStatus.classList.add("text-red-500");
+                formStatus.classList.remove("text-green-500");
+            }
+            return;
+        }
+
+        if (formStatus) {
+            formStatus.classList.add("hidden");
+            formStatus.textContent = "";
+        }
+
+        setStep(2);
+        volume.focus();
+    });
+
+    prevStepBtn?.addEventListener("click", () => {
+        setStep(1);
+        company.focus();
+    });
 
     // Validación al enviar formulario
     form.addEventListener("submit", (e) => {
@@ -133,6 +195,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Opcional: limpiar estados visuales
         [company, name, email, volume].forEach(input => clearError(input));
+        setStep(1);
     });
+
+    setStep(1);
 
 });

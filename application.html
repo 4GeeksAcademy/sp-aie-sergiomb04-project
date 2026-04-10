@@ -73,11 +73,18 @@
                 aria-describedby="form-description required-note" novalidate>
                 <p id="form-status" class="hidden text-sm font-medium text-center mt-2" role="status" aria-live="polite"></p>
 
-                <!-- Información de empresa -->
-                <fieldset class="space-y-4">
-                    <legend class="text-lg font-semibold text-gray-900">
-                        Información de la empresa
-                    </legend>
+                <div class="flex items-center justify-center gap-3 text-sm" aria-label="Progreso del formulario">
+                    <span id="step-indicator-1" class="px-3 py-1 rounded-full bg-blue-600 text-white" aria-current="step">Paso 1: Empresa y contacto</span>
+                    <span id="step-indicator-2" class="px-3 py-1 rounded-full bg-gray-200 text-gray-700">Paso 2: Operación y envío</span>
+                </div>
+
+                <section id="step-1" data-step="1" aria-labelledby="step-1-title" class="space-y-8">
+
+                    <!-- Información de empresa -->
+                    <fieldset class="space-y-4">
+                        <legend id="step-1-title" class="text-lg font-semibold text-gray-900">
+                            Información de la empresa
+                        </legend>
 
                     <div>
                         <label for="company" class="block text-sm font-medium text-gray-700">
@@ -108,13 +115,13 @@
                             <option>Otro</option>
                         </select>
                     </div>
-                </fieldset>
+                    </fieldset>
 
-                <!-- Contacto -->
-                <fieldset class="space-y-4">
-                    <legend class="text-lg font-semibold text-gray-900">
-                        Información de contacto
-                    </legend>
+                    <!-- Contacto -->
+                    <fieldset class="space-y-4">
+                        <legend class="text-lg font-semibold text-gray-900">
+                            Información de contacto
+                        </legend>
 
                     <div>
                         <label for="name" class="block text-sm font-medium text-gray-700">
@@ -142,13 +149,24 @@
                                 class="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                         </div>
                     </div>
-                </fieldset>
+                    </fieldset>
 
-                <!-- Operación logística -->
-                <fieldset class="space-y-4">
-                    <legend class="text-lg font-semibold text-gray-900">
-                        Operación logística
-                    </legend>
+                    <div class="text-center">
+                        <button id="next-step" type="button"
+                            class="bg-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-700 transition w-full md:w-auto">
+                            Continuar al paso 2
+                        </button>
+                    </div>
+
+                </section>
+
+                <section id="step-2" data-step="2" aria-labelledby="step-2-title" class="space-y-8 hidden" hidden>
+
+                    <!-- Operación logística -->
+                    <fieldset class="space-y-4">
+                        <legend id="step-2-title" class="text-lg font-semibold text-gray-900">
+                            Operación logística
+                        </legend>
 
                     <div>
                         <label for="volume" class="block text-sm font-medium text-gray-700">
@@ -179,13 +197,13 @@
                             <option>Solución completa</option>
                         </select>
                     </div>
-                </fieldset>
+                    </fieldset>
 
-                <!-- Mensaje -->
-                <fieldset class="space-y-4">
-                    <legend class="text-lg font-semibold text-gray-900">
-                        Detalles adicionales
-                    </legend>
+                    <!-- Mensaje -->
+                    <fieldset class="space-y-4">
+                        <legend class="text-lg font-semibold text-gray-900">
+                            Detalles adicionales
+                        </legend>
 
                     <div>
                         <label for="message" class="block text-sm font-medium text-gray-700">
@@ -195,21 +213,28 @@
                             placeholder="Describe tus necesidades logísticas..."
                             class="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
                     </div>
-                </fieldset>
+                    </fieldset>
 
-                <!-- Submit -->
-                <div class="text-center">
-                    <button type="submit"
-                        class="bg-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-700 transition w-full md:w-auto">
-                        Enviar solicitud
-                    </button>
+                    <!-- Submit -->
+                    <div class="text-center">
+                        <button id="prev-step" type="button"
+                            class="bg-white border border-gray-300 px-8 py-3 rounded-lg font-medium hover:bg-gray-50 transition w-full md:w-auto">
+                            Volver al paso 1
+                        </button>
 
-                    <button type="reset"
-                        class="bg-gray-500 text-white px-8 py-3 rounded-lg font-medium hover:bg-gray-600 transition w-full md:w-auto mt-2 md:mt-0 md:ml-2">
-                        Restablecer
-                    </button>
+                        <button type="submit"
+                            class="bg-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-700 transition w-full md:w-auto mt-2 md:mt-0 md:ml-2">
+                            Enviar solicitud
+                        </button>
 
-                </div>
+                        <button type="reset"
+                            class="bg-gray-500 text-white px-8 py-3 rounded-lg font-medium hover:bg-gray-600 transition w-full md:w-auto mt-2 md:mt-0 md:ml-2">
+                            Restablecer
+                        </button>
+
+                    </div>
+
+                </section>
 
             </form>
         </div>
