@@ -1,16 +1,16 @@
-type WarehouseLocation = "Los Angeles" | "Zaragoza";
+export type WarehouseLocation = "Los Angeles" | "Zaragoza";
 
-type ProductStatus = "Active" | "Low stock" | "Out of stock" | "Discounted";
+export type ProductStatus = "Active" | "Low stock" | "Out of stock" | "Discounted";
 
-type ProductCategory = "Fashion" | "Electronics" | "Cosmetics" | "Home" | "Other";
+export type ProductCategory = "Fashion" | "Electronics" | "Cosmetics" | "Home" | "Other";
 
-interface Dimensions {
+export interface Dimensions {
     lengthCm: number,
     widthCm: number,
     heightCm: number;
 }
 
-interface Product {
+export interface Product {
     // SKU = identificador operativo para inventario y envíos
     sku: string;
     name: string;
@@ -26,20 +26,20 @@ interface Product {
     status: ProductStatus;
 }
 
-type Country = "United States" | "Spain";
+export type Country = "United States" | "Spain";
 
-interface Destination {
+export interface Destination {
     city: string,
     country: Country;
     postalCode: string;
     distanceKm: number;
 }
 
-type ShipmentPriority = "Standard" | "Express" | "Same-day";
+export type ShipmentPriority = "Standard" | "Express" | "Same-day";
 
-type ShipmentStatus = "Pending" | "Assigned" | "In transit" | "Delivered" | "Failed"
+export type ShipmentStatus = "Pending" | "Assigned" | "In transit" | "Delivered" | "Failed"
 
-interface Shipment {
+export interface Shipment {
     id: string;
     // SKU relacionado con Product.sku sin duplicar producto (Solo ID del producto)
     sku: string;
@@ -54,7 +54,7 @@ interface Shipment {
     createdAt: Date;
 }
 
-interface Carrier {
+export interface Carrier {
     id: string;
     name: string;
     operatesIn: Country[];
@@ -69,9 +69,9 @@ interface Carrier {
     acceptsPriority: ShipmentPriority[];
 }
 
-type MovementType = "Inbound" | "Outbound" | "Transfer" | "Adjustment";
+export type MovementType = "Inbound" | "Outbound" | "Transfer" | "Adjustment";
 
-interface InventoryMovement {
+export interface InventoryMovement {
     id: string;
     sku: string;
     warehouse: WarehouseLocation;
