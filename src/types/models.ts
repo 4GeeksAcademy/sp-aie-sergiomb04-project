@@ -80,3 +80,9 @@ export interface InventoryMovement {
     reason: string;
     timestamp: Date;
 }
+
+export interface ValidationReport {
+  // Estructura estándar de salida para todas las validaciones.
+  valid: boolean;
+  errors: string[];
+}
