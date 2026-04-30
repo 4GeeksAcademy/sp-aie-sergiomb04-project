@@ -35,7 +35,7 @@ export function validateProduct(product: Product): ValidationReport {
     errors.push("unitCostUSD debe ser > 0");
   }
 
-  // Returnar respuesta, si hay 0 errores marca valid = true y también pasa el array de errors (Objeto ValidationReport)
+  // Returnar respuesta: Si hay 0 errores marca valid = true y también pasa el array de errors (Objeto ValidationReport)
   return { valid: errors.length === 0, errors };
 }
 
