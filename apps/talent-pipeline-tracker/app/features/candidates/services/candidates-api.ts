@@ -1,10 +1,11 @@
 import {
   CandidateDetail,
+  CandidateFilters,
   CandidateListResponse,
   CandidateNote,
   CandidateNotesResponse,
   CandidatePayload,
-} from "@/app/components/candidates/types";
+} from "@/app/features/candidates/types/candidate";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -35,14 +36,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   return text ? (JSON.parse(text) as T) : ({} as T);
 }
-
-export type CandidateFilters = {
-  status?: string;
-  stage?: string;
-  search?: string;
-  page?: number;
-  limit?: number;
-};
 
 export async function fetchCandidates(
   filters: CandidateFilters = {}
@@ -140,16 +133,10 @@ export async function deleteCandidateNote(
   id: string,
   noteId: string
 ): Promise<{ success: boolean }> {
-  console.log("Deleting note:", { id, noteId });
-
-  const response = await request<{ success: boolean }>(
+  return request<{ success: boolean }>(
     `/records/${id}/notes/${noteId}`,
     {
       method: "DELETE",
     }
   );
-
-  console.log("Delete response:", response);
-
-  return response;
 }

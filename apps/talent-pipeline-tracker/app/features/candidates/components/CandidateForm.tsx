@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { CandidatePayload } from "./types";
-import { STAGE_OPTIONS, STATUS_OPTIONS, prettifyFilterValue } from "./utils";
+import { CandidatePayload } from "@/app/features/candidates/types/candidate";
+import { STAGE_OPTIONS, STATUS_OPTIONS, prettifyFilterValue } from "@/app/features/candidates/lib/candidate-filters";
 
 type CandidateFormProps = {
   mode: "create" | "edit";

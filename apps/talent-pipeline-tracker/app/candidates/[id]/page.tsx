@@ -1,5 +1,5 @@
-import { CandidateDetail } from "@/app/components/candidates/CandidateDetail";
-import { getCandidateById, getCandidateNotes } from "@/services/api";
+import { CandidateDetail } from "@/app/features/candidates/components/CandidateDetail";
+import { getCandidateById, getCandidateNotes } from "@/app/features/candidates/services/candidates-api";
 import { notFound } from "next/navigation";
 
 interface CandidateDetailPageProps {

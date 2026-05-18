@@ -1,7 +1,12 @@
 "use client";
 
 import React from "react";
-import { FiltersState, STAGE_OPTIONS, STATUS_OPTIONS, prettifyFilterValue } from "./utils";
+import {
+  FiltersState,
+  STAGE_OPTIONS,
+  STATUS_OPTIONS,
+  prettifyFilterValue,
+} from "@/app/features/candidates/lib/candidate-filters";
 
 type CandidateFiltersProps = {
   filters: FiltersState;

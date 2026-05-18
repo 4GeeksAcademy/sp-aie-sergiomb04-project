@@ -1,7 +1,11 @@
 "use client";
 import React, { useCallback, useState } from "react";
-import { addCandidateNote, deleteCandidateNote, getCandidateNotes } from "@/services/api";
-import { CandidateNote } from "./types";
+import {
+  addCandidateNote,
+  deleteCandidateNote,
+  getCandidateNotes,
+} from "@/app/features/candidates/services/candidates-api";
+import { CandidateNote } from "@/app/features/candidates/types/candidate";
 
 interface NotesSectionProps {
   recordId: string;

@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
-import { Candidate } from "@/app/components/candidates/types";
-import { prettifyFilterValue } from "./utils";
+import { Candidate } from "@/app/features/candidates/types/candidate";
+import { prettifyFilterValue } from "@/app/features/candidates/lib/candidate-filters";
 
 type CandidatesTableProps = {
   candidates: Candidate[];

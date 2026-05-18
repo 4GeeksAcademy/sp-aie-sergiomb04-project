@@ -1,14 +1,32 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
-import { createCandidate, fetchCandidates } from "../../../services/api";
-import { CandidateFilters } from "./CandidateFilters";
-import { CandidatesTable } from "@/app/components/candidates/CandidatesTable";
-import { Candidate, CandidateFilters as CandidateFiltersType, CandidateListResponse, CandidatePayload } from "./types";
-import { DEFAULT_FILTERS, FiltersState } from "./utils";
-import { CandidateForm } from "./CandidateForm";
+import { useCallback, useState } from "react";
+import { createCandidate, fetchCandidates } from "@/app/features/candidates/services/candidates-api";
+import {
+  Candidate,
+  CandidateFilters,
+  CandidateListResponse,
+  CandidatePayload,
+} from "@/app/features/candidates/types/candidate";
+import { DEFAULT_FILTERS, FiltersState } from "@/app/features/candidates/lib/candidate-filters";
 
-function toApiFilters(filters: FiltersState) {
+type UseCandidatesDashboardParams = {
+  initialCandidates: Candidate[];
+  initialError: string | null;
+  initialFilters: CandidateFilters;
+};
+
+function normalizeFilters(filters: CandidateFilters): FiltersState {
+  return {
+    status: filters.status || "",
+    stage: filters.stage || "",
+    search: filters.search || "",
+    page: filters.page || 1,
+    limit: filters.limit || 20,
+  };
+}
+
+function toApiFilters(filters: FiltersState): CandidateFilters {
   return {
     status: filters.status || undefined,
     stage: filters.stage || undefined,
@@ -28,34 +46,15 @@ function toSearchParams(filters: FiltersState): URLSearchParams {
   return params;
 }
 
-type CandidatesDashboardProps = {
-  initialCandidates: Candidate[];
-  initialError: string | null;
-  initialFilters: CandidateFiltersType;
-};
-
-function normalizeFilters(filters: CandidateFiltersType): FiltersState {
-  return {
-    status: filters.status || "",
-    stage: filters.stage || "",
-    search: filters.search || "",
-    page: filters.page || 1,
-    limit: filters.limit || 20,
-  };
-}
-
-export function CandidatesDashboard({
+export function useCandidatesDashboard({
   initialCandidates,
   initialError,
   initialFilters,
-}: CandidatesDashboardProps) {
+}: UseCandidatesDashboardParams) {
   const [filters, setFilters] = useState<FiltersState>(() => normalizeFilters(initialFilters));
   const [candidates, setCandidates] = useState<Candidate[]>(initialCandidates);
   const [error, setError] = useState<string | null>(initialError);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  /*const [successMessage, setSuccessMessage] = useState<string | null>(
-    initialError ? null : "Datos cargados correctamente"
-  );*/
+  const [isLoading, setIsLoading] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -63,7 +62,6 @@ export function CandidatesDashboard({
 
   const loadCandidates = useCallback(async (activeFilters: FiltersState) => {
     setIsLoading(true);
-    //setSuccessMessage(null);
     try {
       const response: CandidateListResponse = await fetchCandidates(toApiFilters(activeFilters));
       setCandidates(response.data ?? []);
@@ -114,51 +112,26 @@ export function CandidatesDashboard({
     }
   };
 
-  return (
-    <>
-      <div className="mb-6 w-full rounded border border-zinc-200 p-4">
-        <button
-          type="button"
-          onClick={() => {
-            setShowCreateForm((prev) => !prev);
-            setCreateError(null);
-            setCreateSuccess(null);
-          }}
-          className="rounded bg-emerald-600 px-4 py-2 text-white"
-        >
-          {showCreateForm ? "Cerrar formulario" : "Nueva candidatura"}
-        </button>
+  const handleToggleCreateForm = () => {
+    setShowCreateForm((prev) => !prev);
+    setCreateError(null);
+    setCreateSuccess(null);
+  };
 
-        {createSuccess && <p className="mt-2 text-green-700">{createSuccess}</p>}
-        {createError && <p className="mt-2 text-red-600">{createError}</p>}
-
-        {showCreateForm && (
-          <div className="mt-4">
-            <CandidateForm
-              mode="create"
-              isSubmitting={isCreating}
-              submitLabel="Registrar candidatura"
-              onSubmit={handleCreate}
-              onCancel={() => setShowCreateForm(false)}
-            />
-          </div>
-        )}
-      </div>
-
-      <CandidateFilters
-        filters={filters}
-        isLoading={isLoading}
-        onChange={setFilters}
-        onApply={handleApply}
-        onClear={handleClear}
-      />
-
-      {isLoading && <div>Cargando candidatos...</div>}
-      {!isLoading && error && <div className="text-red-500">{error}</div>}
-      {!isLoading && !error && candidates.length === 0 && (
-        <div>No hay candidatos para los filtros seleccionados.</div>
-      )}
-      {!isLoading && !error && candidates.length > 0 && <CandidatesTable candidates={candidates} />}
-    </>
-  );
+  return {
+    filters,
+    setFilters,
+    candidates,
+    error,
+    isLoading,
+    showCreateForm,
+    setShowCreateForm,
+    isCreating,
+    createError,
+    createSuccess,
+    handleApply,
+    handleClear,
+    handleCreate,
+    handleToggleCreateForm,
+  };
 }

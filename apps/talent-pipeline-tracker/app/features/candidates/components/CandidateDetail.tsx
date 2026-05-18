@@ -1,11 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { patchCandidateStatusAndStage, updateCandidate } from "@/services/api";
+import {
+  patchCandidateStatusAndStage,
+  updateCandidate,
+} from "@/app/features/candidates/services/candidates-api";
 import { CandidateForm } from "./CandidateForm";
 import { NotesSection } from "./NotesSection";
-import { CandidateDetail as CandidateDetailType, CandidateNote, CandidatePayload } from "./types";
-import { STAGE_OPTIONS, STATUS_OPTIONS, prettifyFilterValue } from "./utils";
+import { CandidateDetail as CandidateDetailType, CandidateNote, CandidatePayload } from "@/app/features/candidates/types/candidate";
+import { STAGE_OPTIONS, STATUS_OPTIONS, prettifyFilterValue } from "@/app/features/candidates/lib/candidate-filters";
 
 type CandidateDetailProps = {
   candidate: CandidateDetailType;

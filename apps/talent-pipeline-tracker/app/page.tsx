@@ -1,7 +1,7 @@
 
-import { fetchCandidates } from "@/services/api";
-import { CandidatesDashboard } from "@/app/components/candidates/CandidatesDashboard";
-import { Candidate, CandidateFilters } from "@/app/components/candidates/types";
+import { fetchCandidates } from "@/app/features/candidates/services/candidates-api";
+import { CandidatesDashboard } from "@/app/features/candidates/components/CandidatesDashboard";
+import { Candidate, CandidateFilters } from "@/app/features/candidates/types/candidate";
 import React from "react";
 
 type HomePageProps = {
