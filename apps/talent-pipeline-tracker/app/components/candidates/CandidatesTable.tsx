@@ -1,5 +1,6 @@
 import React from "react";
-import { Candidate } from "./types";
+import Link from "next/link";
+import { Candidate } from "@/app/components/candidates/types";
 import { prettifyFilterValue } from "./utils";
 
 type CandidatesTableProps = {
@@ -21,7 +22,11 @@ export function CandidatesTable({ candidates }: CandidatesTableProps) {
         <tbody>
           {candidates.map((candidate) => (
             <tr key={candidate.id} className="border-t border-zinc-200 dark:border-zinc-700">
-              <td className="px-4 py-2">{candidate.full_name}</td>
+              <td className="px-4 py-2">
+                <Link href={`/candidates/${candidate.id}`} className="text-blue-600 hover:underline">
+                  {candidate.full_name}
+                </Link>
+              </td>
               <td className="px-4 py-2">{candidate.position}</td>
               <td className="px-4 py-2">{prettifyFilterValue(candidate.status)}</td>
               <td className="px-4 py-2">{prettifyFilterValue(candidate.stage)}</td>

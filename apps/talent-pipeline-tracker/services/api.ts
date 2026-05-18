@@ -7,6 +7,36 @@ if (!API_URL) {
   throw new Error('NEXT_PUBLIC_API_URL no está definida en .env.local');
 }
 
+export async function getCandidateById(id: string) {
+  const endpoint = `${API_URL}/records/${id}`;
+
+  console.log('Fetching candidate detail from:', endpoint);
+
+  const res = await fetch(endpoint, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+  });
+
+  if (!res.ok) {
+    const errorBody = await res.text();
+
+    console.error('HTTP Error:', {
+      status: res.status,
+      statusText: res.statusText,
+      body: errorBody,
+    });
+
+    throw new Error(
+      `Error al obtener detalle de candidato: ${res.status} ${res.statusText}`
+    );
+  }
+
+  return res.json();
+}
+
 export type CandidateFilters = {
   status?: string;
   stage?: string;

@@ -3,7 +3,7 @@
 import React, { useCallback, useState } from "react";
 import { fetchCandidates } from "../../../services/api";
 import { CandidateFilters } from "./CandidateFilters";
-import { CandidatesTable } from "./CandidatesTable";
+import { CandidatesTable } from "@/app/components/candidates/CandidatesTable";
 import { Candidate, CandidateListResponse } from "./types";
 import { DEFAULT_FILTERS, FiltersState } from "./utils";
 
