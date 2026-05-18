@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { fetchCandidates } from "../../../services/api";
 import { CandidateFilters } from "./CandidateFilters";
 import { CandidatesTable } from "@/app/components/candidates/CandidatesTable";
@@ -17,6 +18,26 @@ function toApiFilters(filters: FiltersState) {
   };
 }
 
+function fromSearchParams(params: URLSearchParams): FiltersState {
+  return {
+    status: params.get("status") || "",
+    stage: params.get("stage") || "",
+    search: params.get("search") || "",
+    page: parseInt(params.get("page") || "1", 10),
+    limit: parseInt(params.get("limit") || "20", 10),
+  };
+}
+
+function toSearchParams(filters: FiltersState): URLSearchParams {
+  const params = new URLSearchParams();
+  if (filters.status) params.set("status", filters.status);
+  if (filters.stage) params.set("stage", filters.stage);
+  if (filters.search) params.set("search", filters.search);
+  params.set("page", String(filters.page));
+  params.set("limit", String(filters.limit));
+  return params;
+}
+
 type CandidatesDashboardProps = {
   initialCandidates: Candidate[];
   initialError: string | null;
@@ -26,7 +47,8 @@ export function CandidatesDashboard({
   initialCandidates,
   initialError,
 }: CandidatesDashboardProps) {
-  const [filters, setFilters] = useState<FiltersState>(DEFAULT_FILTERS);
+  const searchParams = useSearchParams();
+  const [filters, setFilters] = useState<FiltersState>(() => fromSearchParams(searchParams));
   const [candidates, setCandidates] = useState<Candidate[]>(initialCandidates);
   const [error, setError] = useState<string | null>(initialError);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -45,17 +67,25 @@ export function CandidatesDashboard({
     }
   }, []);
 
+  useEffect(() => {
+    const params = toSearchParams(filters);
+    const url = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState(null, "", url);
+  }, [filters]);
+
+  useEffect(() => {
+    void loadCandidates(filters);
+  }, [filters, loadCandidates]);
+
   const handleApply = async () => {
     const nextFilters = { ...filters, search: filters.search.trim() };
     setFilters(nextFilters);
     setIsLoading(true);
-    await loadCandidates(nextFilters);
   };
 
   const handleClear = async () => {
     setFilters(DEFAULT_FILTERS);
     setIsLoading(true);
-    await loadCandidates(DEFAULT_FILTERS);
   };
 
   return (
