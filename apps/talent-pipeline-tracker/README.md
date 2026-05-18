@@ -1,36 +1,227 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ⚛️ Talent Pipeline Tracker
 
-## Getting Started
+Frontend interno desarrollado con **Next.js + TypeScript** para gestionar el pipeline de candidaturas de una empresa.
 
-First, run the development server:
+El objetivo de esta aplicación es permitir al equipo de People & Talent visualizar, filtrar y administrar candidatos de forma rápida utilizando una API REST ya existente.
+
+---
+
+# 🚀 Stack Tecnológico
+
+- Next.js (App Router)
+- React
+- TypeScript
+- TailwindCSS
+- ESLint
+
+---
+
+# 📦 Instalación
+
+## 1. Crear el proyecto
+
+```bash
+cd apps/talent-pipeline-tracker
+npx create-next-app@latest . --typescript --app --tailwind --eslint
+```
+
+---
+
+## 2. Variables de entorno
+
+Crear el archivo `.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL=https://playground.4geeks.com/tracker/api/v1
+```
+
+---
+
+## 3. Instalar dependencias
+
+```bash
+npm install
+```
+
+---
+
+## 4. Ejecutar el proyecto
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+# 📁 Estructura del Proyecto
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```txt
+src/
+ ├── app/
+ │   ├── page.tsx
+ │   ├── candidates/
+ │   │   └── [id]/page.tsx
+ │   └── components/
+ │
+ ├── components/
+ ├── hooks/
+ ├── lib/
+ ├── services/
+ ├── types/
+ └── styles/
+```
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+# ✅ Funcionalidades
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📋 Listado de candidaturas
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Mostrar todos los candidatos.
+- Mostrar:
+  - Nombre completo
+  - Puesto
+  - Estado actual
+  - Etapa actual
+- Buscar por nombre o email.
+- Filtrar por estado.
+- Filtrar por etapa.
+- Navegación sin recarga de página.
+- Estados visuales:
+  - Loading
+  - Success
+  - Error
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 👤 Detalle del candidato
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Mostrar información completa:
+
+- Nombre
+- Email
+- Teléfono
+- Puesto
+- LinkedIn
+- CV
+- Años de experiencia
+- Estado
+- Etapa
+- Fecha de aplicación
+
+Además:
+
+- Actualizar estado (`PATCH /records/:id`)
+- Actualizar etapa (`PATCH /records/:id`)
+- Ver notas
+- Añadir notas
+- Eliminar notas
+
+---
+
+## 📝 Gestión de candidaturas
+
+### Crear candidatura
+
+Formulario para registrar nuevos candidatos usando:
+
+```http
+POST /records
+```
+
+### Editar candidatura
+
+Formulario para editar candidatos existentes usando:
+
+```http
+PUT /records/:id
+```
+
+---
+
+# 🔄 Manejo Asíncrono
+
+Todas las llamadas a la API utilizan:
+
+```ts
+async/await
+```
+
+Cada operación implementa:
+
+- Estado de carga
+- Estado de éxito
+- Estado de error
+
+La interfaz se actualiza dinámicamente sin recargar la página.
+
+---
+
+# 🧠 Tipado
+
+El proyecto utiliza TypeScript para definir:
+
+- Candidate
+- Note
+- API Responses
+- Forms
+- Filters
+
+Ejemplo:
+
+```ts
+export interface Candidate {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  position: string;
+  status: string;
+  stage: string;
+}
+```
+
+---
+
+# 🌐 API
+
+Documentación oficial:
+
+https://playground.4geeks.com/tracker/api/v1/docs
+
+Endpoints principales:
+
+```http
+GET    /records
+GET    /records/:id
+POST   /records
+PUT    /records/:id
+PATCH  /records/:id
+
+GET    /records/:id/notes
+POST   /records/:id/notes
+DELETE /records/:id/notes/:note_id
+```
+
+---
+
+# 🎯 Objetivos del Proyecto
+
+- Practicar Next.js App Router
+- Manejar estado local con React Hooks
+- Consumir APIs REST
+- Implementar filtros y búsqueda dinámica
+- Gestionar formularios en TypeScript
+- Trabajar con UI asíncrona
+- Organizar aplicaciones escalables
+
+---
+
+# 📌 Requisitos Importantes
+
+- No usar Redux, Zustand o librerías externas de estado.
+- Usar únicamente React Hooks.
+- Navegación con App Router.
+- Mantener separación clara entre lógica, tipos y componentes.
+- Adaptar textos y dominio según el contexto de empresa asignado.
+
