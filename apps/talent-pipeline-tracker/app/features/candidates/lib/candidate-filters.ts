@@ -24,9 +24,18 @@ export const DEFAULT_FILTERS: FiltersState = {
   limit: 20,
 };
 
+const FILTER_VALUE_LABELS: Record<string, string> = {
+  received: "Recibida",
+  in_progress: "En proceso",
+  selected: "Seleccionada",
+  discarded: "Descartada",
+  pending: "Pendiente de revisión",
+  review: "En revisión",
+  personal_interview: "Entrevista personal",
+  technical_interview: "Entrevista técnica",
+  offer_presented: "Oferta presentada",
+};
+
 export function prettifyFilterValue(value: string): string {
-  return value
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+  return FILTER_VALUE_LABELS[value] ?? value;
 }
