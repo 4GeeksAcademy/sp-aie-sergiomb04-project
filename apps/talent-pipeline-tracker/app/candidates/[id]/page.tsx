@@ -1,5 +1,5 @@
 import { CandidateDetail } from "@/app/components/candidates/CandidateDetail";
-import { getCandidateById } from "@/services/api";
+import { getCandidateById, getCandidateNotes } from "@/services/api";
 import { notFound } from "next/navigation";
 
 interface CandidateDetailPageProps {
@@ -13,6 +13,6 @@ export default async function CandidateDetailPage({ params }: CandidateDetailPag
     notFound();
   }
 
-  const candidate = await getCandidateById(id);
-  return <CandidateDetail candidate={candidate} />;
+  const [candidate, notesResponse] = await Promise.all([getCandidateById(id), getCandidateNotes(id)]);
+  return <CandidateDetail candidate={candidate} initialNotes={notesResponse.data ?? []} />;
 }
