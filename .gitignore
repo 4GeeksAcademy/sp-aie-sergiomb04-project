@@ -1,0 +1,7 @@
+# Variables de entorno
+.env
+.env.local
+.env.*.local
+
+# Permitir el archivo de ejemplo
+!.env.example
