@@ -53,9 +53,9 @@ export function CandidatesDashboard({
   const [candidates, setCandidates] = useState<Candidate[]>(initialCandidates);
   const [error, setError] = useState<string | null>(initialError);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(
+  /*const [successMessage, setSuccessMessage] = useState<string | null>(
     initialError ? null : "Datos cargados correctamente"
-  );
+  );*/
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -63,12 +63,11 @@ export function CandidatesDashboard({
 
   const loadCandidates = useCallback(async (activeFilters: FiltersState) => {
     setIsLoading(true);
-    setSuccessMessage(null);
+    //setSuccessMessage(null);
     try {
       const response: CandidateListResponse = await fetchCandidates(toApiFilters(activeFilters));
       setCandidates(response.data ?? []);
       setError(null);
-      setSuccessMessage("Filtros aplicados correctamente");
     } catch (unknownError: unknown) {
       const message = unknownError instanceof Error ? unknownError.message : "Error al obtener candidatos";
       setError(message);
@@ -155,7 +154,6 @@ export function CandidatesDashboard({
       />
 
       {isLoading && <div>Cargando candidatos...</div>}
-      {!isLoading && successMessage && <div className="text-green-700">{successMessage}</div>}
       {!isLoading && error && <div className="text-red-500">{error}</div>}
       {!isLoading && !error && candidates.length === 0 && (
         <div>No hay candidatos para los filtros seleccionados.</div>

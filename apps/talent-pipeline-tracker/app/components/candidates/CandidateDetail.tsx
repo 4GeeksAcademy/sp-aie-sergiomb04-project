@@ -212,19 +212,17 @@ export function CandidateDetail({ candidate, initialNotes }: CandidateDetailProp
           <p><strong>Anios de experiencia:</strong> {candidateData.experience_years}</p>
           <p><strong>Notas:</strong> {candidateData.notes_count}</p>
           <p suppressHydrationWarning>
-            <strong>Aplico el:</strong> {new Date(candidateData.applied_at).toLocaleDateString("es-ES", { timeZone: "Europe/Madrid" })} {" "}
+            <strong>Aplico el:</strong> {new Date(candidateData.applied_at).toLocaleDateString("es-ES")} {" "}
             {new Date(candidateData.applied_at).toLocaleTimeString("es-ES", {
               hour: "2-digit",
               minute: "2-digit",
-              timeZone: "Europe/Madrid",
             })}
           </p>
           <p suppressHydrationWarning>
-            <strong>Actualizado el:</strong> {new Date(candidateData.updated_at).toLocaleDateString("es-ES", { timeZone: "Europe/Madrid" })} {" "}
+            <strong>Actualizado el:</strong> {new Date(candidateData.updated_at).toLocaleDateString("es-ES")} {" "}
             {new Date(candidateData.updated_at).toLocaleTimeString("es-ES", {
               hour: "2-digit",
               minute: "2-digit",
-              timeZone: "Europe/Madrid",
             })}
           </p>
         </div>
