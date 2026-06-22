@@ -65,8 +65,8 @@ Las siguientes rutas requieren confirmacion explicita previa del usuario o respo
 - company-choice.md
 - memory-bank/projectbrief.md
 - memory-bank/techContext.md
-- apps/talent-pipeline-tracker/TASK.md
-- apps/talent-pipeline-tracker/package.json
+- uis/talent-pipeline-tracker/TASK.md
+- uis/talent-pipeline-tracker/package.json
 - packages/shared/package.json
 - packages/shared/types/index.ts
 

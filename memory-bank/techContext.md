@@ -2,9 +2,9 @@
 
 ## Stack tecnologico actual
 ### Entorno de proyecto (repositorio)
-- Monorepo estructurado por dominios: apps, packages, data, docs, agents, skills, workflows.
+- Monorepo estructurado por dominios: uis, packages, data, docs, agents, skills, workflows.
 - Frontend clasico inicial en raiz: HTML + JavaScript + Tailwind via CDN.
-- App moderna en desarrollo: Next.js (App Router) + React + TypeScript + TailwindCSS + ESLint en apps/talent-pipeline-tracker.
+- App moderna en desarrollo: Next.js (App Router) + React + TypeScript + TailwindCSS + ESLint en uis/talent-pipeline-tracker.
 - Paquete compartido de tipos: packages/shared (@repo/shared-types).
 
 ### Contexto tecnologico de negocio (empresa)
@@ -22,7 +22,7 @@
 - Time-to-delivery tecnico alto para nuevas funcionalidades.
 
 ## Arquitectura del monorepo
-- apps/: aplicaciones de producto (portales, dashboards, frontends por dominio).
+- uis/: aplicaciones de producto (portales, dashboards, frontends por dominio).
 - packages/shared/: tipos y contratos compartidos para reducir duplicidad.
 - data/: base para pipelines, datasets y analitica.
 - skills/ y agents/: patrones y recursos para agentes de IA.

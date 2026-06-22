@@ -24,7 +24,7 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
 - Preparacion del salto a app estructurada en Next.js para evolucion funcional.
 
 ## Trabajo en curso para el Hito 4
-- App Next.js activa en apps/talent-pipeline-tracker con App Router y TypeScript.
+- App Next.js activa en uis/talent-pipeline-tracker con App Router y TypeScript.
 - Flujo de listado y detalle de candidaturas conectado a API REST.
 - Gestion de filtros, estados asincronos y notas ya integrada a nivel base.
 - Segun TASK.md, quedan mejoras/ajustes inmediatos: actualizacion de estado y etapa (PATCH /records/:id), mejora de UX/UI responsive en detalle y cierre del flujo de notas (consulta, alta y eliminacion).

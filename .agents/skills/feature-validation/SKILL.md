@@ -40,9 +40,9 @@ Esta skill asegura que los cambios:
   - packages/shared/
   - src/utils/
   - src/types/
-  - apps/*/app/features/**/lib/
-  - apps/*/app/features/**/services/
-  - apps/*/app/features/**/types/
+  - uis/*/app/features/**/lib/
+  - uis/*/app/features/**/services/
+  - uis/*/app/features/**/types/
 - Verificar que no existan nuevas funciones que repliquen reglas ya implementadas con otro nombre.
 - Si hubo nueva logica transversal, confirmar que se extrajo a modulo reutilizable.
 

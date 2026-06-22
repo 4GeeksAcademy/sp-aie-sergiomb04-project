@@ -21,9 +21,9 @@ Revisar primero estas ubicaciones antes de implementar algo nuevo:
 - packages/shared/
 - src/utils/
 - src/types/
-- apps/*/app/features/**/lib/
-- apps/*/app/features/**/services/
-- apps/*/app/features/**/types/
+- uis/*/app/features/**/lib/
+- uis/*/app/features/**/services/
+- uis/*/app/features/**/types/
 
 Si existe una funcion equivalente o compatible, debe reutilizarse o extenderse. No se permite reescribir la misma regla de negocio con otro nombre.
 
