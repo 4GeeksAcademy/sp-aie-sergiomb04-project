@@ -109,19 +109,27 @@ export default function Home() {
           <div className="mt-4 space-y-3 text-sm text-slate-600">
             <div className="rounded-xl bg-slate-50 p-4">
               <p className="font-medium text-slate-900">Producto</p>
-              <p className="mt-1 break-words">{String(businessLogicSnapshot.productValidation)}</p>
+              <p className="mt-1 break-words">{getValidationStatus(businessLogicSnapshot.productValidation)}</p>
             </div>
             <div className="rounded-xl bg-slate-50 p-4">
               <p className="font-medium text-slate-900">Envio</p>
-              <p className="mt-1 break-words">{String(businessLogicSnapshot.shipmentValidation)}</p>
+              <p className="mt-1 break-words">{getValidationStatus(businessLogicSnapshot.shipmentValidation)}</p>
             </div>
             <div className="rounded-xl bg-slate-50 p-4">
               <p className="font-medium text-slate-900">Carrier</p>
-              <p className="mt-1 break-words">{String(businessLogicSnapshot.carrierValidation)}</p>
+              <p className="mt-1 break-words">{getValidationStatus(businessLogicSnapshot.carrierValidation)}</p>
             </div>
           </div>
         </article>
       </section>
     </main>
   );
+}
+
+const getValidationStatus = (element: any) => {
+  if (element.valid) {
+    return "Valido";
+  } else {
+    return `Invalido: ${element.errors.join(", ")}`;
+  }
 }
