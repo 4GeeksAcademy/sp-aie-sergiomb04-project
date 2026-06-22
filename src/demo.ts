@@ -1,3 +1,5 @@
+import { pathToFileURL } from "node:url";
+
 import type { Carrier, Product, Shipment } from "./types/models.js";
 import {
   filterLowStockProducts,
@@ -165,29 +167,80 @@ const extraShipments: Shipment[] = [
 
 const laptop = findProductBySKU(sampleProducts, sampleShipment.sku);
 
-console.log("Productos en Los Angeles:", filterProductsByWarehouse(sampleProducts, "Los Angeles"));
-console.log("Productos de Electronics:", filterProductsByCategory(sampleProducts, "Electronics"));
-console.log("Productos con stock bajo:", filterLowStockProducts(sampleProducts));
-console.log("Productos por stock asc:", sortProductsByStock(sampleProducts, "asc"));
-console.log("Transportistas por confiabilidad desc:", sortCarriersByReliability(sampleCarriers, "desc"));
-console.log("Buscar producto por SKU:", findProductBySKU(sampleProducts, "laptop-dell-15"));
-console.log("Buscar envío por ID:", findShipmentById(extraShipments, "SH-2024-8822"));
-console.log(
-  "Búsqueda binaria por peso:",
-  binarySearchProductByWeight([...sampleProducts].sort((a, b) => a.weightKg - b.weightKg), 2.3)
-);
+const sortedProductsByStock = sortProductsByStock(sampleProducts, "asc");
+const topCarriers = findTopCarriers(extraShipments, 2);
+const shipmentsByStatus = groupShipmentsByStatus(extraShipments);
+const categoryCounts = countProductsByCategory(sampleProducts);
+const inventoryValue = calculateTotalInventoryValue(sampleProducts);
+const averageShipmentDistance = calculateAverageShipmentDistance(extraShipments);
+const lowStockProducts = filterLowStockProducts(sampleProducts);
+const reliableCarriers = sortCarriersByReliability(sampleCarriers, "desc");
 
-if (laptop) {
-  console.log("Costo con SEUR:", calculateShippingCost(sampleShipment, laptop, sampleCarriers[1]));
-  console.log("Score SEUR:", scoreCarrierForShipment(sampleCarriers[1], sampleShipment, laptop));
-  console.log("Mejor transportista:", selectBestCarrier(sampleCarriers, sampleShipment, laptop));
+export const businessLogicSnapshot = {
+  productsInLosAngeles: filterProductsByWarehouse(sampleProducts, "Los Angeles"),
+  electronicsProducts: filterProductsByCategory(sampleProducts, "Electronics"),
+  lowStockProducts,
+  sortedProductsByStock,
+  reliableCarriers,
+  productSearchResult: findProductBySKU(sampleProducts, "laptop-dell-15"),
+  shipmentSearchResult: findShipmentById(extraShipments, "SH-2024-8822"),
+  weightSearchResult: binarySearchProductByWeight(
+    [...sampleProducts].sort((a, b) => a.weightKg - b.weightKg),
+    2.3
+  ),
+  costWithSeur: laptop
+    ? calculateShippingCost(sampleShipment, laptop, sampleCarriers[1])
+    : null,
+  scoreSeur: laptop
+    ? scoreCarrierForShipment(sampleCarriers[1], sampleShipment, laptop)
+    : null,
+  bestCarrier: laptop
+    ? selectBestCarrier(sampleCarriers, sampleShipment, laptop)
+    : null,
+  categoryCounts,
+  inventoryValue,
+  averageShipmentDistance,
+  shipmentsByStatus,
+  topCarriers,
+  productValidation: validateProduct(sampleProducts[0]),
+  shipmentValidation: validateShipment(sampleShipment),
+  carrierValidation: validateCarrier(sampleCarriers[0])
+} as const;
+
+export function logBusinessLogicDemo() {
+  console.log("Productos en Los Angeles:", filterProductsByWarehouse(sampleProducts, "Los Angeles"));
+  console.log("Productos de Electronics:", filterProductsByCategory(sampleProducts, "Electronics"));
+  console.log("Productos con stock bajo:", lowStockProducts);
+  console.log("Productos por stock asc:", sortedProductsByStock);
+  console.log("Transportistas por confiabilidad desc:", reliableCarriers);
+  console.log("Buscar producto por SKU:", findProductBySKU(sampleProducts, "laptop-dell-15"));
+  console.log("Buscar envío por ID:", findShipmentById(extraShipments, "SH-2024-8822"));
+  console.log(
+    "Búsqueda binaria por peso:",
+    binarySearchProductByWeight([...sampleProducts].sort((a, b) => a.weightKg - b.weightKg), 2.3)
+  );
+
+  if (laptop) {
+    console.log("Costo con SEUR:", calculateShippingCost(sampleShipment, laptop, sampleCarriers[1]));
+    console.log("Score SEUR:", scoreCarrierForShipment(sampleCarriers[1], sampleShipment, laptop));
+    console.log("Mejor transportista:", selectBestCarrier(sampleCarriers, sampleShipment, laptop));
+  }
+
+  console.log("Conteo por categoría:", categoryCounts);
+  console.log("Valor total inventario:", inventoryValue);
+  console.log("Distancia promedio de envíos:", averageShipmentDistance);
+  console.log("Envíos agrupados por estado:", shipmentsByStatus);
+  console.log("Top carriers:", topCarriers);
+  console.log("Validación producto:", validateProduct(sampleProducts[0]));
+  console.log("Validación envío:", validateShipment(sampleShipment));
+  console.log("Validación carrier:", validateCarrier(sampleCarriers[0]));
 }
 
-console.log("Conteo por categoría:", countProductsByCategory(sampleProducts));
-console.log("Valor total inventario:", calculateTotalInventoryValue(sampleProducts));
-console.log("Distancia promedio de envíos:", calculateAverageShipmentDistance(extraShipments));
-console.log("Envíos agrupados por estado:", groupShipmentsByStatus(extraShipments));
-console.log("Top carriers:", findTopCarriers(extraShipments, 2));
-console.log("Validación producto:", validateProduct(sampleProducts[0]));
-console.log("Validación envío:", validateShipment(sampleShipment));
-console.log("Validación carrier:", validateCarrier(sampleCarriers[0]));
+const isDirectExecution =
+  typeof process !== "undefined" &&
+  Boolean(process.argv[1]) &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isDirectExecution) {
+  logBusinessLogicDemo();
+}

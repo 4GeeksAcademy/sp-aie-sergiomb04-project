@@ -21,7 +21,7 @@ El objetivo de esta aplicación es permitir al equipo de People & Talent visuali
 ## 1. Crear el proyecto
 
 ```bash
-cd apps/talent-pipeline-tracker
+cd uis/talent-pipeline-tracker
 npx create-next-app@latest . --typescript --app --tailwind --eslint
 ```
 
