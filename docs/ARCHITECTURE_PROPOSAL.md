@@ -36,10 +36,10 @@ Los endpoints se agruparán por dominio mediante `APIRouter`, evitando concentra
 
 Ejemplo de dominios:
 
-- `inventory`
+- `products`
 - `orders`
-- `tracking`
-- `returns`
+    - `tracking`
+    - `returns`
 - `customers`
 - `health`
 
