@@ -2,6 +2,7 @@
 import { fetchCandidates } from "@/app/features/candidates/services/candidates-api";
 import { CandidatesDashboard } from "@/app/features/candidates/components/CandidatesDashboard";
 import { Candidate, CandidateFilters } from "@/app/features/candidates/types/candidate";
+import Link from "next/link";
 import React from "react";
 
 type HomePageProps = {
@@ -39,7 +40,15 @@ export default async function Home({ searchParams }: HomePageProps) {
   return (
     <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black min-h-screen">
       <main className="flex flex-1 w-full max-w-3xl flex-col items-center py-16 px-4 bg-white dark:bg-black sm:items-start">
-        <h1 className="text-3xl font-bold mb-8 text-black dark:text-zinc-50">Listado de Candidatos</h1>
+        <div className="mb-8 flex w-full items-center justify-between gap-3">
+          <h1 className="text-3xl font-bold text-black dark:text-zinc-50">Listado de Candidatos</h1>
+          <Link
+            href="/incidents"
+            className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+          >
+            Ir a Incidents Analysis
+          </Link>
+        </div>
         <CandidatesDashboard
           initialCandidates={initialCandidates}
           initialError={initialError}

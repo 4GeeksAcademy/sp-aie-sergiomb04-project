@@ -9,11 +9,11 @@ import {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-if (!API_URL) {
-  throw new Error("NEXT_PUBLIC_API_URL no está definida en .env.local");
-}
-
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  if (!API_URL) {
+    throw new Error("NEXT_PUBLIC_API_URL no está definida en .env.local");
+  }
+
   const res = await fetch(`${API_URL}${path}`, {
     headers: {
       "Content-Type": "application/json",

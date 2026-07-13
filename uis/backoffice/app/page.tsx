@@ -126,10 +126,15 @@ export default function Home() {
   );
 }
 
-const getValidationStatus = (element: any) => {
+type ValidationResult = {
+  valid: boolean;
+  errors: string[];
+};
+
+const getValidationStatus = (element: ValidationResult) => {
   if (element.valid) {
     return "Valido";
   } else {
     return `Invalido: ${element.errors.join(", ")}`;
   }
-}
+};

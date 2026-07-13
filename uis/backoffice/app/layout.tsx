@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Link from "next/link";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -37,6 +38,15 @@ export default function RootLayout({
                 </p>
                 <p className="text-lg font-semibold text-slate-950">Backoffice</p>
               </div>
+
+              <nav className="flex items-center gap-3 text-sm font-medium text-slate-600">
+                <Link href="/" className="rounded-lg px-3 py-2 hover:bg-slate-100">
+                  Dashboard
+                </Link>
+                <Link href="/incidents" className="rounded-lg px-3 py-2 hover:bg-slate-100">
+                  Incidencias
+                </Link>
+              </nav>
             </div>
           </header>
 

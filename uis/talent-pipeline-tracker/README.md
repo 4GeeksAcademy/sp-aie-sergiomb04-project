@@ -75,6 +75,33 @@ src/
 
 # ✅ Funcionalidades
 
+## INCIDENTS ANALYSIS (TrackFlow)
+
+- Nueva pagina interna en `/incidents` para analizar CSV de incidentes.
+- Subida de archivo CSV y analisis via API interna.
+- Resumen de metricas: totales, invalidos por regla, categoria, estado, pais y satisfaccion.
+- Descarga de exportacion CSV con una fila por metrica.
+
+### Endpoints internos
+
+```http
+POST /api/incidents/analyze
+GET  /api/incidents/results/export
+```
+
+### Script Python reutilizado por la API
+
+```bash
+python3 scripts/incidents-analysis/analyze.py <ruta_csv>
+```
+
+Modos utiles:
+
+```bash
+python3 scripts/incidents-analysis/analyze.py <ruta_csv> --json --no-prompt
+python3 scripts/incidents-analysis/analyze.py <ruta_csv> --export-path <salida.csv>
+```
+
 ## 📋 Listado de candidaturas
 
 - Mostrar todos los candidatos.
