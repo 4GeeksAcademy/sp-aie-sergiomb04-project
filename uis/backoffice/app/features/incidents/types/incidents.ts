@@ -8,6 +8,19 @@ export type IncidentInvalidRule =
   | "invalid_country"
   | "invalid_description";
 
+export type IncidentCategory =
+  | "LOST_PARCEL"
+  | "DELAYED_DELIVERY"
+  | "WRONG_ADDRESS"
+  | "RETURN_REQUEST"
+  | "DAMAGE";
+
+export type IncidentStatus = "OPEN" | "CLOSED" | "DISCARDED";
+
+export type IncidentCountry = "US" | "ES";
+
+export type IncidentCustomerType = "B2B" | "B2C";
+
 export type IncidentAnalysisResult = {
   source_file: string;
   total_records: number;

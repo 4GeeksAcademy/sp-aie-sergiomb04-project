@@ -1,6 +1,10 @@
 import React from "react";
 
-import { IncidentAnalysisResult } from "@/app/features/incidents/types/incidents";
+import {
+  IncidentAnalysisResult,
+  IncidentCategory,
+  IncidentStatus,
+} from "@/app/features/incidents/types/incidents";
 
 type IncidentSummaryProps = {
   result: IncidentAnalysisResult;
@@ -11,22 +15,49 @@ const INVALID_RULE_LABELS: Record<string, string> = {
   invalid_carrier: "Carrier invalido para el pais",
   invalid_category: "Categoria faltante o invalida",
   invalid_email: "Email faltante o invalido",
-  closed_missing_score: "CLOSED sin satisfaction_score",
-  score_out_of_range: "satisfaction_score fuera de rango",
+  closed_missing_score: "Cerrado sin puntuacion de satisfaccion",
+  score_out_of_range: "Puntuacion de satisfaccion fuera de rango",
   invalid_country: "Country faltante o invalido",
   invalid_description: "Description vacia o muy corta",
 };
 
+const CATEGORY_LABELS: Record<IncidentCategory, string> = {
+  LOST_PARCEL: "Paquete perdido",
+  DELAYED_DELIVERY: "Retrasado",
+  RETURN_REQUEST: "Devolucion",
+  DAMAGE: "Daño",
+  WRONG_ADDRESS: "Dirección incorrecta",
+};
+
+const STATUS_LABELS: Record<IncidentStatus, string> = {
+  OPEN: "Abierta",
+  CLOSED: "Cerrada",
+  DISCARDED: "Descartada",
+};
+
+function toSentenceCaseLabel(value: string): string {
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((word) => (word ? word[0].toUpperCase() + word.slice(1) : word))
+    .join(" ");
+}
+
+function getDisplayLabel(key: string, labels?: Record<string, string>): string {
+  return labels?.[key] ?? toSentenceCaseLabel(key);
+}
+
 function renderRows(
   counts: Record<string, number>,
-  percentages?: Record<string, number>
+  percentages?: Record<string, number>,
+  labels?: Record<string, string>
 ): React.ReactNode {
   return Object.entries(counts).map(([key, value]) => (
     <li
       key={key}
       className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3"
     >
-      <span className="font-medium text-slate-700">{key}</span>
+      <span className="font-medium text-slate-700">{getDisplayLabel(key, labels)}</span>
       <span className="text-slate-700">
         {value}
         {percentages ? ` (${(percentages[key] ?? 0).toFixed(1)}%)` : ""}
@@ -72,14 +103,14 @@ export function IncidentSummary({ result }: IncidentSummaryProps) {
         <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
           <h3 className="text-lg font-semibold text-slate-900">Desglose por categoria</h3>
           <ul className="mt-4 space-y-2">
-            {renderRows(result.by_category, result.category_percentages)}
+            {renderRows(result.by_category, result.category_percentages, CATEGORY_LABELS)}
           </ul>
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
           <h3 className="text-lg font-semibold text-slate-900">Desglose por estado</h3>
           <ul className="mt-4 space-y-2">
-            {renderRows(result.by_status, result.status_percentages)}
+            {renderRows(result.by_status, result.status_percentages, STATUS_LABELS)}
           </ul>
         </article>
 
