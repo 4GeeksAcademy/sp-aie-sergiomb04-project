@@ -7,6 +7,7 @@ import { runIncidentsAnalysis } from "@/app/features/incidents/server/analysis-r
 import { setLatestAnalysis } from "@/app/features/incidents/server/analysis-store";
 
 export const runtime = "nodejs";
+const INCIDENTS_API_BASE_URL = process.env.INCIDENTS_API_BASE_URL;
 
 function badRequest(message: string): Response {
   return Response.json({ error: message }, { status: 400 });
@@ -29,6 +30,45 @@ export async function POST(request: Request): Promise<Response> {
 
   if (uploadedFile.size === 0) {
     return badRequest("El fichero esta vacio");
+  }
+
+  if (INCIDENTS_API_BASE_URL) {
+    try {
+      const externalFormData = new FormData();
+      externalFormData.append("file", uploadedFile, uploadedFile.name);
+
+      const upstreamResponse = await fetch(
+        `${INCIDENTS_API_BASE_URL.replace(/\/$/, "")}/api/incidents/analyze`,
+        {
+          method: "POST",
+          body: externalFormData,
+          cache: "no-store",
+        }
+      );
+
+      if (!upstreamResponse.ok) {
+        const payload = (await upstreamResponse.json().catch(() => null)) as
+          | { detail?: string; error?: string }
+          | null;
+        const message =
+          payload?.detail ??
+          payload?.error ??
+          "No se pudo analizar el archivo CSV en el backend Python";
+
+        return Response.json(
+          { error: message },
+          { status: upstreamResponse.status }
+        );
+      }
+
+      const payload = await upstreamResponse.json();
+      return Response.json(payload);
+    } catch {
+      return Response.json(
+        { error: "No se pudo conectar con el backend Python de incidencias" },
+        { status: 502 }
+      );
+    }
   }
 
   const buffer = Buffer.from(await uploadedFile.arrayBuffer());
