@@ -5,3 +5,25 @@
 
 # Permitir el archivo de ejemplo
 !.env.example
+
+# Python bytecode y caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entornos virtuales
+.venv/
+venv/
+ENV/
+env/
+
+# Herramientas Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.tox/
+.nox/
+
+# Jupyter
+.ipynb_checkpoints/
