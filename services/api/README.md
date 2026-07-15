@@ -10,17 +10,42 @@ Servicio FastAPI para analizar ficheros CSV de incidencias reutilizando la logic
 - `GET /api/incidents/results/export`
   - Salida: CSV descargable del ultimo analisis ejecutado
 
-## Ejecutar localmente
+## Ejecutar con Pipenv
 
 ```bash
 cd services/api
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn incidents_api.app:app --reload --host 0.0.0.0 --port 8000
+PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv sync --dev
+PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv run dev
+```
+
+El servicio quedara disponible en `http://localhost:8000`.
+
+## Comandos utiles
+
+```bash
+# Levantar en modo desarrollo (reload)
+PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv run dev
+
+# Levantar en modo normal
+PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv run start
+
+# Ejecutar un comando Python dentro del entorno
+PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv run python -c "from incidents_api.app import app; print(app.title)"
+```
+
+## Probar endpoints rapido
+
+```bash
+# Analizar CSV
+curl -X POST "http://localhost:8000/api/incidents/analyze" \
+  -F "file=@../../scripts/incidents-analysis/incidents-trackflow.csv"
+
+# Exportar ultimo resultado
+curl -L "http://localhost:8000/api/incidents/results/export" -o incidents-analysis-results.csv
 ```
 
 ## Notas
 
 - El servicio usa la misma validacion y calculo de metricas del script en `scripts/incidents-analysis/domain`.
 - Si no hay analisis previo, el endpoint de export devuelve `404`.
+- `PIPENV_IGNORE_VIRTUALENVS=1` evita que Pipenv reutilice un entorno activo del shell.
