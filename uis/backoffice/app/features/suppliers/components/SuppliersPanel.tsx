@@ -450,11 +450,10 @@ export function SuppliersPanel() {
                     </td>
                     <td className="px-3 py-3 align-top">
                       <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          supplier.status === "active"
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${supplier.status === "active"
                             ? "bg-emerald-100 text-emerald-700"
                             : "bg-amber-100 text-amber-800"
-                        }`}
+                          }`}
                       >
                         {STATUS_LABELS[supplier.status]}
                       </span>
@@ -463,7 +462,7 @@ export function SuppliersPanel() {
                       {formatApiDate(supplier.updated_at)}
                     </td>
                     <td className="px-3 py-3 align-top">
-                      <div className="space-y-2">
+                      <div className="flex items-center gap-2 flex-nowrap">
                         <div className="flex items-center gap-2">
                           <input
                             type="number"
@@ -471,26 +470,20 @@ export function SuppliersPanel() {
                             step="0.01"
                             disabled={savingRateIds[supplier.id]}
                             value={rateEdits[supplier.id] ?? String(supplier.rate_per_shipment)}
-                            onChange={(event) =>
-                              {
-                                setRateEdits((prevState) => ({
-                                  ...prevState,
-                                  [supplier.id]: event.target.value,
-                                }));
-                                setPendingRateIds((prevState) => ({
-                                  ...prevState,
-                                  [supplier.id]: true,
-                                }));
-                              }
+                            onChange={(event) => {
+                              setRateEdits((prevState) => ({
+                                ...prevState,
+                                [supplier.id]: event.target.value,
+                              }));
+                              setPendingRateIds((prevState) => ({
+                                ...prevState,
+                                [supplier.id]: true,
+                              }));
+                            }
                             }
                             className="w-28 rounded-lg border border-slate-300 px-2 py-1"
                           />
                         </div>
-                        <p className="text-xs text-slate-500">
-                          {savingRateIds[supplier.id]
-                            ? "Guardando tarifa..."
-                            : "Autoguardado tras breve inactividad"}
-                        </p>
 
                         <div className="flex items-center gap-2">
                           <select
