@@ -1,4 +1,5 @@
 import { setLatestAnalysis } from "@/app/features/incidents/server/analysis-store";
+import { IncidentAnalysisResult } from "@/app/features/incidents/types/incidents";
 
 export const runtime = "nodejs";
 const INCIDENTS_API_BASE_URL = "http://localhost:8000";
@@ -55,7 +56,7 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const payload = (await upstreamResponse.json()) as {
-      data: unknown;
+      data: IncidentAnalysisResult;
       meta?: {
         source_file?: string;
         generated_at?: string;

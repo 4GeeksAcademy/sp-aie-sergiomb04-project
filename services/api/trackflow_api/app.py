@@ -22,9 +22,9 @@ from domain.analyzer import analyze_csv  # type: ignore  # noqa: E402
 from domain.exporter import write_export_csv  # type: ignore  # noqa: E402
 
 app = FastAPI(
-    title="TrackFlow Incidents API",
+    title="TrackFlow API",
     version="1.0.0",
-    description="Backend Python para analisis de incidencias de TrackFlow.",
+    description="Backend Python unificado para incidencias y suppliers de TrackFlow.",
 )
 
 
