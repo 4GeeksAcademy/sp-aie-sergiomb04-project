@@ -46,6 +46,9 @@ export default function RootLayout({
                 <Link href="/incidents" className="rounded-lg px-3 py-2 hover:bg-slate-100">
                   Incidencias
                 </Link>
+                <Link href="/suppliers" className="rounded-lg px-3 py-2 hover:bg-slate-100">
+                  Suppliers
+                </Link>
               </nav>
             </div>
           </header>
