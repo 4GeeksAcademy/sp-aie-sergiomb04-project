@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from tinydb import Query as TinyQuery
 
-from incidents_api.database import get_db
-from incidents_api.models import SupplierCreate, supplier_record_from_create
+from trackflow_api.database import get_db
+from trackflow_api.models import SupplierCreate, supplier_record_from_create
 
 SUPPLIERS_SEED = [
     {

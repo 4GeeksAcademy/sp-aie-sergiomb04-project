@@ -1,4 +1,4 @@
 .venv/
 __pycache__/
 *.pyc
-incidents_api/data/
+trackflow_api/data/

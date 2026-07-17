@@ -3,8 +3,8 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query, status
 from tinydb import Query as TinyQuery
 
-from incidents_api.database import get_db
-from incidents_api.models import (
+from trackflow_api.database import get_db
+from trackflow_api.models import (
     Supplier,
     SupplierCategory,
     SupplierCountry,
