@@ -15,3 +15,4 @@ dependencies = [
 
 [project.scripts]
 seed = "trackflow_api.seed:main"
+create-admin = "trackflow_api.create_admin:main"
