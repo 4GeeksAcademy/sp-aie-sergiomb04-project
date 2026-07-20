@@ -1,183 +1,111 @@
-# Implementación completa de práctica en monorepo
+## Objetivo
 
-Actúa como un Senior Full Stack Engineer especializado en FastAPI, TinyDB, Pydantic y React.
+Agregar un sistema de autenticación que:
 
-Vas a implementar completamente esta práctica dentro del monorepo existente. NO crees un proyecto nuevo.
+- Gestione usuarios y perfiles en TinyDB.
+- Permita iniciar sesión con JWT.
+- Proteja todas las rutas sensibles mediante una dependencia reutilizable (`get_current_user`).
 
-## IMPORTANTE
+## Requisitos principales
 
-Antes de escribir una sola línea de código:
+### 1. Usuarios (/users)
 
-1. Localiza y lee completamente el archivo [CONTEXT-company.md](.current_task/CONTEXT-trackflow.es.md).
-2. Extrae de él:
-   - todos los campos exactos del modelo `Supplier`
-   - el nombre exacto del campo de tarifa
-   - categorías válidas
-   - estados permitidos
-   - datos iniciales para el seeder
+- Crear modelo `User` en TinyDB con:
+  - `id`
+  - `email`
+  - `hashed_password`
+  - `is_active`
+  - `role` (`admin`, `manager` o `user`)
+  - `created_at`
+- Nunca almacenar nombre, teléfono o dirección en `User`.
+- CRUD completo:
+  - `POST /users` (registro, contraseña hasheada y creación automática del `Profile`)
+  - `GET /users`
+  - `GET /users/{id}`
+  - `PUT /users/{id}` (solo el usuario o un admin; solo un admin puede cambiar el rol)
+  - `DELETE /users/{id}` (elimina también el perfil)
+- Los nuevos usuarios tienen rol `user` por defecto.
 
-**NO** inventes nombres de campos.  
-**NO** utilices valores genéricos.  
-**TODO** debe coincidir exactamente con el `CONTEXT`.
+### 2. Perfiles (/profiles)
 
-Si el contexto es demasiado grande para una sola respuesta, divide automáticamente el trabajo en varias fases.
+Modelo `Profile` en TinyDB con:
+- `id`
+- `user_id`
+- `name`
+- `phone`
+- `address`
 
----
+Endpoints:
+- `GET /profiles/me`
+- `PUT /profiles/me` (solo el propietario puede editarlo).
 
-# PLAN DE TRABAJO
+### 3. Autenticación (/auth)
 
-## Fase 1
+- `POST /auth/login`
+  - Recibe email y contraseña.
+  - Valida credenciales.
+  - Devuelve un JWT firmado.
+- `GET /auth/me`
+  - Devuelve email, rol y el perfil asociado.
 
-- Analizar el proyecto.
-- Leer `CONTEXT-company.md`.
-- Inspeccionar la estructura del monorepo.
-- Identificar dónde está FastAPI.
-- Identificar dónde está el frontend.
-- Mostrar un pequeño plan antes de modificar código.
+### 4. JWT
 
-Esperar únicamente si falta información imprescindible.
+Implementar `get_current_user` que:
+- Lea `Authorization: Bearer <token>`.
+- Valide y decodifique el JWT.
+- Obtenga el usuario desde TinyDB.
+- Devuelva `401` si el token es inválido o expiró.
 
-Si toda la información existe en el repositorio, continuar automáticamente.
+Configurar mediante variables de entorno:
+- `SECRET_KEY`
+- `ACCESS_TOKEN_EXPIRE_MINUTES`
 
----
+Usar:
+- `OAuth2PasswordBearer`
+- `python-jose`
+- `passlib` con `bcrypt`
 
-## Fase 2
+## Protección de rutas
 
-### Backend
+Aplicar `get_current_user` a:
+- Todos los endpoints de `/users` excepto `POST /users`.
+- `/auth/me`.
+- Al menos 5 rutas existentes del proyecto fuera de `/users` y `/auth`.
 
-Crear toda la estructura necesaria.
+Respuestas esperadas:
+- `401 Unauthorized`: sin token o token inválido.
+- `403 Forbidden`: cuando un usuario intenta acceder o modificar recursos que no le pertenecen.
 
-Implementar:
+## Verificación
 
-- `database.py`
-- `models.py`
-- `routes/suppliers.py`
-- `seed.py`
-- Actualizar `main.py`
+Comprobar en `/docs`:
+1. Registrar usuario.
+2. Iniciar sesión.
+3. Obtener el JWT.
+4. Acceder a una ruta protegida con el token.
+5. Verificar que:
+   - Sin token → `401`.
+   - Token inválido o expirado → `401`.
 
-Debe existir:
+## Restricciones importantes
 
-- `POST /suppliers`
-- `GET /suppliers`
-- `GET /suppliers/{id}`
-- `PATCH /suppliers/{id}/rate`
-- `PATCH /suppliers/{id}/status`
-- `DELETE /suppliers/{id}`
+- Trabajar sobre una rama nueva (`feature/auth`).
+- Instalar dependencias con `uv`, no con `pip`.
+- `User` y `Profile` solo en TinyDB (nada de Supabase/PostgreSQL).
+- Otros módulos solo referencian el `id` de TinyDB (`user_id`).
+- No usar autenticación por sesiones ni cookies.
+- Nunca guardar contraseñas en texto plano; siempre hashearlas con `bcrypt`.
 
-### Requisitos
+## Evaluación
 
-- Usar TinyDB.
-- Persistencia real.
-- Modelos Pydantic.
-- Modelos separados para entrada y salida cuando sea necesario.
-- `updated_at` generado automáticamente.
-- `status` usando `Enum` o validación.
-- La tarifa debe ser `> 0`.
-
-Errores HTTP correctos:
-
-- `422`
-- `404`
-- `200`
-- `201`
-
-Implementar filtros:
-
-- `GET /suppliers?country=`
-- `GET /suppliers?category=`
-
----
-
-## Fase 3
-
-### Seeder
-
-Crear `seed.py`.
-
-Debe funcionar con:
-
-```bash
-uv run seed
-```
-
-Debe:
-
-- leer los proveedores del `CONTEXT`
-- insertarlos
-- evitar duplicados
-
-Mostrar:
-
-```text
-Inserted X suppliers
-```
-
-Si ya existen, no duplicarlos.
-
----
-
-## Fase 4
-
-### Frontend
-
-Dentro de:
-
-```text
-uis/backoffice
-```
-
-Crear la página **Suppliers**.
-
-Agregar entrada al menú.
-
-Implementar:
-
-- tabla
-- filtros
-- alta
-- editar tarifa
-- editar estado
-- badges para activo/suspendido
-- actualización inmediata después de las llamadas a la API
-- mostrar errores `422` enviados por la API
-- no recargar la página para filtrar
-
----
-
-## Fase 5
-
-### Validación
-
-Comprobar que absolutamente todos los requisitos del README están cumplidos.
-
-Crear una checklist indicando:
-
-- ✔ realizado
-- ⚠ pendiente
-- ❌ falta
-
-No marcar como realizado algo que realmente no exista.
-
----
-
-# REGLAS
-
-- No romper código existente.
-- Reutilizar componentes si existen.
-- Seguir el estilo del proyecto.
-- No duplicar lógica.
-- Escribir código limpio.
-- Usar typing.
-- Añadir comentarios solo cuando aporten valor.
-- No generar archivos innecesarios.
-- Si encuentras una estructura ya existente, intégrate en ella.
-
-Al terminar cada fase:
-
-- verifica que compile
-- corrige errores automáticamente
-- continúa con la siguiente fase
-
-Solo detente cuando toda la práctica esté completamente implementada.
-
-El objetivo es completar las **44 tareas del README**.
+Se verificará que:
+- El CRUD de usuarios funcione.
+- Cada usuario tenga un perfil asociado.
+- Los roles estén restringidos (`admin`, `manager`, `user`).
+- Las contraseñas estén correctamente hasheadas.
+- El login genere un JWT válido.
+- `get_current_user` funcione correctamente.
+- Las rutas protegidas respondan con `401` cuando corresponda.
+- La clave secreta y expiración provengan de variables de entorno.
+- Existan al menos 5 rutas adicionales protegidas.
+- No haya regresiones en las rutas existentes autenticadas.

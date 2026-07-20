@@ -7,7 +7,13 @@ dependencies = [
   "uvicorn==0.35.0",
   "python-multipart==0.0.20",
   "tinydb==4.8.2",
+  "python-jose[cryptography]==3.5.0",
+  "passlib[bcrypt]==1.7.4",
+  "bcrypt==4.0.1",
+  "email-validator==2.3.0",
 ]
 
 [project.scripts]
 seed = "trackflow_api.seed:main"
+create-user = "trackflow_api.create_user:main"
+create-admin = "trackflow_api.create_admin:main"

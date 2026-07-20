@@ -1,6 +1,9 @@
 export const runtime = "nodejs";
 
-const INCIDENTS_API_BASE_URL = "http://localhost:8000";
+import {
+  buildTrackflowApiUrl,
+  getAuthorizedSessionHeaders,
+} from "@/app/features/auth/server/session";
 
 type UpstreamError = {
   detail?: unknown;
@@ -24,10 +27,16 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ): Promise<Response> {
   const { id } = await context.params;
+  const headers = await getAuthorizedSessionHeaders();
+
+  if (!headers) {
+    return Response.json({ detail: "Unauthorized" }, { status: 401 });
+  }
 
   try {
-    const upstreamResponse = await fetch(`${INCIDENTS_API_BASE_URL}/suppliers/${id}`, {
+    const upstreamResponse = await fetch(buildTrackflowApiUrl(`/suppliers/${id}`), {
       method: "GET",
+      headers,
       cache: "no-store",
     });
 
@@ -49,10 +58,16 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ): Promise<Response> {
   const { id } = await context.params;
+  const headers = await getAuthorizedSessionHeaders();
+
+  if (!headers) {
+    return Response.json({ detail: "Unauthorized" }, { status: 401 });
+  }
 
   try {
-    const upstreamResponse = await fetch(`${INCIDENTS_API_BASE_URL}/suppliers/${id}`, {
+    const upstreamResponse = await fetch(buildTrackflowApiUrl(`/suppliers/${id}`), {
       method: "DELETE",
+      headers,
       cache: "no-store",
     });
 

@@ -1,12 +1,23 @@
 export const runtime = "nodejs";
-const INCIDENTS_API_BASE_URL = "http://localhost:8000";
+
+import {
+  buildTrackflowApiUrl,
+  getAuthorizedSessionHeaders,
+} from "@/app/features/auth/server/session";
 
 export async function GET(): Promise<Response> {
+  const headers = await getAuthorizedSessionHeaders();
+
+  if (!headers) {
+    return Response.json({ detail: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const upstreamResponse = await fetch(
-      `${INCIDENTS_API_BASE_URL}/api/incidents/results/export`,
+      buildTrackflowApiUrl("/api/incidents/results/export"),
       {
         method: "GET",
+        headers,
         cache: "no-store",
       }
     );

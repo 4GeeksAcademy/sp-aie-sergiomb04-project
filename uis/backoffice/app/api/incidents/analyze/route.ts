@@ -1,14 +1,23 @@
 import { setLatestAnalysis } from "@/app/features/incidents/server/analysis-store";
 import { IncidentAnalysisResult } from "@/app/features/incidents/types/incidents";
+import {
+  buildTrackflowApiUrl,
+  getAuthorizedSessionHeaders,
+} from "@/app/features/auth/server/session";
 
 export const runtime = "nodejs";
-const INCIDENTS_API_BASE_URL = "http://localhost:8000";
 
 function badRequest(message: string): Response {
   return Response.json({ error: message }, { status: 400 });
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const authHeaders = await getAuthorizedSessionHeaders();
+
+  if (!authHeaders) {
+    return Response.json({ detail: "Unauthorized" }, { status: 401 });
+  }
+
   const formData = await request.formData();
   const uploadedFile = formData.get("file");
 
@@ -32,9 +41,10 @@ export async function POST(request: Request): Promise<Response> {
     externalFormData.append("file", uploadedFile, uploadedFile.name);
 
     const upstreamResponse = await fetch(
-      `${INCIDENTS_API_BASE_URL}/api/incidents/analyze`,
+      buildTrackflowApiUrl("/api/incidents/analyze"),
       {
         method: "POST",
+        headers: authHeaders,
         body: externalFormData,
         cache: "no-store",
       }
@@ -64,9 +74,10 @@ export async function POST(request: Request): Promise<Response> {
     };
 
     const exportResponse = await fetch(
-      `${INCIDENTS_API_BASE_URL}/api/incidents/results/export`,
+      buildTrackflowApiUrl("/api/incidents/results/export"),
       {
         method: "GET",
+        headers: authHeaders,
         cache: "no-store",
       }
     );

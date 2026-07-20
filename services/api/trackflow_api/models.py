@@ -5,7 +5,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 VALID_CATEGORIES = [
     "carrier_last_mile",
@@ -19,6 +19,12 @@ VALID_CATEGORIES = [
 ]
 
 VALID_STATUSES = ["active", "suspended"]
+
+
+class UserRole(StrEnum):
+    ADMIN = "admin"
+    MANAGER = "manager"
+    USER = "user"
 
 
 class SupplierCategory(StrEnum):
@@ -115,6 +121,143 @@ class SupplierStatusUpdate(BaseModel):
     status: SupplierStatus
 
     model_config = ConfigDict(extra="forbid")
+
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8)
+    name: str = Field(min_length=1)
+    phone: str = Field(min_length=1)
+    address: str = Field(min_length=1)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("email")
+    @classmethod
+    def _normalize_email(cls, value: EmailStr) -> str:
+        return str(value).lower().strip()
+
+    @field_validator("name", "phone", "address", mode="before")
+    @classmethod
+    def _strip_required_strings(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            value = value.strip()
+        return value
+
+
+class UserUpdate(BaseModel):
+    email: EmailStr | None = None
+    password: str | None = Field(default=None, min_length=8)
+    is_active: bool | None = None
+    role: UserRole | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("email")
+    @classmethod
+    def _normalize_optional_email(cls, value: EmailStr | None) -> str | None:
+        if value is None:
+            return None
+        return str(value).lower().strip()
+
+
+class UserRecord(BaseModel):
+    id: str
+    email: EmailStr
+    hashed_password: str
+    is_active: bool
+    role: UserRole
+    created_at: datetime
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class UserPublic(BaseModel):
+    id: str
+    email: EmailStr
+    is_active: bool
+    role: UserRole
+    created_at: datetime
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ProfileBase(BaseModel):
+    name: str = Field(min_length=1)
+    phone: str = Field(min_length=1)
+    address: str = Field(min_length=1)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("name", "phone", "address", mode="before")
+    @classmethod
+    def _strip_profile_strings(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            value = value.strip()
+        return value
+
+
+class ProfileUpdate(ProfileBase):
+    pass
+
+
+class ProfileRecord(ProfileBase):
+    id: str
+    user_id: str
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=1)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("email")
+    @classmethod
+    def _normalize_login_email(cls, value: EmailStr) -> str:
+        return str(value).lower().strip()
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class AuthMeResponse(BaseModel):
+    email: EmailStr
+    role: UserRole
+    profile: ProfileRecord
+
+
+def user_record_from_create(payload: UserCreate, hashed_password: str) -> UserRecord:
+    return UserRecord(
+        id=str(uuid4()),
+        email=payload.email,
+        hashed_password=hashed_password,
+        is_active=True,
+        role=UserRole.USER,
+        created_at=now_utc(),
+    )
+
+
+def profile_record_from_user_create(user_id: str, payload: UserCreate) -> ProfileRecord:
+    return ProfileRecord(
+        id=str(uuid4()),
+        user_id=user_id,
+        name=payload.name,
+        phone=payload.phone,
+        address=payload.address,
+    )
+
+
+def user_public_from_record(record: UserRecord) -> UserPublic:
+    return UserPublic(
+        id=record.id,
+        email=record.email,
+        is_active=record.is_active,
+        role=record.role,
+        created_at=record.created_at,
+    )
 
 
 def now_utc() -> datetime:
