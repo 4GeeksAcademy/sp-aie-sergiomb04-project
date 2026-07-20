@@ -1,15 +1,18 @@
 export const runtime = "nodejs";
 
-const INCIDENTS_API_BASE_URL = "http://localhost:8000";
-
 type UpstreamError = {
   detail?: unknown;
   error?: string;
 };
 
+import {
+  buildTrackflowApiUrl,
+  getAuthorizedSessionHeaders,
+} from "@/app/features/auth/server/session";
+
 function buildUpstreamUrl(request: Request): string {
   const requestUrl = new URL(request.url);
-  const upstreamUrl = new URL(`${INCIDENTS_API_BASE_URL}/suppliers`);
+  const upstreamUrl = new URL(buildTrackflowApiUrl("/suppliers"));
 
   const country = requestUrl.searchParams.get("country");
   const category = requestUrl.searchParams.get("category");
@@ -38,9 +41,16 @@ async function toErrorResponse(upstreamResponse: Response): Promise<Response> {
 }
 
 export async function GET(request: Request): Promise<Response> {
+  const headers = await getAuthorizedSessionHeaders();
+
+  if (!headers) {
+    return Response.json({ detail: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const upstreamResponse = await fetch(buildUpstreamUrl(request), {
       method: "GET",
+      headers,
       cache: "no-store",
     });
 
@@ -59,14 +69,20 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const headers = await getAuthorizedSessionHeaders({
+    "Content-Type": "application/json",
+  });
+
+  if (!headers) {
+    return Response.json({ detail: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
 
-    const upstreamResponse = await fetch(`${INCIDENTS_API_BASE_URL}/suppliers`, {
+    const upstreamResponse = await fetch(buildTrackflowApiUrl("/suppliers"), {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(body),
       cache: "no-store",
     });

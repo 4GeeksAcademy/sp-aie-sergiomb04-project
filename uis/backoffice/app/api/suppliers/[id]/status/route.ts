@@ -1,6 +1,9 @@
 export const runtime = "nodejs";
 
-const INCIDENTS_API_BASE_URL = "http://localhost:8000";
+import {
+  buildTrackflowApiUrl,
+  getAuthorizedSessionHeaders,
+} from "@/app/features/auth/server/session";
 
 type UpstreamError = {
   detail?: unknown;
@@ -24,15 +27,20 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ): Promise<Response> {
   const { id } = await context.params;
+  const headers = await getAuthorizedSessionHeaders({
+    "Content-Type": "application/json",
+  });
+
+  if (!headers) {
+    return Response.json({ detail: "Unauthorized" }, { status: 401 });
+  }
 
   try {
     const body = await request.json();
 
-    const upstreamResponse = await fetch(`${INCIDENTS_API_BASE_URL}/suppliers/${id}/status`, {
+    const upstreamResponse = await fetch(buildTrackflowApiUrl(`/suppliers/${id}/status`), {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(body),
       cache: "no-store",
     });

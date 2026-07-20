@@ -1,4 +1,4 @@
-import { businessLogicSnapshot } from "../../../src/demo";
+import { businessLogicSnapshot } from "../../../../src/demo";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("es-ES", {
@@ -14,6 +14,19 @@ function formatDistance(value: number) {
   }).format(value);
 }
 
+type ValidationResult = {
+  valid: boolean;
+  errors: string[];
+};
+
+const getValidationStatus = (element: ValidationResult) => {
+  if (element.valid) {
+    return "Valido";
+  }
+
+  return `Invalido: ${element.errors.join(", ")}`;
+};
+
 export default function Home() {
   const categoryEntries = Object.entries(businessLogicSnapshot.categoryCounts);
   const shipmentStatusEntries = Object.entries(businessLogicSnapshot.shipmentsByStatus);
@@ -22,14 +35,15 @@ export default function Home() {
     <main className="flex flex-1 flex-col gap-8 px-6 py-10 lg:px-10">
       <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
         <div className="flex flex-col gap-3">
-          <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-600">
-            Backoffice
+          <span className="w-fit rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700">
+            Sesión protegida
           </span>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
             Dashboard operativo
           </h1>
           <p className="max-w-2xl text-slate-600">
-            Espacio inicial para modulos internos, indicadores y herramientas de gestion.
+            El acceso autenticado habilita la operativa interna de incidencias, proveedores y
+            seguimiento del estado del negocio desde un único panel.
           </p>
         </div>
       </section>
@@ -125,16 +139,3 @@ export default function Home() {
     </main>
   );
 }
-
-type ValidationResult = {
-  valid: boolean;
-  errors: string[];
-};
-
-const getValidationStatus = (element: ValidationResult) => {
-  if (element.valid) {
-    return "Valido";
-  } else {
-    return `Invalido: ${element.errors.join(", ")}`;
-  }
-};
