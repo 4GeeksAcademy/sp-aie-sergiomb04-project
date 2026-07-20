@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from tinydb import Query as TinyQuery
 
+from trackflow_api.auth import get_current_user
 from trackflow_api.database import get_db
 from trackflow_api.models import (
     Supplier,
@@ -15,7 +16,11 @@ from trackflow_api.models import (
     supplier_record_from_create,
 )
 
-router = APIRouter(prefix="/suppliers", tags=["suppliers"])
+router = APIRouter(
+    prefix="/suppliers",
+    tags=["suppliers"],
+    dependencies=[Depends(get_current_user)],
+)
 _SUPPLIER_QUERY = TinyQuery()
 
 

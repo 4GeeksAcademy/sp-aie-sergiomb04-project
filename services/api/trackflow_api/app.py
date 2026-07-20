@@ -7,9 +7,11 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from uuid import uuid4
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, Response
 
+from .auth import get_current_user
+from .models import UserRecord
 from .store import StoredAnalysis, get_latest_analysis, set_latest_analysis
 
 BASE_DIR = Path(__file__).resolve().parents[3]
@@ -36,7 +38,10 @@ def _cleanup_file(path: str) -> None:
 
 
 @app.post("/api/incidents/analyze")
-async def analyze_incidents(file: UploadFile = File(...)) -> JSONResponse:
+async def analyze_incidents(
+    file: UploadFile = File(...),
+    _: UserRecord = Depends(get_current_user),
+) -> JSONResponse:
     filename = file.filename or "incidents.csv"
 
     if not filename.lower().endswith(".csv"):
@@ -108,7 +113,7 @@ async def analyze_incidents(file: UploadFile = File(...)) -> JSONResponse:
 
 
 @app.get("/api/incidents/results/export")
-def export_latest_analysis() -> Response:
+def export_latest_analysis(_: UserRecord = Depends(get_current_user)) -> Response:
     latest = get_latest_analysis()
     if latest is None:
         raise HTTPException(
