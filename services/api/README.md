@@ -66,23 +66,19 @@ PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv run python -c "from 
 # Ejecutar seeder de suppliers
 PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv run python -m trackflow_api.seed
 
-# Crear un usuario administrador
-uv run create-admin \
-  --email admin@trackflow.test \
-  --password Secret123 \
-  --name "Admin TrackFlow" \
-  --phone "+34 600 000 000" \
-  --address "Calle Mayor 1"
-
-# Promover un usuario existente a admin y resetear la contraseña
-uv run create-admin \
+# Crear un usuario (si faltan argumentos, se pediran por terminal)
+uv run create-user \
   --email ops@trackflow.test \
   --password NewSecret123 \
   --name "Ops User" \
   --phone "+34 600 000 001" \
   --address "Avenida Central 10" \
-  --promote-existing \
+  --role admin \
+  --update-existing \
   --reset-password
+
+# Modo totalmente interactivo
+uv run create-user
 ```
 
 ## Probar endpoints rapido
