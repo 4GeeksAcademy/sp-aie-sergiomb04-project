@@ -1,8 +1,12 @@
 import {
   AuthUser,
+  ChangePasswordPayload,
+  ForgotPasswordPayload,
   LoginPayload,
   LoginResponse,
+  MessageResponse,
   ProfileUpdatePayload,
+  ResetPasswordPayload,
   RegisterRequestPayload,
 } from "@/app/features/auth/types/auth";
 import { clearSessionToken, getSessionToken, notifyUnauthorizedSession } from "@/app/features/auth/lib/session";
@@ -93,6 +97,35 @@ export async function fetchMe(): Promise<AuthUser> {
 export async function updateMyProfile(payload: ProfileUpdatePayload): Promise<AuthUser["profile"]> {
   return authRequest<AuthUser["profile"]>("/profiles/me", {
     method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function forgotPassword(payload: ForgotPasswordPayload): Promise<MessageResponse> {
+  return authRequest<MessageResponse>(
+    "/auth/forgot-password",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    { requireAuth: false }
+  );
+}
+
+export async function resetPassword(payload: ResetPasswordPayload): Promise<MessageResponse> {
+  return authRequest<MessageResponse>(
+    "/auth/reset-password",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    { requireAuth: false }
+  );
+}
+
+export async function changePassword(payload: ChangePasswordPayload): Promise<MessageResponse> {
+  return authRequest<MessageResponse>("/auth/change-password", {
+    method: "POST",
     body: JSON.stringify(payload),
   });
 }

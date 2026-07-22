@@ -104,6 +104,12 @@ export function LoginForm() {
       </button>
 
       <p className="text-sm text-slate-600">
+        <Link href="/forgot-password" className="font-medium text-slate-900 underline">
+          ¿Olvidaste tu contraseña?
+        </Link>
+      </p>
+
+      <p className="text-sm text-slate-600">
         ¿No tienes cuenta?{" "}
         <Link href="/register" className="font-medium text-slate-900 underline">
           Regístrate aquí

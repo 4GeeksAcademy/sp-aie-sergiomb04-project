@@ -6,7 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuthSession } from "@/app/features/auth/components/AuthSessionProvider";
 import { getSessionToken } from "@/app/features/auth/lib/session";
 
-const PUBLIC_PATHS = new Set(["/login", "/register"]);
+const PUBLIC_PATHS = new Set(["/login", "/register", "/forgot-password", "/reset-password"]);
+const AUTO_REDIRECT_WHEN_AUTHENTICATED = new Set(["/login", "/register"]);
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -19,7 +20,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     const token = getSessionToken();
 
     if (isPublicRoute) {
-      if (token) {
+      if (token && AUTO_REDIRECT_WHEN_AUTHENTICATED.has(pathname)) {
         router.replace("/");
       }
       return;

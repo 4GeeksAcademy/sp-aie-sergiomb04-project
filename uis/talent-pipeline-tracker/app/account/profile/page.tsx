@@ -14,6 +14,11 @@ export default function AccountProfilePage() {
           <p className="mt-2 text-sm text-slate-600">
             Gestiona tus datos de cuenta en TrackFlow Talent.
           </p>
+          <p className="mt-2 text-sm">
+            <Link href="/account/change-password" className="text-blue-700 hover:underline">
+              Cambiar contraseña
+            </Link>
+          </p>
         </header>
 
         <ProfileForm />

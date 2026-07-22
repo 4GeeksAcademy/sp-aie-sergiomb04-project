@@ -218,6 +218,46 @@ class LoginRequest(BaseModel):
         return str(value).lower().strip()
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("email")
+    @classmethod
+    def _normalize_forgot_email(cls, value: EmailStr) -> str:
+        return str(value).lower().strip()
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=16)
+    new_password: str = Field(min_length=8)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1)
+    new_password: str = Field(min_length=8)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class MessageResponse(BaseModel):
+    detail: str
+
+
+class PasswordResetTokenRecord(BaseModel):
+    id: str
+    user_id: str
+    token_hash: str
+    created_at: datetime
+    expires_at: datetime
+    used_at: datetime | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -257,6 +297,21 @@ def user_public_from_record(record: UserRecord) -> UserPublic:
         is_active=record.is_active,
         role=record.role,
         created_at=record.created_at,
+    )
+
+
+def password_reset_token_record_from_create(
+    user_id: str,
+    token_hash: str,
+    expires_at: datetime,
+) -> PasswordResetTokenRecord:
+    return PasswordResetTokenRecord(
+        id=str(uuid4()),
+        user_id=user_id,
+        token_hash=token_hash,
+        created_at=now_utc(),
+        expires_at=expires_at,
+        used_at=None,
     )
 
 
