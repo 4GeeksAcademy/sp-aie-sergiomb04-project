@@ -17,7 +17,36 @@ export type LoginPayload = {
   password: string;
 };
 
+export type RegisterPayload = {
+  email: string;
+  password: string;
+  name?: string;
+  phone?: string;
+  address?: string;
+};
+
+export type RegisterRequestPayload = {
+  email: string;
+  password: string;
+  name: string;
+  phone: string;
+  address: string;
+};
+
 export type LoginResponse = {
   access_token: string;
   token_type: string;
+};
+
+export type ForgotPasswordPayload = {
+  email: string;
+};
+
+export type ResetPasswordPayload = {
+  token: string;
+  new_password: string;
+};
+
+export type MessageResponse = {
+  detail: string;
 };
