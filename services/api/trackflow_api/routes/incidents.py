@@ -17,7 +17,7 @@ from trackflow_api.models import (
 )
 
 router = APIRouter(
-    prefix="/incidents",
+    prefix="/api/incidents",
     tags=["incidents"],
     dependencies=[Depends(get_current_user)],
 )
