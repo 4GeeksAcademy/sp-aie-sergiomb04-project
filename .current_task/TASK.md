@@ -1,64 +1,45 @@
 ## Objetivo
 
-Implementar un **Gestor de Incidencias Centralizado** sobre el monorepo existente. Leer primero `CONTEXT-company.md` y usar exactamente sus categorías, sedes y valores.
-
-### Backend
-
-* Crear el modelo `Incident` con los campos:
-
-  * `id`
-  * `title`
-  * `description`
-  * `category`
-  * `status`
-  * `origin`
-  * `branch`
-  * `created_at`
-  * `updated_at`
-* Validar campos obligatorios y enums:
-
-  * `status`: `open`, `in_progress`, `resolved`, `discarded`
-  * `origin`: `customer`, `branch`, `internal`
-  * `category`: según `CONTEXT-company.md`
-* Crear `scripts/seed_incidents.py`:
-
-  * Importar el CSV del proyecto anterior.
-  * Asignar `origin="customer"` a todos los registros.
-  * Reutilizar validaciones desde `packages/shared`.
-  * Ignorar y reportar registros inválidos.
-  * Ser idempotente (no duplicar datos).
-* Implementar endpoints:
-
-  * `POST /api/incidents`
-  * `GET /api/incidents` (filtros: `status`, `origin`, `branch`, `category`)
-  * `GET /api/incidents/{id}`
-  * `PATCH /api/incidents/{id}/status`
-  * `GET /api/incidents/summary`
-* Validar transiciones de estado:
-
-  * `open → in_progress | discarded`
-  * `in_progress → resolved | discarded`
-  * `resolved` y `discarded` son estados finales.
-* Manejo de errores:
-
-  * `400` con `{ field, message }` para validaciones.
-  * `404` si no existe.
-  * `500` genérico, nunca devolver stack trace.
-  * Si no hay datos, devolver listas vacías o métricas en `0`.
+Auditar todo el monorepo y aplicar una estrategia consistente de gestión de errores en frontend, backend y scripts, sin añadir nuevas funcionalidades.
 
 ### Frontend
 
-* Crear página de registro de incidencias.
-* Formulario con todos los campos; `branch` obligatorio y siempre visible.
-* Resaltar `branch` cuando `origin="branch"`.
-* Mostrar loading y deshabilitar el botón al enviar.
-* Mostrar errores amigables y por campo.
-* Limpiar el formulario y mostrar confirmación tras guardar.
-* Crear listado con filtros (`status`, `origin`, `branch`), loading, estado vacío, reintento si falla y actualización de estado con rollback visual si falla.
-* Crear panel de resumen consumiendo `/summary`, con loading y manejo de errores sin romper la UI.
+* Revisar todos los `fetch`/llamadas a la API y añadir `try/catch` específicos.
+* Implementar el patrón de 3 estados en todas las operaciones asíncronas:
+
+  * Loading.
+  * Éxito.
+  * Error con llamada a la acción (reintentar, volver al inicio o contactar soporte).
+* Reemplazar errores técnicos por mensajes amigables.
+* Usar `finally` para limpiar siempre el estado de carga.
+* Aplicar `optional chaining (?.)` donde pueda haber `undefined`.
+* Añadir valores por defecto (`fallbacks`) para `null` o `undefined`.
+
+### Backend
+
+* Revisar todos los endpoints y limitar los `try/except` a operaciones concretas.
+* Devolver respuestas HTTP correctas (`400`, `404`, `422`, `500`) con JSON limpio.
+* No exponer stack traces, rutas internas, claves ni información sensible.
+* Añadir manejo de errores en llamadas a APIs externas o servicios de terceros.
+
+### Scripts
+
+* Proteger lectura/escritura de archivos y parseo de CSV con `try/except`.
+* Mostrar errores informativos en `stderr`.
+* Finalizar con `sys.exit(1)` ante errores críticos.
+* Validar datos de entrada antes de procesarlos.
+
+### General
+
+* Eliminar o reemplazar `console.error` y `print` que expongan información sensible.
+* No añadir funcionalidades nuevas ni hacer refactors fuera del manejo de errores.
 
 ### Requisitos
 
-* Reutilizar toda la lógica de validación en `packages/shared`.
-* Mantener la estructura del monorepo (`scripts/`, `services/`, `uis/`, `packages/shared/`).
-* No inventar categorías ni sedes: usar exactamente las definidas en `CONTEXT-company.md`.
+* Todas las operaciones asíncronas deben tener estados de carga, éxito y error.
+* Todos los errores mostrados al usuario deben ser claros y ofrecer una acción.
+* Los `try/catch` y `try/except` deben ser específicos, no envolver funciones completas.
+* Usar `finally` para limpiar estados de carga.
+* Evitar errores por `undefined` usando `?.` y valores por defecto.
+* Todas las respuestas de error del backend deben ser limpias y seguras.
+* Los scripts deben devolver un código de salida distinto de `0` cuando fallen.
