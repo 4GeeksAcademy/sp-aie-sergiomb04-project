@@ -355,7 +355,7 @@ class Incident(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 
 class IncidentSummary(BaseModel):
