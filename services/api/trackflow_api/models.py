@@ -271,3 +271,111 @@ def supplier_record_from_create(payload: SupplierCreate) -> Supplier:
         updated_at=now_utc(),
         **data,
     )
+
+
+# ─── Incident Models ───────────────────────────────────────────────────────────
+
+class IncidentStatusEnum(StrEnum):
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    RESOLVED = "resolved"
+    DISCARDED = "discarded"
+
+
+class IncidentOriginEnum(StrEnum):
+    CUSTOMER = "customer"
+    BRANCH = "branch"
+    INTERNAL = "internal"
+
+
+INCIDENT_CATEGORIES = [
+    "carrier_last_mile",
+    "carrier_international",
+    "warehouse_operations",
+    "reverse_logistics",
+    "customer_experience",
+    "commercial",
+    "technology",
+    "executive",
+]
+
+INCIDENT_BRANCHES = ["los_angeles", "zaragoza"]
+
+STATUS_TRANSITIONS: dict[IncidentStatusEnum, list[IncidentStatusEnum]] = {
+    IncidentStatusEnum.OPEN: [IncidentStatusEnum.IN_PROGRESS, IncidentStatusEnum.DISCARDED],
+    IncidentStatusEnum.IN_PROGRESS: [IncidentStatusEnum.RESOLVED, IncidentStatusEnum.DISCARDED],
+    IncidentStatusEnum.RESOLVED: [],
+    IncidentStatusEnum.DISCARDED: [],
+}
+
+
+class IncidentCreate(BaseModel):
+    title: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    category: str = Field(min_length=1)
+    status: IncidentStatusEnum = IncidentStatusEnum.OPEN
+    origin: IncidentOriginEnum
+    branch: str = Field(min_length=1)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("category")
+    @classmethod
+    def _validate_category(cls, value: str) -> str:
+        if value not in INCIDENT_CATEGORIES:
+            raise ValueError(
+                f"Categoria invalida. Debe ser una de: {', '.join(INCIDENT_CATEGORIES)}"
+            )
+        return value
+
+    @field_validator("branch")
+    @classmethod
+    def _validate_branch(cls, value: str) -> str:
+        if value not in INCIDENT_BRANCHES:
+            raise ValueError(
+                f"Sede invalida. Debe ser una de: {', '.join(INCIDENT_BRANCHES)}"
+            )
+        return value
+
+
+class IncidentStatusUpdate(BaseModel):
+    status: IncidentStatusEnum
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class Incident(BaseModel):
+    id: str
+    title: str
+    description: str
+    category: str
+    status: IncidentStatusEnum
+    origin: IncidentOriginEnum
+    branch: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class IncidentSummary(BaseModel):
+    total: int
+    by_status: dict[str, int]
+    by_category: dict[str, int]
+    by_origin: dict[str, int]
+    by_branch: dict[str, int]
+
+
+def incident_record_from_create(payload: IncidentCreate) -> Incident:
+    now = now_utc()
+    return Incident(
+        id=str(uuid4()),
+        title=payload.title.strip(),
+        description=payload.description.strip(),
+        category=payload.category,
+        status=payload.status,
+        origin=payload.origin,
+        branch=payload.branch,
+        created_at=now,
+        updated_at=now,
+    )

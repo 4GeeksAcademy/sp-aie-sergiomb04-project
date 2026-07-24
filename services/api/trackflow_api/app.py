@@ -7,7 +7,8 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 
 from .auth import get_current_user
@@ -28,6 +29,35 @@ app = FastAPI(
     version="1.0.0",
     description="Backend Python unificado para incidencias y suppliers de TrackFlow.",
 )
+
+
+# ─── Error handlers ────────────────────────────────────────────────────────────
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:
+    errors = exc.errors()
+    field_errors = []
+    for error in errors:
+        field = ".".join(str(loc) for loc in error.get("loc", []))
+        msg = error.get("msg", "Valor invalido")
+        field_errors.append({"field": field, "message": msg})
+    return JSONResponse(status_code=400, content=field_errors[0] if len(field_errors) == 1 else field_errors)
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(_request: Request, exc: HTTPException) -> JSONResponse:
+    content = exc.detail
+    if isinstance(content, str):
+        content = {"detail": content}
+    return JSONResponse(status_code=exc.status_code, content=content)
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(_request: Request, _exc: Exception) -> JSONResponse:
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Error interno del servidor"},
+    )
 
 
 def _cleanup_file(path: str) -> None:
