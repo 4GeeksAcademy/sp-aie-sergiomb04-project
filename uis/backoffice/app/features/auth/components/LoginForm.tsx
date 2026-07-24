@@ -1,14 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import { AuthUser, LoginPayload } from "@/app/features/auth/types/auth";
-
-type LoginError = {
-  detail?: string;
-  error?: string;
-};
+import { login } from "@/app/features/auth/services/auth-api";
+import { LoginPayload } from "@/app/features/auth/types/auth";
 
 const INITIAL_FORM: LoginPayload = {
   email: "",
@@ -26,28 +23,18 @@ export function LoginForm() {
     setError(null);
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(form),
-      });
-
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as LoginError | null;
-        setError(payload?.detail ?? payload?.error ?? "No se pudo iniciar sesion");
-        return;
-      }
-
-      await response.json().catch(() => null as AuthUser | null);
+      await login(form);
 
       startTransition(() => {
         router.push("/");
         router.refresh();
       });
-    } catch {
-      setError("No se pudo conectar con el servicio de autenticacion");
+    } catch (unknownError: unknown) {
+      setError(
+        unknownError instanceof Error
+          ? unknownError.message
+          : "No se pudo conectar con el servicio de autenticacion"
+      );
     }
   };
 
@@ -100,6 +87,20 @@ export function LoginForm() {
       >
         {isPending ? "Accediendo..." : "Iniciar sesión"}
       </button>
+
+      <p className="text-sm text-slate-600">
+        <Link href="/forgot-password" className="font-medium text-slate-900 underline">
+          ¿Olvidaste tu contraseña?
+        </Link>
+      </p>
+
+      <p className="text-sm text-slate-600">
+        ¿No tienes cuenta?{" "}
+        <Link href="/register" className="font-medium text-slate-900 underline">
+          Regístrate aquí
+        </Link>
+      </p>
+
     </form>
   );
 }

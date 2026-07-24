@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import React from "react";
 import { CandidateFilters } from "./CandidateFilters";
 import { CandidatesTable } from "./CandidatesTable";
 import { Candidate, CandidateFilters as CandidateFiltersType } from "@/app/features/candidates/types/candidate";
 import { CandidateForm } from "./CandidateForm";
 import { useCandidatesDashboard } from "@/app/features/candidates/hooks/useCandidatesDashboard";
+import { useAuthSession } from "@/app/features/auth/components/AuthSessionProvider";
 
 type CandidatesDashboardProps = {
   initialCandidates: Candidate[];
@@ -18,6 +20,8 @@ export function CandidatesDashboard({
   initialError,
   initialFilters,
 }: CandidatesDashboardProps) {
+  const { user, logout } = useAuthSession();
+
   const {
     filters,
     setFilters,
@@ -41,6 +45,26 @@ export function CandidatesDashboard({
 
   return (
     <>
+      <div className="mb-4 flex w-full items-center justify-between rounded border border-zinc-200 bg-zinc-50 p-3">
+        <div>
+          <p className="text-sm font-semibold text-zinc-800">{user?.email ?? "Usuario"}</p>
+          <p className="text-xs text-zinc-600">Sesión autenticada</p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Link href="/account/profile" className="text-sm text-blue-700 hover:underline">
+            Mi perfil
+          </Link>
+          <button
+            type="button"
+            onClick={logout}
+            className="rounded border border-zinc-300 px-3 py-1 text-sm"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+
       <div className="mb-6 w-full rounded border border-zinc-200 p-4">
         <button
           type="button"

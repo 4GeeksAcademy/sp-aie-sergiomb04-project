@@ -6,35 +6,10 @@ import {
   CandidateNotesResponse,
   CandidatePayload,
 } from "@/app/features/candidates/types/candidate";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
-if (!API_URL) {
-  throw new Error("NEXT_PUBLIC_API_URL no está definida en .env.local");
-}
+import { authRequest } from "@/app/features/auth/services/auth-api";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
-    cache: "no-store",
-    ...init,
-  });
-
-  if (!res.ok) {
-    const errorBody = await res.text();
-
-    throw new Error(
-      `Error ${res.status}: ${errorBody || res.statusText}`
-    );
-  }
-
-  // Evita intentar parsear JSON vacío
-  const text = await res.text();
-
-  return text ? (JSON.parse(text) as T) : ({} as T);
+  return authRequest<T>(path, init);
 }
 
 export async function fetchCandidates(

@@ -30,6 +30,9 @@ Servicio FastAPI unificado para TrackFlow con dos modulos en un mismo backend:
 - `PUT /profiles/me`
 - `POST /auth/login`
 - `GET /auth/me`
+- `POST /auth/forgot-password`
+- `POST /auth/reset-password`
+- `POST /auth/change-password`
 
 ## Autenticacion
 
@@ -40,6 +43,12 @@ Variables de entorno soportadas:
 - `SECRET_KEY`: clave de firma del JWT
 - `ACCESS_TOKEN_EXPIRE_MINUTES`: expiracion del token en minutos
 - `TRACKFLOW_DB_PATH`: ruta opcional para cambiar el archivo TinyDB
+- `PASSWORD_RESET_EXPIRE_MINUTES`: expiracion del token de recuperacion
+- `PASSWORD_RESET_BASE_URL`: URL base del frontend para construir `/reset-password?token=...`
+- `RESEND_API_KEY`: API key del proveedor de correo Resend
+- `RESEND_FROM_EMAIL`: remitente verificado en Resend
+
+Ejemplo de configuracion en `services/api/.env.example`.
 
 ## Ejecutar con Pipenv
 

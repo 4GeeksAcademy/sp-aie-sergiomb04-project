@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createCandidate, fetchCandidates } from "@/app/features/candidates/services/candidates-api";
 import {
   Candidate,
@@ -117,6 +117,12 @@ export function useCandidatesDashboard({
     setCreateError(null);
     setCreateSuccess(null);
   };
+
+  useEffect(() => {
+    if (initialCandidates.length === 0 && !initialError) {
+      void loadCandidates(normalizeFilters(initialFilters));
+    }
+  }, [initialCandidates.length, initialError, initialFilters, loadCandidates]);
 
   return {
     filters,
