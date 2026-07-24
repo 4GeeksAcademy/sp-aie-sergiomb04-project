@@ -19,5 +19,13 @@ def _resolve_db_path() -> Path:
 
 def get_db() -> TinyDB:
     db_path = _resolve_db_path()
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    return TinyDB(db_path)
+    try:
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+    except PermissionError:
+        raise RuntimeError(f"Permiso denegado para crear directorio: {db_path.parent}")
+    except OSError as error:
+        raise RuntimeError(f"Error al crear directorio de BD: {error}") from error
+    try:
+        return TinyDB(db_path)
+    except Exception as error:
+        raise RuntimeError(f"Error al abrir la base de datos: {error}") from error

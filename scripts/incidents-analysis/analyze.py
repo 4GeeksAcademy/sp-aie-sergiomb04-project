@@ -157,17 +157,21 @@ def main() -> int:
 
     csv_path = Path(args.csv_path).resolve()
     if not csv_path.exists() or not csv_path.is_file():
-        print(f"Error: CSV file not found: {csv_path}")
+        print(f"Error: CSV no encontrado: {csv_path}", file=sys.stderr)
         return 1
 
     try:
         result = analyze_csv(csv_path)
     except Exception as error:  # pragma: no cover - terminal entrypoint
-        print(f"Error while analyzing CSV: {error}")
+        print(f"Error al analizar CSV: {error}", file=sys.stderr)
         return 1
 
     if args.export_path:
-        write_export_csv(result, Path(args.export_path).resolve())
+        try:
+            write_export_csv(result, Path(args.export_path).resolve())
+        except Exception as error:
+            print(f"Error al exportar CSV: {error}", file=sys.stderr)
+            return 1
 
     if args.verify_context:
         result_payload = result.to_dict()
@@ -190,11 +194,20 @@ def main() -> int:
     if args.no_prompt:
         return 0
 
-    answer = input("Export results to CSV? [y / n]: ").strip().lower()
+    try:
+        answer = input("Export results to CSV? [y / n]: ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        print("\nOperacion cancelada.", file=sys.stderr)
+        return 1
+
     if answer == "y":
         destination = Path("incidents-analysis-results.csv").resolve()
-        write_export_csv(result, destination)
-        print(f"Exported CSV to: {destination}")
+        try:
+            write_export_csv(result, destination)
+            print(f"CSV exportado a: {destination}")
+        except Exception as error:
+            print(f"Error al exportar CSV: {error}", file=sys.stderr)
+            return 1
 
     return 0
 

@@ -199,11 +199,21 @@ def main() -> None:
             print(f"  - {s}")
 
     # Insert into database (idempotent)
-    db = get_db()
-    table = db.table(INCIDENTS_TABLE)
+    try:
+        db = get_db()
+        table = db.table(INCIDENTS_TABLE)
+    except Exception as e:
+        print(f"Error al conectar con la base de datos: {e}", file=sys.stderr)
+        sys.exit(1)
 
     # Build set of existing CSV IDs (we store them in a helper field for idempotency)
-    existing_records = table.all()
+    try:
+        existing_records = table.all()
+    except Exception as e:
+        print(f"Error al leer registros existentes: {e}", file=sys.stderr)
+        db.close()
+        sys.exit(1)
+
     existing_csv_ids: set[str] = set()
     for rec in existing_records:
         csv_id = rec.get("_csv_id", "")
@@ -235,7 +245,12 @@ def main() -> None:
 
         record_data = incident.model_dump(mode="json")
         record_data["_csv_id"] = mapped["csv_id"]  # Store CSV ID for idempotency
-        table.insert(record_data)
+        try:
+            table.insert(record_data)
+        except Exception as e:
+            print(f"Error al insertar incidencia {mapped['csv_id']}: {e}", file=sys.stderr)
+            db.close()
+            sys.exit(1)
         inserted += 1
 
     db.close()
