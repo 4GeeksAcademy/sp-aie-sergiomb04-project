@@ -141,8 +141,21 @@ def validate_row(row: Dict[str, str]) -> List[str]:
 
 
 def read_csv_rows(csv_path: Path) -> List[Dict[str, str]]:
-    with csv_path.open("r", encoding="utf-8", newline="") as handle:
-        reader = csv.DictReader(handle)
+    try:
+        handle = csv_path.open("r", encoding="utf-8", newline="")
+    except FileNotFoundError:
+        raise ValueError(f"Archivo CSV no encontrado: {csv_path}")
+    except PermissionError:
+        raise ValueError(f"Permiso denegado al leer: {csv_path}")
+    except Exception as error:
+        raise ValueError(f"Error al abrir CSV: {error}") from error
+
+    with handle:
+        try:
+            reader = csv.DictReader(handle)
+        except Exception as error:
+            raise ValueError(f"Error al leer CSV como diccionario: {error}") from error
+
         if reader.fieldnames is None:
             raise ValueError("El CSV no contiene encabezados")
 
@@ -153,8 +166,11 @@ def read_csv_rows(csv_path: Path) -> List[Dict[str, str]]:
             )
 
         rows: List[Dict[str, str]] = []
-        for row in reader:
-            rows.append({key: normalize(value) for key, value in row.items()})
+        try:
+            for row in reader:
+                rows.append({key: normalize(value) for key, value in row.items()})
+        except Exception as error:
+            raise ValueError(f"Error al leer fila del CSV: {error}") from error
         return rows
 
 

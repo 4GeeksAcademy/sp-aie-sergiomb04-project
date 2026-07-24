@@ -45,9 +45,8 @@ export async function POST(request: Request): Promise<Response> {
 
     const data = await upstreamResponse.json();
     return Response.json(data, { status: 201 });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Error interno";
-    return Response.json({ detail: message }, { status: 500 });
+  } catch {
+    return Response.json({ detail: "Error interno del servidor" }, { status: 500 });
   }
 }
 
@@ -77,8 +76,7 @@ export async function GET(request: Request): Promise<Response> {
 
     const data = await upstreamResponse.json();
     return Response.json(data, { status: 200 });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Error interno";
-    return Response.json({ detail: message }, { status: 500 });
+  } catch {
+    return Response.json({ detail: "Error interno del servidor" }, { status: 500 });
   }
 }

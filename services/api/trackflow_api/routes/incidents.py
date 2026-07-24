@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from tinydb import Query as TinyQuery
 from tinydb.table import Table
@@ -36,9 +38,13 @@ def _read_by_id(db, incident_id: str) -> dict | None:
 
 @router.post("", response_model=Incident, status_code=status.HTTP_201_CREATED)
 def create_incident(payload: IncidentCreate) -> Incident:
-    db = get_db()
     incident = incident_record_from_create(payload)
-    _get_table(db).insert(incident.model_dump(mode="json"))
+    try:
+        db = get_db()
+        _get_table(db).insert(incident.model_dump(mode="json"))
+    except Exception as error:
+        db.close()
+        raise HTTPException(status_code=500, detail="Error interno al crear incidencia") from error
     db.close()
     return incident
 
@@ -50,8 +56,12 @@ def list_incidents(
     branch: str | None = Query(default=None),
     category: str | None = Query(default=None),
 ) -> list[Incident]:
-    db = get_db()
-    records = _get_table(db).all()
+    try:
+        db = get_db()
+        records = _get_table(db).all()
+    except Exception as error:
+        db.close()
+        raise HTTPException(status_code=500, detail="Error interno al listar incidencias") from error
     db.close()
 
     if status is not None:
@@ -68,8 +78,12 @@ def list_incidents(
 
 @router.get("/summary", response_model=IncidentSummary, status_code=status.HTTP_200_OK)
 def get_incidents_summary() -> IncidentSummary:
-    db = get_db()
-    records = _get_table(db).all()
+    try:
+        db = get_db()
+        records = _get_table(db).all()
+    except Exception as error:
+        db.close()
+        raise HTTPException(status_code=500, detail="Error interno al obtener resumen") from error
     db.close()
 
     total = len(records)
@@ -102,8 +116,12 @@ def get_incidents_summary() -> IncidentSummary:
 
 @router.get("/{incident_id}", response_model=Incident, status_code=status.HTTP_200_OK)
 def get_incident(incident_id: str) -> Incident:
-    db = get_db()
-    record = _read_by_id(db, incident_id)
+    try:
+        db = get_db()
+        record = _read_by_id(db, incident_id)
+    except Exception as error:
+        db.close()
+        raise HTTPException(status_code=500, detail="Error interno al obtener incidencia") from error
     db.close()
 
     if record is None:
@@ -114,8 +132,12 @@ def get_incident(incident_id: str) -> Incident:
 
 @router.patch("/{incident_id}/status", response_model=Incident, status_code=status.HTTP_200_OK)
 def patch_incident_status(incident_id: str, payload: IncidentStatusUpdate) -> Incident:
-    db = get_db()
-    record = _read_by_id(db, incident_id)
+    try:
+        db = get_db()
+        record = _read_by_id(db, incident_id)
+    except Exception as error:
+        db.close()
+        raise HTTPException(status_code=500, detail="Error interno al acceder a la base de datos") from error
 
     if record is None:
         db.close()
@@ -138,15 +160,15 @@ def patch_incident_status(incident_id: str, payload: IncidentStatusUpdate) -> In
             },
         )
 
-    from datetime import datetime, timezone
-
-    from datetime import datetime, timezone
-
-    _get_table(db).update(
-        {"status": new_status.value, "updated_at": datetime.now(timezone.utc).isoformat()},
-        _INCIDENT_QUERY.id == incident_id,
-    )
-    updated_record = _read_by_id(db, incident_id)
+    try:
+        _get_table(db).update(
+            {"status": new_status.value, "updated_at": datetime.now(timezone.utc).isoformat()},
+            _INCIDENT_QUERY.id == incident_id,
+        )
+        updated_record = _read_by_id(db, incident_id)
+    except Exception as error:
+        db.close()
+        raise HTTPException(status_code=500, detail="Error interno al actualizar estado") from error
     db.close()
 
     if updated_record is None:
