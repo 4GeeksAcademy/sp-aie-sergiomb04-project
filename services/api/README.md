@@ -50,12 +50,12 @@ Variables de entorno soportadas:
 
 Ejemplo de configuracion en `services/api/.env.example`.
 
-## Ejecutar con Pipenv
+## Ejecutar con uv
 
 ```bash
 cd services/api
-PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv sync --dev
-PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv run dev
+uv sync
+uv run uvicorn trackflow_api.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 El servicio quedara disponible en `http://localhost:8000`.
@@ -64,16 +64,16 @@ El servicio quedara disponible en `http://localhost:8000`.
 
 ```bash
 # Levantar en modo desarrollo (reload)
-PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv run dev
+uv run uvicorn trackflow_api.main:app --reload --host 0.0.0.0 --port 8000
 
 # Levantar en modo normal
-PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv run start
+uv run uvicorn trackflow_api.main:app --host 0.0.0.0 --port 8000
 
 # Ejecutar un comando Python dentro del entorno
-PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv run python -c "from trackflow_api.main import app; print(app.title)"
+uv run python -c "from trackflow_api.main import app; print(app.title)"
 
 # Ejecutar seeder de suppliers
-PIPENV_IGNORE_VIRTUALENVS=1 PIPENV_VENV_IN_PROJECT=1 pipenv run python -m trackflow_api.seed
+uv run python -m trackflow_api.seed
 
 # Crear un usuario (si faltan argumentos, se pediran por terminal)
 uv run create-user \
@@ -120,8 +120,18 @@ curl -X POST "http://localhost:8000/auth/login" \
   -d '{"email": "ops@trackflow.test", "password": "Secret123"}'
 ```
 
+## Tests
+
+```bash
+# Ejecutar tests
+uv run pytest
+
+# Ejecutar tests con cobertura
+uv run pytest --cov
+```
+
 ## Notas
 
 - El servicio usa la misma validacion y calculo de metricas del script en `scripts/incidents-analysis/domain`.
 - Si no hay analisis previo, el endpoint de export devuelve `404`.
-- `PIPENV_IGNORE_VIRTUALENVS=1` evita que Pipenv reutilice un entorno activo del shell.
+- Gestion de entorno via `uv` — no requiere configuracion adicional de virtualenv.
