@@ -1,23 +1,32 @@
 from __future__ import annotations
 
 import os
+
 from collections.abc import Generator
 from pathlib import Path
 from typing import Final
 
+from dotenv import load_dotenv
 from sqlmodel import Session, SQLModel, create_engine
 from tinydb import TinyDB
 
 _DATA_DIR: Final[Path] = Path(__file__).resolve().parent / "data"
+_API_ROOT_DIR: Final[Path] = Path(__file__).resolve().parents[1]
+_ENV_FILE_PATH: Final[Path] = _API_ROOT_DIR / ".env"
 _TINY_DB_PATH: Final[Path] = _DATA_DIR / "suppliers.json"
 _INVENTORY_SQLITE_PATH: Final[Path] = _DATA_DIR / "inventory.db"
 _inventory_engine = None
 _inventory_engine_url = ""
 
+load_dotenv(dotenv_path=_ENV_FILE_PATH, override=False)
+
 
 def _resolve_inventory_database_url() -> str:
     configured_url = os.getenv("DATABASE_URL")
     if configured_url:
+        # Normaliza esquemas de Postgres al driver instalado (psycopg v3).
+        if configured_url.startswith("postgresql+psycopg2://"):
+            return configured_url.replace("postgresql+psycopg2://", "postgresql+psycopg://", 1)
         if configured_url.startswith("postgresql://") and "+" not in configured_url.split("://", 1)[0]:
             return configured_url.replace("postgresql://", "postgresql+psycopg://", 1)
         return configured_url
@@ -67,6 +76,5 @@ def init_inventory_db() -> None:
 
 
 def get_db() -> Generator[Session, None, None]:
-    init_inventory_db()
     with Session(get_inventory_engine()) as session:
         yield session
