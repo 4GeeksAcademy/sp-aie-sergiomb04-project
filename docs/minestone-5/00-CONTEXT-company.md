@@ -1,8 +1,6 @@
 # CONTEXT — Hito 5: Gestión de Inventario Backend
 ## Empresa: TrackFlow
 
-**Ruta:** `05-backend-inventory-orm/CONTEXT-trackflow.es.md`
-
 ---
 
 ## Tu Empresa

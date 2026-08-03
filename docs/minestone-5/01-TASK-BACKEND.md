@@ -4,7 +4,7 @@ Completa íntegramente el Hito 5 de backend implementando un sistema de gestión
 
 ## Requisitos obligatorios
 
-- Lee `./00-CONTEXT-company.md` antes de crear modelos, schemas o endpoints y adapta entidades, campos y restricciones exactamente a ese contexto.
+- Lee [00-CONTEXT-company.md](00-CONTEXT-company.md) antes de crear modelos, schemas o endpoints y adapta entidades, campos y restricciones exactamente a ese contexto.
 - Mantén TinyDB exclusivamente para autenticación y usuarios.
 - Implementa una segunda conexión a Supabase/PostgreSQL mediante SQLModel para todo el dominio de inventario.
 - Nunca mezcles datos de negocio en TinyDB ni usuarios en Supabase.
@@ -98,4 +98,4 @@ Comprueba que:
 - Las órdenes almacenan `user_uuid`.
 - Los modelos ORM y los schemas están separados.
 - Todas las sesiones SQLModel se crean mediante `Depends()`.
-- Los nombres de entidades y campos coinciden exactamente con `CONTEXT-company.md`.
+- Los nombres de entidades y campos coinciden exactamente con [00-CONTEXT-company.md](00-CONTEXT-company.md).

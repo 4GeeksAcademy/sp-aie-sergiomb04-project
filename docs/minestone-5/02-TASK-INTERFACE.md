@@ -4,7 +4,7 @@ Completa íntegramente el Hito 5 del backoffice implementando una interfaz de ge
 
 ## Requisitos obligatorios
 
-- Lee `./00-CONTEXT-company.md` antes de crear componentes y utiliza exactamente las entidades, nombres de campos, etiquetas y vocabulario definidos allí.
+- Lee [00-CONTEXT-company.md](00-CONTEXT-company.md) antes de crear componentes y utiliza exactamente las entidades, nombres de campos, etiquetas y vocabulario definidos allí.
 - Trabaja sobre `uis/backoffice`, no crees una aplicación nueva.
 - Toda la información debe consumirse desde la API del backend; no uses datos simulados.
 
@@ -113,4 +113,4 @@ Comprueba que:
 - Los errores HTTP 400 del backend se muestran claramente al usuario.
 - El historial muestra todas las órdenes con producto, cantidad, tipo, fecha y `user_uuid`.
 - Todas las rutas están protegidas.
-- Los nombres de entidades, campos y etiquetas coinciden exactamente con `CONTEXT-company.md`.
+- Los nombres de entidades, campos y etiquetas coinciden exactamente con [00-CONTEXT-company.md](00-CONTEXT-company.md).
