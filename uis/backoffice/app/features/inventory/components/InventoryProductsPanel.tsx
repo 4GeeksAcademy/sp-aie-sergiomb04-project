@@ -21,6 +21,18 @@ function getStockVisualState(stock: number): { label: string; className: string 
   };
 }
 
+const categoryMap: Record<string, string> = {
+  fashion: 'Moda y Accesorios',
+  electronics: 'Electrónica',
+  cosmetics: 'Cosméticos',
+  home: 'Hogar y Decoración',
+  other: 'Otros'
+};
+
+const getCategoryLabel = (categoryKey: string): string => {
+  return categoryMap[categoryKey] || `Sin categoría (${categoryKey})`;
+};
+
 export function InventoryProductsPanel() {
   const [products, setProducts] = useState<InventoryProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -90,13 +102,13 @@ export function InventoryProductsPanel() {
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-left text-slate-700">
               <tr>
-                <th className="px-4 py-3 font-semibold">id</th>
-                <th className="px-4 py-3 font-semibold">name</th>
-                <th className="px-4 py-3 font-semibold">sku</th>
-                <th className="px-4 py-3 font-semibold">client_name</th>
-                <th className="px-4 py-3 font-semibold">category</th>
-                <th className="px-4 py-3 font-semibold">warehouse</th>
-                <th className="px-4 py-3 font-semibold">current_stock</th>
+                <th className="px-4 py-3 font-semibold">Identificador</th>
+                <th className="px-4 py-3 font-semibold">SKU</th>
+                <th className="px-4 py-3 font-semibold">Nombre</th>
+                <th className="px-4 py-3 font-semibold">Cliente</th>
+                <th className="px-4 py-3 font-semibold">Categoría</th>
+                <th className="px-4 py-3 font-semibold">Almacén</th>
+                <th className="px-4 py-3 font-semibold">Stock actual</th>
                 <th className="px-4 py-3 font-semibold">Acciones</th>
               </tr>
             </thead>
@@ -107,15 +119,15 @@ export function InventoryProductsPanel() {
                 return (
                   <tr key={product.id}>
                     <td className="px-4 py-3 text-slate-700">{product.id}</td>
-                    <td className="px-4 py-3 text-slate-900">{product.name}</td>
                     <td className="px-4 py-3 font-mono text-xs text-slate-700">{product.sku}</td>
+                    <td className="px-4 py-3 text-slate-900">{product.name}</td>
                     <td className="px-4 py-3 text-slate-700">{product.client_name}</td>
-                    <td className="px-4 py-3 text-slate-700">{product.category}</td>
+                    <td className="px-4 py-3 text-slate-700">{getCategoryLabel(product.category)}</td>
                     <td className="px-4 py-3 text-slate-700">{product.warehouse}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-slate-900">{product.current_stock}</span>
-                        <span className={`rounded-full border px-2 py-1 text-xs font-medium ${stockVisual.className}`}>
+                        <span className={`rounded-full border px-2 py-1 text-xs font-medium whitespace-nowrap shrink-0 ${stockVisual.className}`}>
                           {stockVisual.label}
                         </span>
                       </div>
