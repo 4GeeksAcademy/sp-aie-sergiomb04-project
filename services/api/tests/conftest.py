@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from trackflow_api.auth import get_password_hash
-from trackflow_api.database import get_db
+from trackflow_api.database import get_tinydb
 from trackflow_api.main import app
 
 
@@ -24,6 +24,7 @@ def db_path(tmp_path: Path) -> Path:
 @pytest.fixture
 def monkeypatch_env(monkeypatch: pytest.MonkeyPatch, db_path: Path) -> None:
     monkeypatch.setenv("TRACKFLOW_DB_PATH", str(db_path))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path.parent / 'trackflow-inventory-test.db'}")
     monkeypatch.setenv("SECRET_KEY", "test-secret")
     monkeypatch.setenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
 
@@ -64,7 +65,7 @@ def created_user(monkeypatch_env: None, client: TestClient) -> dict:
 @pytest.fixture
 def admin_token(monkeypatch_env: None, client: TestClient) -> str:
     """Create an admin user directly in DB and return a token."""
-    db = get_db()
+    db = get_tinydb()
     db.table("users").insert(
         {
             "id": "admin-1",

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from tinydb import Query as TinyQuery
 
 from trackflow_api.auth import get_current_user
-from trackflow_api.database import get_db
+from trackflow_api.database import get_tinydb
 from trackflow_api.models import (
     Supplier,
     SupplierCategory,
@@ -32,7 +32,7 @@ def _read_supplier_by_id(db, supplier_id: str) -> dict | None:
 def create_supplier(payload: SupplierCreate) -> Supplier:
     supplier = supplier_record_from_create(payload)
     try:
-        db = get_db()
+        db = get_tinydb()
         db.insert(supplier.model_dump(mode="json"))
     except Exception as error:
         db.close()
@@ -47,7 +47,7 @@ def list_suppliers(
     category: SupplierCategory | None = Query(default=None),
 ) -> list[Supplier]:
     try:
-        db = get_db()
+        db = get_tinydb()
         records = db.all()
     except Exception as error:
         db.close()
@@ -70,7 +70,7 @@ def list_suppliers(
 @router.get("/{supplier_id}", response_model=Supplier, status_code=status.HTTP_200_OK)
 def get_supplier(supplier_id: str) -> Supplier:
     try:
-        db = get_db()
+        db = get_tinydb()
         record = _read_supplier_by_id(db, supplier_id)
     except Exception as error:
         db.close()
@@ -86,7 +86,7 @@ def get_supplier(supplier_id: str) -> Supplier:
 @router.patch("/{supplier_id}/rate", response_model=Supplier, status_code=status.HTTP_200_OK)
 def patch_supplier_rate(supplier_id: str, payload: SupplierRateUpdate) -> Supplier:
     try:
-        db = get_db()
+        db = get_tinydb()
         record = _read_supplier_by_id(db, supplier_id)
     except Exception as error:
         db.close()
@@ -117,7 +117,7 @@ def patch_supplier_rate(supplier_id: str, payload: SupplierRateUpdate) -> Suppli
 @router.patch("/{supplier_id}/status", response_model=Supplier, status_code=status.HTTP_200_OK)
 def patch_supplier_status(supplier_id: str, payload: SupplierStatusUpdate) -> Supplier:
     try:
-        db = get_db()
+        db = get_tinydb()
         record = _read_supplier_by_id(db, supplier_id)
     except Exception as error:
         db.close()
@@ -144,7 +144,7 @@ def patch_supplier_status(supplier_id: str, payload: SupplierStatusUpdate) -> Su
 @router.delete("/{supplier_id}", status_code=status.HTTP_200_OK)
 def delete_supplier(supplier_id: str) -> dict[str, str]:
     try:
-        db = get_db()
+        db = get_tinydb()
         record = _read_supplier_by_id(db, supplier_id)
     except Exception as error:
         db.close()

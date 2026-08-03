@@ -6,6 +6,8 @@ from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
+from sqlmodel import Field as SQLField
+from sqlmodel import SQLModel
 
 VALID_CATEGORIES = [
     "carrier_last_mile",
@@ -434,3 +436,46 @@ def incident_record_from_create(payload: IncidentCreate) -> Incident:
         created_at=now,
         updated_at=now,
     )
+
+
+# ─── Inventory ORM Models (SQLModel) ──────────────────────────────────────────
+
+INVENTORY_CATEGORIES = ["fashion", "electronics", "cosmetics"]
+INVENTORY_WAREHOUSES = ["LA", "ZGZ"]
+STOCK_EXIT_TYPES = ["dispatch", "loss"]
+
+
+class Product(SQLModel, table=True):
+    __tablename__ = "products"
+
+    id: int | None = SQLField(default=None, primary_key=True)
+    name: str
+    sku: str = SQLField(index=True, unique=True)
+    client_name: str
+    category: str = SQLField(index=True)
+    warehouse: str = SQLField(index=True)
+
+
+class InboundOrder(SQLModel, table=True):
+    __tablename__ = "inbound_orders"
+
+    id: int | None = SQLField(default=None, primary_key=True)
+    sku_id: int = SQLField(foreign_key="products.id", index=True)
+    quantity: int = SQLField(gt=0)
+    reference: str
+    warehouse: str = SQLField(index=True)
+    created_at: datetime = SQLField(default_factory=now_utc, index=True)
+    user_uuid: str = SQLField(index=True)
+
+
+class OutboundOrder(SQLModel, table=True):
+    __tablename__ = "outbound_orders"
+
+    id: int | None = SQLField(default=None, primary_key=True)
+    sku_id: int = SQLField(foreign_key="products.id", index=True)
+    quantity: int = SQLField(gt=0)
+    exit_type: str = SQLField(index=True)
+    tracking_number: str | None = None
+    warehouse: str = SQLField(index=True)
+    created_at: datetime = SQLField(default_factory=now_utc, index=True)
+    user_uuid: str = SQLField(index=True)

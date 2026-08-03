@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from tinydb import Query as TinyQuery
 
 from trackflow_api.auth import create_access_token, get_current_user, get_password_hash, verify_password
-from trackflow_api.database import get_db
+from trackflow_api.database import get_tinydb
 from trackflow_api.models import (
     AuthMeResponse,
     ChangePasswordRequest,
@@ -41,7 +41,7 @@ _PASSWORD_RESET_QUERY = TinyQuery()
 @router.post("/login", response_model=TokenResponse, status_code=status.HTTP_200_OK)
 def login(payload: LoginRequest) -> TokenResponse:
     try:
-        db = get_db()
+        db = get_tinydb()
         user_record = get_user_record_by_email(db, str(payload.email))
     except Exception as error:
         db.close()
@@ -64,7 +64,7 @@ def login(payload: LoginRequest) -> TokenResponse:
 @router.get("/me", response_model=AuthMeResponse, status_code=status.HTTP_200_OK)
 def get_auth_me(current_user: UserRecord = Depends(get_current_user)) -> AuthMeResponse:
     try:
-        db = get_db()
+        db = get_tinydb()
         profile_record = get_profile_record_by_user_id(db, current_user.id)
     except Exception as error:
         db.close()
@@ -83,7 +83,7 @@ def get_auth_me(current_user: UserRecord = Depends(get_current_user)) -> AuthMeR
 
 @router.post("/forgot-password", response_model=MessageResponse, status_code=status.HTTP_200_OK)
 def forgot_password(payload: ForgotPasswordRequest) -> MessageResponse:
-    db = get_db()
+    db = get_tinydb()
     user_record = get_user_record_by_email(db, str(payload.email))
 
     if user_record is not None:
@@ -109,7 +109,7 @@ def forgot_password(payload: ForgotPasswordRequest) -> MessageResponse:
 
 @router.post("/reset-password", response_model=MessageResponse, status_code=status.HTTP_200_OK)
 def reset_password(payload: ResetPasswordRequest) -> MessageResponse:
-    db = get_db()
+    db = get_tinydb()
     token_hash = hash_password_reset_token(payload.token)
     token_record_raw = get_password_reset_token_by_hash(db, token_hash)
 
@@ -145,7 +145,7 @@ def change_password(
     payload: ChangePasswordRequest,
     current_user: UserRecord = Depends(get_current_user),
 ) -> MessageResponse:
-    db = get_db()
+    db = get_tinydb()
     user_record = get_user_record_by_email(db, str(current_user.email))
 
     if user_record is None:

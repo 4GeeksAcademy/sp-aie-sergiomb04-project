@@ -12,6 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 
 from .auth import get_current_user
+from .database import init_inventory_db
 from .models import UserRecord
 from .store import StoredAnalysis, get_latest_analysis, set_latest_analysis
 
@@ -29,6 +30,11 @@ app = FastAPI(
     version="1.0.0",
     description="Backend Python unificado para incidencias y suppliers de TrackFlow.",
 )
+
+
+@app.on_event("startup")
+def startup_inventory_database() -> None:
+    init_inventory_db()
 
 
 # ─── Error handlers ────────────────────────────────────────────────────────────
