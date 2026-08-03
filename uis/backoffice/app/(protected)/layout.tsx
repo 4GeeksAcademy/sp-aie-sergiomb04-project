@@ -32,6 +32,12 @@ export default async function ProtectedLayout({
               <Link href="/suppliers" className="rounded-lg px-3 py-2 hover:bg-slate-100">
                 Suppliers
               </Link>
+              <Link
+                href="/backoffice/inventory/products"
+                className="rounded-lg px-3 py-2 hover:bg-slate-100"
+              >
+                Inventory
+              </Link>
             </nav>
           </div>
 
@@ -55,6 +61,12 @@ export default async function ProtectedLayout({
           </Link>
           <Link href="/suppliers" className="rounded-lg px-3 py-2 hover:bg-slate-100">
             Suppliers
+          </Link>
+          <Link
+            href="/backoffice/inventory/products"
+            className="rounded-lg px-3 py-2 hover:bg-slate-100"
+          >
+            Inventory
           </Link>
         </nav>
       </header>
