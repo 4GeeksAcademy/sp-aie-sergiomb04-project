@@ -114,5 +114,3 @@ Comprueba que:
 - El historial muestra todas las órdenes con producto, cantidad, tipo, fecha y `user_uuid`.
 - Todas las rutas están protegidas.
 - Los nombres de entidades, campos y etiquetas coinciden exactamente con `CONTEXT-company.md`.
-```
-
