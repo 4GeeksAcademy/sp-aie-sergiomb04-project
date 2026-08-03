@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from trackflow_api.auth import create_access_token, get_password_hash
-from trackflow_api.database import get_db
+from trackflow_api.database import get_tinydb
 
 
 class TestLogin:
@@ -98,7 +98,7 @@ class TestLogin:
 
     def test_login_inactive_user(self, client: TestClient, monkeypatch_env: None) -> None:
         # Create inactive user directly in DB
-        db = get_db()
+        db = get_tinydb()
         db.table("users").insert(
             {
                 "id": "inactive-1",
@@ -190,7 +190,7 @@ class TestAuthMe:
 
     def test_me_inactive_user(self, client: TestClient, monkeypatch_env: None) -> None:
         # Create inactive user
-        db = get_db()
+        db = get_tinydb()
         db.table("users").insert(
             {
                 "id": "inactive-2",
@@ -276,7 +276,7 @@ class TestResetPassword:
         from trackflow_api.repositories import get_password_reset_tokens_table
 
         client.post("/auth/forgot-password", json={"email": email})
-        db = get_db()
+        db = get_tinydb()
         tokens = get_password_reset_tokens_table(db).all()
         db.close()
         if not tokens:
@@ -290,7 +290,7 @@ class TestResetPassword:
         from trackflow_api.repositories import get_password_reset_tokens_table
 
         client.post("/auth/forgot-password", json={"email": email})
-        db = get_db()
+        db = get_tinydb()
         tokens = get_password_reset_tokens_table(db).all()
         db.close()
         if not tokens:
@@ -326,7 +326,7 @@ class TestResetPassword:
         from trackflow_api.models import password_reset_token_record_from_create
         from trackflow_api.repositories import get_user_record_by_email
 
-        db = get_db()
+        db = get_tinydb()
         user = get_user_record_by_email(db, "user@example.com")
         assert user is not None
 
@@ -399,7 +399,7 @@ class TestResetPassword:
         from trackflow_api.models import password_reset_token_record_from_create
         from trackflow_api.repositories import get_user_record_by_email
 
-        db = get_db()
+        db = get_tinydb()
         user = get_user_record_by_email(db, "user@example.com")
         assert user is not None
 
@@ -449,7 +449,7 @@ class TestResetPassword:
         from trackflow_api.models import password_reset_token_record_from_create
         from trackflow_api.repositories import get_user_record_by_email
 
-        db = get_db()
+        db = get_tinydb()
         user = get_user_record_by_email(db, "user@example.com")
         assert user is not None
 

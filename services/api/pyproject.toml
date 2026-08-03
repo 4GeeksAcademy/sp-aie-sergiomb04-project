@@ -14,6 +14,9 @@ dependencies = [
   "uvicorn==0.35.0",
   "python-multipart==0.0.20",
   "tinydb==4.8.2",
+  "sqlmodel==0.0.24",
+  "psycopg==3.2.9",
+  "python-dotenv==1.1.1",
   "python-jose[cryptography]==3.5.0",
   "passlib[bcrypt]==1.7.4",
   "bcrypt==4.0.1",
@@ -29,5 +32,6 @@ dev = [
 
 [project.scripts]
 seed = "trackflow_api.seed:main"
+seed-inventory = "trackflow_api.seed_inventory:main"
 create-user = "trackflow_api.create_user:main"
 create-admin = "trackflow_api.create_admin:main"

@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from trackflow_api.auth import get_password_hash
-from trackflow_api.database import get_db
+from trackflow_api.database import get_tinydb
 
 
 class TestCreateUser:

@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from trackflow_api.auth import get_password_hash
-from trackflow_api.database import get_db
+from trackflow_api.database import get_tinydb
 from trackflow_api.main import app
 
 client = TestClient(app)
@@ -69,7 +69,7 @@ def test_only_admin_can_change_role_and_other_users_are_forbidden(monkeypatch, t
     monkeypatch.setenv("SECRET_KEY", "test-secret")
 
     admin_id = "admin-1"
-    db = get_db()
+    db = get_tinydb()
     db.table("users").insert(
         {
             "id": admin_id,
