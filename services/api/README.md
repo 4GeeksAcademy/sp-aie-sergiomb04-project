@@ -42,7 +42,10 @@ Variables de entorno soportadas:
 
 - `SECRET_KEY`: clave de firma del JWT
 - `ACCESS_TOKEN_EXPIRE_MINUTES`: expiracion del token en minutos
-- `TRACKFLOW_DB_PATH`: ruta opcional para cambiar el archivo TinyDB
+- `TRACKFLOW_SUPPLIERS_DB_PATH`: ruta opcional del TinyDB de proveedores
+- `TRACKFLOW_USERS_DB_PATH`: ruta opcional del TinyDB de usuarios/perfiles/auth
+- `TRACKFLOW_INCIDENTS_DB_PATH`: ruta opcional del TinyDB de incidencias
+- `TRACKFLOW_DB_PATH`: alias legacy (solo suppliers) para compatibilidad hacia atras
 - `PASSWORD_RESET_EXPIRE_MINUTES`: expiracion del token de recuperacion
 - `PASSWORD_RESET_BASE_URL`: URL base del frontend para construir `/reset-password?token=...`
 - `RESEND_API_KEY`: API key del proveedor de correo Resend
