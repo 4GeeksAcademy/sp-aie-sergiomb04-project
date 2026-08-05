@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from tinydb import Query as TinyQuery
 
 from trackflow_api.auth import get_current_user
-from trackflow_api.database import get_tinydb
+from trackflow_api.database import get_users_db
 from trackflow_api.models import ProfileRecord, ProfileUpdate, UserRecord
 from trackflow_api.repositories import get_profile_record_by_user_id, get_profiles_table
 
@@ -15,7 +15,7 @@ _PROFILE_QUERY = TinyQuery()
 @router.get("/me", response_model=ProfileRecord, status_code=status.HTTP_200_OK)
 def get_my_profile(current_user: UserRecord = Depends(get_current_user)) -> ProfileRecord:
     try:
-        db = get_tinydb()
+        db = get_users_db()
         profile_record = get_profile_record_by_user_id(db, current_user.id)
     except Exception as error:
         db.close()
@@ -34,7 +34,7 @@ def update_my_profile(
     current_user: UserRecord = Depends(get_current_user),
 ) -> ProfileRecord:
     try:
-        db = get_tinydb()
+        db = get_users_db()
         profiles_table = get_profiles_table(db)
         existing_profile = get_profile_record_by_user_id(db, current_user.id)
     except Exception as error:

@@ -7,7 +7,7 @@ from tinydb import Query as TinyQuery
 from tinydb.table import Table
 
 from trackflow_api.auth import get_current_user
-from trackflow_api.database import get_tinydb
+from trackflow_api.database import get_incidents_db
 from trackflow_api.models import (
     Incident,
     IncidentCreate,
@@ -40,7 +40,7 @@ def _read_by_id(db, incident_id: str) -> dict | None:
 def create_incident(payload: IncidentCreate) -> Incident:
     incident = incident_record_from_create(payload)
     try:
-        db = get_tinydb()
+        db = get_incidents_db()
         _get_table(db).insert(incident.model_dump(mode="json"))
     except Exception as error:
         db.close()
@@ -57,7 +57,7 @@ def list_incidents(
     category: str | None = Query(default=None),
 ) -> list[Incident]:
     try:
-        db = get_tinydb()
+        db = get_incidents_db()
         records = _get_table(db).all()
     except Exception as error:
         db.close()
@@ -79,7 +79,7 @@ def list_incidents(
 @router.get("/summary", response_model=IncidentSummary, status_code=status.HTTP_200_OK)
 def get_incidents_summary() -> IncidentSummary:
     try:
-        db = get_tinydb()
+        db = get_incidents_db()
         records = _get_table(db).all()
     except Exception as error:
         db.close()
@@ -117,7 +117,7 @@ def get_incidents_summary() -> IncidentSummary:
 @router.get("/{incident_id}", response_model=Incident, status_code=status.HTTP_200_OK)
 def get_incident(incident_id: str) -> Incident:
     try:
-        db = get_tinydb()
+        db = get_incidents_db()
         record = _read_by_id(db, incident_id)
     except Exception as error:
         db.close()
@@ -133,7 +133,7 @@ def get_incident(incident_id: str) -> Incident:
 @router.patch("/{incident_id}/status", response_model=Incident, status_code=status.HTTP_200_OK)
 def patch_incident_status(incident_id: str, payload: IncidentStatusUpdate) -> Incident:
     try:
-        db = get_tinydb()
+        db = get_incidents_db()
         record = _read_by_id(db, incident_id)
     except Exception as error:
         db.close()

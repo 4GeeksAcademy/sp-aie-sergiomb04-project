@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from trackflow_api.auth import get_password_hash
-from trackflow_api.database import get_tinydb
+from trackflow_api.database import get_users_db
 from trackflow_api.main import app
 
 client = TestClient(app)
@@ -14,7 +14,8 @@ def _auth_headers(token: str) -> dict[str, str]:
 
 
 def test_auth_flow_and_protected_routes(monkeypatch, tmp_path) -> None:
-    monkeypatch.setenv("TRACKFLOW_DB_PATH", str(tmp_path / "trackflow-test.json"))
+    monkeypatch.setenv("TRACKFLOW_SUPPLIERS_DB_PATH", str(tmp_path / "suppliers-test.json"))
+    monkeypatch.setenv("TRACKFLOW_USERS_DB_PATH", str(tmp_path / "users-test.json"))
     monkeypatch.setenv("SECRET_KEY", "test-secret")
     monkeypatch.setenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
 
@@ -65,11 +66,12 @@ def test_auth_flow_and_protected_routes(monkeypatch, tmp_path) -> None:
 
 
 def test_only_admin_can_change_role_and_other_users_are_forbidden(monkeypatch, tmp_path) -> None:
-    monkeypatch.setenv("TRACKFLOW_DB_PATH", str(tmp_path / "trackflow-admin-test.json"))
+    monkeypatch.setenv("TRACKFLOW_SUPPLIERS_DB_PATH", str(tmp_path / "suppliers-admin-test.json"))
+    monkeypatch.setenv("TRACKFLOW_USERS_DB_PATH", str(tmp_path / "users-admin-test.json"))
     monkeypatch.setenv("SECRET_KEY", "test-secret")
 
     admin_id = "admin-1"
-    db = get_tinydb()
+    db = get_users_db()
     db.table("users").insert(
         {
             "id": admin_id,
