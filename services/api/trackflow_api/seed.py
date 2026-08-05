@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from tinydb import Query as TinyQuery
 
-from trackflow_api.database import get_db
+from trackflow_api.database import get_tinydb
 from trackflow_api.models import SupplierCreate, supplier_record_from_create
 
 SUPPLIERS_SEED = [
@@ -167,7 +167,7 @@ SUPPLIERS_SEED = [
 
 
 def main() -> None:
-    db = get_db()
+    db = get_tinydb()
     supplier_query = TinyQuery()
     inserted = 0
 

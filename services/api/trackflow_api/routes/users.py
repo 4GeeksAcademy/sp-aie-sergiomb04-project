@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from tinydb import Query as TinyQuery
 
 from trackflow_api.auth import get_current_user, get_password_hash, require_admin
-from trackflow_api.database import get_db
+from trackflow_api.database import get_users_db
 from trackflow_api.models import (
     ProfileRecord,
     UserCreate,
@@ -38,7 +38,7 @@ def _ensure_self_or_admin(current_user: UserRecord, target_user_id: str) -> None
 @router.post("", response_model=UserPublic, status_code=status.HTTP_201_CREATED)
 def create_user(payload: UserCreate) -> UserPublic:
     try:
-        db = get_db()
+        db = get_users_db()
         users_table = get_users_table(db)
         profiles_table = get_profiles_table(db)
 
@@ -65,7 +65,7 @@ def create_user(payload: UserCreate) -> UserPublic:
 @router.get("", response_model=list[UserPublic], status_code=status.HTTP_200_OK)
 def list_users(_: UserRecord = Depends(require_admin)) -> list[UserPublic]:
     try:
-        db = get_db()
+        db = get_users_db()
         records = get_users_table(db).all()
     except Exception as error:
         db.close()
@@ -79,7 +79,7 @@ def get_user(user_id: str, current_user: UserRecord = Depends(get_current_user))
     _ensure_self_or_admin(current_user, user_id)
 
     try:
-        db = get_db()
+        db = get_users_db()
         record = get_user_record_by_id(db, user_id)
     except Exception as error:
         db.close()
@@ -107,7 +107,7 @@ def update_user(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Solo administradores pueden cambiar activacion")
 
     try:
-        db = get_db()
+        db = get_users_db()
         users_table = get_users_table(db)
         record = get_user_record_by_id(db, user_id)
     except Exception as error:
@@ -148,7 +148,7 @@ def delete_user(user_id: str, current_user: UserRecord = Depends(get_current_use
     _ensure_self_or_admin(current_user, user_id)
 
     try:
-        db = get_db()
+        db = get_users_db()
         user_record = get_user_record_by_id(db, user_id)
     except Exception as error:
         db.close()

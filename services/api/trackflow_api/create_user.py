@@ -6,7 +6,7 @@ from getpass import getpass
 from tinydb import Query as TinyQuery
 
 from trackflow_api.auth import get_password_hash
-from trackflow_api.database import get_db
+from trackflow_api.database import get_users_db
 from trackflow_api.models import UserCreate, UserRecord, UserRole, user_record_from_create
 from trackflow_api.repositories import (
     get_profiles_table,
@@ -156,7 +156,7 @@ def main() -> None:
 
     email = _get_required(args.email, "Email")
 
-    db = get_db()
+    db = get_users_db()
     users_table = get_users_table(db)
     profiles_table = get_profiles_table(db)
     existing_user = get_user_record_by_email(db, email)

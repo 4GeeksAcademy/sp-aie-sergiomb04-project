@@ -9,7 +9,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-from trackflow_api.database import get_db
+from trackflow_api.database import get_users_db
 from trackflow_api.models import UserRecord, UserRole
 from trackflow_api.repositories import get_user_record_by_id
 
@@ -61,7 +61,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> UserRecord:
     except JWTError as error:
         raise _credentials_exception() from error
 
-    db = get_db()
+    db = get_users_db()
     record = get_user_record_by_id(db, user_id)
     db.close()
 

@@ -1,0 +1,11 @@
+api/.venv
+api/.pytest_cache
+api/.mypy_cache
+api/.ruff_cache
+api/__pycache__
+api/.coverage
+api/tests/__pycache__
+.git
+.vscode
+README.md
+README.es.md
