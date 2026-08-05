@@ -11,15 +11,18 @@ services:
       BACKOFFICE_PORT: ${BACKOFFICE_PORT}
       TRACKFLOW_API_BASE_URL: ${TRACKFLOW_API_BASE_URL}
       NEXT_PUBLIC_INVENTORY_API_URL: ${NEXT_PUBLIC_INVENTORY_API_URL}
-      CHOKIDAR_USEPOLLING: "true"
-      WATCHPACK_POLLING: "true"
     ports:
       - "${WEBSITE_PORT}:${WEBSITE_PORT}"
       - "${BACKOFFICE_PORT}:${BACKOFFICE_PORT}"
     volumes:
-      - ./:/workspace
+      - ./uis:/workspace/uis
+      - ./src:/workspace/src
+      - ./packages:/workspace/packages
+      - ./shared:/workspace/shared
       - uis_website_node_modules:/workspace/uis/website/node_modules
+      - uis_website_next:/workspace/uis/website/.next
       - uis_backoffice_node_modules:/workspace/uis/backoffice/node_modules
+      - uis_backoffice_next:/workspace/uis/backoffice/.next
     depends_on:
       - services
     networks:
@@ -46,7 +49,8 @@ services:
     ports:
       - "${SERVICES_PORT}:${SERVICES_PORT}"
     volumes:
-      - ./:/workspace
+      - ./services/api:/workspace/services/api
+      - ./scripts:/workspace/scripts
     networks:
       - trackflow-dev-net
 
@@ -57,4 +61,6 @@ networks:
 
 volumes:
   uis_website_node_modules:
+  uis_website_next:
   uis_backoffice_node_modules:
+  uis_backoffice_next:
