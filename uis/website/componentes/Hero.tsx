@@ -34,7 +34,7 @@ export function Hero({ stats }: HeroProps) {
         <div className="flex flex-col justify-center gap-4 sm:flex-row">
           <Link
             href="/dashboard"
-            className="rounded-lg bg-blue-600 px-6 py-3 font-medium text-white transition hover:bg-blue-700"
+            className="rounded-lg bg-blue-600 px-6 py-3 font-medium !text-white transition hover:bg-blue-700"
           >
             Ir al Dashboard
           </Link>
