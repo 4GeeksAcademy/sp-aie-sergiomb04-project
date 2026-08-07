@@ -1,6 +1,5 @@
-import Link from "next/link";
-
 import { LogoutButton } from "@/app/features/auth/components/LogoutButton";
+import { ProtectedNavLinks } from "@/app/features/layout/components/ProtectedNavLinks";
 import { requireAuthenticatedUser } from "@/app/features/auth/server/current-user";
 
 export default async function ProtectedLayout({
@@ -22,23 +21,7 @@ export default async function ProtectedLayout({
               <p className="text-lg font-semibold text-slate-950">Backoffice</p>
             </div>
 
-            <nav className="hidden items-center gap-3 text-sm font-medium text-slate-600 md:flex">
-              <Link href="/" className="rounded-lg px-3 py-2 hover:bg-slate-100">
-                Dashboard
-              </Link>
-              <Link href="/incidents" className="rounded-lg px-3 py-2 hover:bg-slate-100">
-                Incidencias
-              </Link>
-              <Link href="/suppliers" className="rounded-lg px-3 py-2 hover:bg-slate-100">
-                Suppliers
-              </Link>
-              <Link
-                href="/backoffice/inventory/products"
-                className="rounded-lg px-3 py-2 hover:bg-slate-100"
-              >
-                Inventory
-              </Link>
-            </nav>
+            <ProtectedNavLinks />
           </div>
 
           <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -52,23 +35,7 @@ export default async function ProtectedLayout({
           </div>
         </div>
 
-        <nav className="mt-4 flex items-center gap-2 text-sm font-medium text-slate-600 md:hidden">
-          <Link href="/" className="rounded-lg px-3 py-2 hover:bg-slate-100">
-            Dashboard
-          </Link>
-          <Link href="/incidents" className="rounded-lg px-3 py-2 hover:bg-slate-100">
-            Incidencias
-          </Link>
-          <Link href="/suppliers" className="rounded-lg px-3 py-2 hover:bg-slate-100">
-            Suppliers
-          </Link>
-          <Link
-            href="/backoffice/inventory/products"
-            className="rounded-lg px-3 py-2 hover:bg-slate-100"
-          >
-            Inventory
-          </Link>
-        </nav>
+        <ProtectedNavLinks mobile />
       </header>
 
       <div className="mx-auto flex w-full max-w-7xl flex-1">{children}</div>

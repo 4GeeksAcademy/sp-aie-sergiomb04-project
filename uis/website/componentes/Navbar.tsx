@@ -1,7 +1,4 @@
-"use client";
-
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 
 type NavigationItem = {
   label: string;
@@ -17,8 +14,6 @@ const navigationItems: NavigationItem[] = [
 ];
 
 export function Navbar() {
-  const pathname = usePathname();
-
   return (
     <header
       role="banner"
@@ -30,24 +25,17 @@ export function Navbar() {
 
       <nav role="navigation" aria-label="Navegacion principal">
         <ul className="flex flex-wrap items-center gap-4 md:gap-6 text-gray-800">
-          {navigationItems.map((item) => {
-            const isCurrent = pathname === item.href;
-
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  aria-current={isCurrent ? "page" : undefined}
-                  className={[
-                    "transition hover:text-blue-600",
-                    isCurrent ? "font-medium text-blue-600" : "text-gray-700",
-                  ].join(" ")}
-                >
-                  {item.label}
-                </Link>
-              </li>
-            );
-          })}
+          {navigationItems.map((item) => (
+            <li key={item.href}>
+              <Link
+                href={item.href}
+                prefetch={false}
+                className="text-gray-700 transition hover:text-blue-600"
+              >
+                {item.label}
+              </Link>
+            </li>
+          ))}
         </ul>
       </nav>
     </header>
