@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import os
 import sys
+from time import perf_counter
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from uuid import uuid4
+import logging
 
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
@@ -30,11 +32,28 @@ app = FastAPI(
     version="1.0.0",
     description="Backend Python unificado para incidencias y suppliers de TrackFlow.",
 )
+logger = logging.getLogger("trackflow_api.timing")
 
 
 @app.on_event("startup")
 def startup_inventory_database() -> None:
     init_inventory_db()
+
+
+@app.middleware("http")
+async def request_timing_middleware(request: Request, call_next):
+    start = perf_counter()
+    response = await call_next(request)
+    elapsed_ms = (perf_counter() - start) * 1000
+    response.headers["X-Process-Time-Ms"] = f"{elapsed_ms:.2f}"
+    logger.info(
+        "request_timing path=%s method=%s status=%s duration_ms=%.2f",
+        request.url.path,
+        request.method,
+        response.status_code,
+        elapsed_ms,
+    )
+    return response
 
 
 # ─── Error handlers ────────────────────────────────────────────────────────────
