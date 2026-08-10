@@ -35,8 +35,28 @@ app = FastAPI(
 logger = logging.getLogger("trackflow_api.timing")
 
 
+def _configure_timing_logger() -> None:
+    if logger.handlers:
+        return
+
+    uvicorn_logger = logging.getLogger("uvicorn.error")
+    if uvicorn_logger.handlers:
+        for handler in uvicorn_logger.handlers:
+            logger.addHandler(handler)
+        logger.setLevel(uvicorn_logger.level or logging.INFO)
+        logger.propagate = False
+        return
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
+    logger.setLevel(logging.INFO)
+
+
 @app.on_event("startup")
 def startup_inventory_database() -> None:
+    _configure_timing_logger()
     init_inventory_db()
 
 
