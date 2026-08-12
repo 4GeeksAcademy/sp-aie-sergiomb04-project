@@ -1,0 +1,514 @@
+{
+  "catalogVersion": "1.0.0",
+  "sourceOfTruth": ".tasks/CONTEXT-empresa.md",
+  "eventEnvelope": {
+    "additionalProperties": false,
+    "required": [
+      "eventId",
+      "timestamp",
+      "sessionId",
+      "userId",
+      "event_type",
+      "schemaVersion",
+      "requestId",
+      "properties"
+    ],
+    "fields": [
+      {
+        "name": "eventId",
+        "type": "string",
+        "format": "uuid",
+        "required": true,
+        "description": "Identificador unico del evento"
+      },
+      {
+        "name": "timestamp",
+        "type": "string",
+        "format": "date-time",
+        "required": true,
+        "description": "Fecha en ISO 8601 UTC"
+      },
+      {
+        "name": "sessionId",
+        "type": "string",
+        "required": true,
+        "description": "Identificador de sesion"
+      },
+      {
+        "name": "userId",
+        "type": ["string", "null"],
+        "required": true,
+        "description": "Identificador de usuario autenticado o null"
+      },
+      {
+        "name": "event_type",
+        "type": "string",
+        "required": true,
+        "description": "Taxonomia entidad_accion"
+      },
+      {
+        "name": "schemaVersion",
+        "type": "string",
+        "required": true,
+        "description": "Version del esquema"
+      },
+      {
+        "name": "requestId",
+        "type": "string",
+        "required": true,
+        "description": "Correlacion frontend-backend-logs"
+      },
+      {
+        "name": "properties",
+        "type": "object",
+        "required": true,
+        "description": "Campos especificos del evento",
+        "additionalProperties": false
+      }
+    ]
+  },
+  "events": [
+    {
+      "event_type": "inbound_order_created",
+      "classification": "obligatorio",
+      "category": "inventario",
+      "description": "Recepcion de mercancia registrada en almacen",
+      "businessHypothesis": "Necesitamos saber cuanto volumen entra, por cliente y por almacen.",
+      "decisionEnabled": "Planificar capacidad de almacen y personal segun volumen entrante.",
+      "delivery": {
+        "mode": "stream",
+        "justification": "Evento critico de operacion de almacen",
+        "frequencyControl": "none"
+      },
+      "allowlist": [
+        "warehouse",
+        "client_id",
+        "product_id",
+        "product_category",
+        "quantity",
+        "order_id",
+        "reference",
+        "user_uuid"
+      ],
+      "properties": [
+        {
+          "name": "warehouse",
+          "type": "string",
+          "required": true,
+          "enum": ["los_angeles", "zaragoza"],
+          "description": "Almacen operativo",
+          "sensitivity": "internal",
+          "containsPII": false,
+          "sanitization": "normalizar valor canonico"
+        },
+        {
+          "name": "client_id",
+          "type": "string",
+          "required": true,
+          "description": "Identificador de cliente B2B",
+          "sensitivity": "internal",
+          "containsPII": false,
+          "sanitization": "trim y validacion de formato"
+        },
+        {
+          "name": "product_id",
+          "type": "string",
+          "required": true,
+          "description": "Identificador SKU",
+          "sensitivity": "internal",
+          "containsPII": false,
+          "sanitization": "normalizar y validar existencia"
+        },
+        {
+          "name": "product_category",
+          "type": "string",
+          "required": true,
+          "enum": ["fashion", "electronics", "cosmetics"],
+          "description": "Categoria del SKU",
+          "sensitivity": "internal",
+          "containsPII": false,
+          "sanitization": "normalizar a taxonomia"
+        },
+        {
+          "name": "quantity",
+          "type": "integer",
+          "required": true,
+          "description": "Unidades entrantes",
+          "sensitivity": "internal",
+          "containsPII": false,
+          "sanitization": "entero positivo"
+        },
+        {
+          "name": "order_id",
+          "type": "string",
+          "required": true,
+          "description": "Identificador tecnico de orden inbound",
+          "sensitivity": "internal",
+          "containsPII": false,
+          "sanitization": "uuid o id numerico como string"
+        },
+        {
+          "name": "reference",
+          "type": "string",
+          "required": true,
+          "description": "Referencia operativa de entrada",
+          "sensitivity": "internal",
+          "containsPII": false,
+          "sanitization": "limitar longitud y remover texto sensible"
+        },
+        {
+          "name": "user_uuid",
+          "type": "string",
+          "required": true,
+          "description": "Usuario que registra la entrada",
+          "sensitivity": "restricted",
+          "containsPII": true,
+          "sanitization": "pseudonimo interno; no email"
+        }
+      ]
+    },
+    {
+      "event_type": "outbound_order_created",
+      "classification": "obligatorio",
+      "category": "inventario",
+      "description": "Salida de stock registrada tras picking y despacho",
+      "businessHypothesis": "Necesitamos saber cuantos pedidos se procesan, por cliente y almacen, y a que ritmo.",
+      "decisionEnabled": "Detectar cuellos de botella antes de afectar SLA de entrega.",
+      "delivery": {
+        "mode": "stream",
+        "justification": "Impacta ritmo operativo y SLA",
+        "frequencyControl": "none"
+      },
+      "allowlist": [
+        "warehouse",
+        "client_id",
+        "product_id",
+        "product_category",
+        "quantity",
+        "order_id",
+        "exit_type",
+        "tracking_number_present",
+        "user_uuid"
+      ],
+      "properties": [
+        {"name": "warehouse", "type": "string", "required": true, "enum": ["los_angeles", "zaragoza"], "description": "Almacen operativo", "sensitivity": "internal", "containsPII": false, "sanitization": "normalizar valor canonico"},
+        {"name": "client_id", "type": "string", "required": true, "description": "Identificador cliente B2B", "sensitivity": "internal", "containsPII": false, "sanitization": "trim y validacion de formato"},
+        {"name": "product_id", "type": "string", "required": true, "description": "Identificador SKU", "sensitivity": "internal", "containsPII": false, "sanitization": "normalizar y validar existencia"},
+        {"name": "product_category", "type": "string", "required": true, "enum": ["fashion", "electronics", "cosmetics"], "description": "Categoria SKU", "sensitivity": "internal", "containsPII": false, "sanitization": "normalizar a taxonomia"},
+        {"name": "quantity", "type": "integer", "required": true, "description": "Unidades salientes", "sensitivity": "internal", "containsPII": false, "sanitization": "entero positivo"},
+        {"name": "order_id", "type": "string", "required": true, "description": "Identificador tecnico de orden outbound", "sensitivity": "internal", "containsPII": false, "sanitization": "uuid o id numerico como string"},
+        {"name": "exit_type", "type": "string", "required": true, "enum": ["dispatch", "loss"], "description": "Tipo de salida", "sensitivity": "internal", "containsPII": false, "sanitization": "enum estricto"},
+        {"name": "tracking_number_present", "type": "boolean", "required": true, "description": "Indica si hubo tracking en dispatch", "sensitivity": "internal", "containsPII": false, "sanitization": "no guardar tracking completo"},
+        {"name": "user_uuid", "type": "string", "required": true, "description": "Usuario que registra la salida", "sensitivity": "restricted", "containsPII": true, "sanitization": "pseudonimo interno"}
+      ]
+    },
+    {
+      "event_type": "stock_threshold_triggered",
+      "classification": "obligatorio",
+      "category": "inventario",
+      "description": "Stock por debajo del minimo configurado",
+      "businessHypothesis": "Necesitamos saber con que frecuencia un cliente se queda sin stock disponible de un SKU.",
+      "decisionEnabled": "Alertar al cliente y al equipo comercial antes de un quiebre de stock.",
+      "delivery": {
+        "mode": "stream",
+        "justification": "Reaccion operativa inmediata",
+        "frequencyControl": "dedupe_5m_por_producto_almacen"
+      },
+      "allowlist": ["warehouse", "client_id", "product_id", "product_category", "quantity", "minimum_threshold", "deficit_units"],
+      "properties": [
+        {"name": "warehouse", "type": "string", "required": true, "enum": ["los_angeles", "zaragoza"], "description": "Almacen", "sensitivity": "internal", "containsPII": false, "sanitization": "normalizar valor canonico"},
+        {"name": "client_id", "type": "string", "required": true, "description": "Cliente B2B", "sensitivity": "internal", "containsPII": false, "sanitization": "validar formato"},
+        {"name": "product_id", "type": "string", "required": true, "description": "SKU", "sensitivity": "internal", "containsPII": false, "sanitization": "validar existencia"},
+        {"name": "product_category", "type": "string", "required": true, "enum": ["fashion", "electronics", "cosmetics"], "description": "Categoria", "sensitivity": "internal", "containsPII": false, "sanitization": "enum"},
+        {"name": "quantity", "type": "integer", "required": true, "description": "Stock actual", "sensitivity": "internal", "containsPII": false, "sanitization": "entero"},
+        {"name": "minimum_threshold", "type": "integer", "required": true, "description": "Minimo configurado", "sensitivity": "internal", "containsPII": false, "sanitization": "entero no negativo"},
+        {"name": "deficit_units", "type": "integer", "required": true, "description": "Unidades faltantes", "sensitivity": "internal", "containsPII": false, "sanitization": "entero"}
+      ]
+    },
+    {
+      "event_type": "direct_stock_edit_rejected",
+      "classification": "obligatorio",
+      "category": "inventario",
+      "description": "Intento de editar stock directo rechazado",
+      "businessHypothesis": "Necesitamos saber si el personal de almacen intenta saltarse el control de trazabilidad.",
+      "decisionEnabled": "Reforzar capacitacion o permisos en el almacen donde esto ocurre con mas frecuencia.",
+      "delivery": {
+        "mode": "stream",
+        "justification": "Cumplimiento operativo y trazabilidad",
+        "frequencyControl": "dedupe_1m_por_usuario_y_producto"
+      },
+      "allowlist": ["warehouse", "client_id", "product_id", "product_category", "quantity", "attempted_action", "rejection_reason", "user_uuid"],
+      "properties": [
+        {"name": "warehouse", "type": "string", "required": true, "enum": ["los_angeles", "zaragoza"], "description": "Almacen", "sensitivity": "internal", "containsPII": false, "sanitization": "normalizar"},
+        {"name": "client_id", "type": "string", "required": true, "description": "Cliente B2B", "sensitivity": "internal", "containsPII": false, "sanitization": "validar"},
+        {"name": "product_id", "type": "string", "required": true, "description": "SKU", "sensitivity": "internal", "containsPII": false, "sanitization": "validar"},
+        {"name": "product_category", "type": "string", "required": true, "enum": ["fashion", "electronics", "cosmetics"], "description": "Categoria", "sensitivity": "internal", "containsPII": false, "sanitization": "enum"},
+        {"name": "quantity", "type": "integer", "required": true, "description": "Cantidad intentada", "sensitivity": "internal", "containsPII": false, "sanitization": "entero"},
+        {"name": "attempted_action", "type": "string", "required": true, "description": "Accion directa bloqueada", "sensitivity": "internal", "containsPII": false, "sanitization": "allowlist de acciones"},
+        {"name": "rejection_reason", "type": "string", "required": true, "description": "Motivo de rechazo", "sensitivity": "internal", "containsPII": false, "sanitization": "codigo de error canonico"},
+        {"name": "user_uuid", "type": "string", "required": true, "description": "Usuario que intento editar", "sensitivity": "restricted", "containsPII": true, "sanitization": "pseudonimo interno"}
+      ]
+    },
+    {
+      "event_type": "inventory_discrepancy_detected",
+      "classification": "obligatorio",
+      "category": "inventario",
+      "description": "Diferencia detectada entre conteo fisico y stock de sistema",
+      "businessHypothesis": "Necesitamos saber en que SKUs y almacenes ocurren mas discrepancias.",
+      "decisionEnabled": "Priorizar auditorias de inventario en los SKUs con mayor tasa de discrepancia.",
+      "delivery": {
+        "mode": "stream",
+        "justification": "Control de auditoria",
+        "frequencyControl": "none"
+      },
+      "allowlist": ["warehouse", "client_id", "product_id", "product_category", "quantity", "physical_count", "system_count", "discrepancy_units", "audit_id"],
+      "properties": [
+        {"name": "warehouse", "type": "string", "required": true, "enum": ["los_angeles", "zaragoza"], "description": "Almacen", "sensitivity": "internal", "containsPII": false, "sanitization": "normalizar"},
+        {"name": "client_id", "type": "string", "required": true, "description": "Cliente B2B", "sensitivity": "internal", "containsPII": false, "sanitization": "validar"},
+        {"name": "product_id", "type": "string", "required": true, "description": "SKU", "sensitivity": "internal", "containsPII": false, "sanitization": "validar"},
+        {"name": "product_category", "type": "string", "required": true, "enum": ["fashion", "electronics", "cosmetics"], "description": "Categoria", "sensitivity": "internal", "containsPII": false, "sanitization": "enum"},
+        {"name": "quantity", "type": "integer", "required": true, "description": "Stock de referencia para reporte", "sensitivity": "internal", "containsPII": false, "sanitization": "entero"},
+        {"name": "physical_count", "type": "integer", "required": true, "description": "Conteo fisico", "sensitivity": "internal", "containsPII": false, "sanitization": "entero"},
+        {"name": "system_count", "type": "integer", "required": true, "description": "Conteo del sistema", "sensitivity": "internal", "containsPII": false, "sanitization": "entero"},
+        {"name": "discrepancy_units", "type": "integer", "required": true, "description": "Diferencia en unidades", "sensitivity": "internal", "containsPII": false, "sanitization": "entero"},
+        {"name": "audit_id", "type": "string", "required": true, "description": "Identificador de auditoria", "sensitivity": "internal", "containsPII": false, "sanitization": "formato controlado"}
+      ]
+    },
+    {
+      "event_type": "outbound_order_rejected_insufficient_stock",
+      "classification": "oportunidad identificada",
+      "category": "inventario",
+      "description": "Intento de salida rechazado por stock insuficiente",
+      "businessHypothesis": "Necesitamos medir friccion por falta de stock en salida.",
+      "decisionEnabled": "Ajustar reglas de reposicion y priorizacion de picking por almacen y cliente.",
+      "delivery": {
+        "mode": "stream",
+        "justification": "Evita intentos repetidos y retrasos operativos",
+        "frequencyControl": "dedupe_2m_por_producto_almacen"
+      },
+      "allowlist": ["warehouse", "client_id", "product_id", "product_category", "quantity", "available_stock", "requested_quantity", "user_uuid", "rejection_reason"],
+      "properties": [
+        {"name": "warehouse", "type": "string", "required": true, "enum": ["los_angeles", "zaragoza"], "description": "Almacen", "sensitivity": "internal", "containsPII": false, "sanitization": "normalizar"},
+        {"name": "client_id", "type": "string", "required": true, "description": "Cliente B2B", "sensitivity": "internal", "containsPII": false, "sanitization": "validar"},
+        {"name": "product_id", "type": "string", "required": true, "description": "SKU", "sensitivity": "internal", "containsPII": false, "sanitization": "validar"},
+        {"name": "product_category", "type": "string", "required": true, "enum": ["fashion", "electronics", "cosmetics"], "description": "Categoria", "sensitivity": "internal", "containsPII": false, "sanitization": "enum"},
+        {"name": "quantity", "type": "integer", "required": true, "description": "Cantidad intentada", "sensitivity": "internal", "containsPII": false, "sanitization": "entero"},
+        {"name": "available_stock", "type": "integer", "required": true, "description": "Stock disponible", "sensitivity": "internal", "containsPII": false, "sanitization": "entero"},
+        {"name": "requested_quantity", "type": "integer", "required": true, "description": "Stock solicitado", "sensitivity": "internal", "containsPII": false, "sanitization": "entero"},
+        {"name": "user_uuid", "type": "string", "required": true, "description": "Usuario que intento la salida", "sensitivity": "restricted", "containsPII": true, "sanitization": "pseudonimo interno"},
+        {"name": "rejection_reason", "type": "string", "required": true, "description": "Motivo canonico", "sensitivity": "internal", "containsPII": false, "sanitization": "codigo controlado"}
+      ]
+    },
+    {
+      "event_type": "inventory_order_rejected_warehouse_mismatch",
+      "classification": "oportunidad identificada",
+      "category": "inventario",
+      "description": "Rechazo por desajuste entre warehouse del SKU y warehouse enviado",
+      "businessHypothesis": "Necesitamos detectar errores de operacion entre SKU y almacen asignado.",
+      "decisionEnabled": "Corregir capacitacion y controles de UI para reducir errores de captura.",
+      "delivery": {
+        "mode": "stream",
+        "justification": "Bloquea flujo operativo de entrada y salida",
+        "frequencyControl": "dedupe_2m_por_producto_usuario"
+      },
+      "allowlist": ["warehouse", "client_id", "product_id", "product_category", "quantity", "expected_warehouse", "provided_warehouse", "order_type", "user_uuid"],
+      "properties": [
+        {"name": "warehouse", "type": "string", "required": true, "enum": ["los_angeles", "zaragoza"], "description": "Warehouse esperado canonico", "sensitivity": "internal", "containsPII": false, "sanitization": "normalizar"},
+        {"name": "client_id", "type": "string", "required": true, "description": "Cliente B2B", "sensitivity": "internal", "containsPII": false, "sanitization": "validar"},
+        {"name": "product_id", "type": "string", "required": true, "description": "SKU", "sensitivity": "internal", "containsPII": false, "sanitization": "validar"},
+        {"name": "product_category", "type": "string", "required": true, "enum": ["fashion", "electronics", "cosmetics"], "description": "Categoria", "sensitivity": "internal", "containsPII": false, "sanitization": "enum"},
+        {"name": "quantity", "type": "integer", "required": true, "description": "Cantidad del intento", "sensitivity": "internal", "containsPII": false, "sanitization": "entero"},
+        {"name": "expected_warehouse", "type": "string", "required": true, "enum": ["los_angeles", "zaragoza"], "description": "Warehouse del SKU", "sensitivity": "internal", "containsPII": false, "sanitization": "normalizar"},
+        {"name": "provided_warehouse", "type": "string", "required": true, "enum": ["los_angeles", "zaragoza"], "description": "Warehouse enviado", "sensitivity": "internal", "containsPII": false, "sanitization": "normalizar"},
+        {"name": "order_type", "type": "string", "required": true, "enum": ["inbound", "outbound"], "description": "Tipo de orden rechazada", "sensitivity": "internal", "containsPII": false, "sanitization": "enum"},
+        {"name": "user_uuid", "type": "string", "required": true, "description": "Usuario del intento", "sensitivity": "restricted", "containsPII": true, "sanitization": "pseudonimo interno"}
+      ]
+    },
+    {
+      "event_type": "inventory_form_validation_failed",
+      "classification": "oportunidad identificada",
+      "category": "inventario",
+      "description": "Validacion fallida en formularios de stock entry/exit",
+      "businessHypothesis": "Necesitamos saber por que falla la captura en formularios de entrada y salida.",
+      "decisionEnabled": "Mejorar UX, validaciones y copy para subir tasa de exito.",
+      "delivery": {
+        "mode": "batch",
+        "justification": "Analitica de UX, no requiere reaccion inmediata",
+        "frequencyControl": "aggregate_15m_por_error_code"
+      },
+      "allowlist": ["form_name", "error_code", "field_name", "warehouse", "client_id", "product_id", "product_category", "quantity"],
+      "properties": [
+        {"name": "form_name", "type": "string", "required": true, "enum": ["stock_entry", "stock_exit"], "description": "Formulario", "sensitivity": "internal", "containsPII": false, "sanitization": "enum"},
+        {"name": "error_code", "type": "string", "required": true, "description": "Codigo de validacion", "sensitivity": "internal", "containsPII": false, "sanitization": "allowlist de codigos"},
+        {"name": "field_name", "type": "string", "required": true, "description": "Campo con error", "sensitivity": "internal", "containsPII": false, "sanitization": "allowlist de campos"},
+        {"name": "warehouse", "type": "string", "required": true, "enum": ["los_angeles", "zaragoza"], "description": "Almacen asociado", "sensitivity": "internal", "containsPII": false, "sanitization": "normalizar"},
+        {"name": "client_id", "type": "string", "required": true, "description": "Cliente B2B asociado", "sensitivity": "internal", "containsPII": false, "sanitization": "validar"},
+        {"name": "product_id", "type": "string", "required": true, "description": "SKU asociado", "sensitivity": "internal", "containsPII": false, "sanitization": "validar"},
+        {"name": "product_category", "type": "string", "required": true, "enum": ["fashion", "electronics", "cosmetics"], "description": "Categoria SKU", "sensitivity": "internal", "containsPII": false, "sanitization": "enum"},
+        {"name": "quantity", "type": "integer", "required": true, "description": "Cantidad ingresada", "sensitivity": "internal", "containsPII": false, "sanitization": "entero"}
+      ]
+    },
+    {
+      "event_type": "auth_login_succeeded",
+      "classification": "oportunidad identificada",
+      "category": "autenticacion",
+      "description": "Inicio de sesion completado con exito",
+      "businessHypothesis": "Necesitamos medir inicio de sesion exitoso por rol y canal para disponibilidad operativa.",
+      "decisionEnabled": "Ajustar capacidad de soporte y monitoreo de acceso.",
+      "delivery": {
+        "mode": "stream",
+        "justification": "Operacion diaria y seguridad basica",
+        "frequencyControl": "none"
+      },
+      "allowlist": ["auth_method", "user_role", "identity_provider", "session_age_seconds", "device_type"],
+      "properties": [
+        {"name": "auth_method", "type": "string", "required": true, "enum": ["password"], "description": "Metodo de login", "sensitivity": "internal", "containsPII": false, "sanitization": "enum"},
+        {"name": "user_role", "type": "string", "required": true, "description": "Rol autenticado", "sensitivity": "internal", "containsPII": false, "sanitization": "allowlist de roles"},
+        {"name": "identity_provider", "type": "string", "required": true, "enum": ["trackflow_internal"], "description": "Proveedor de identidad", "sensitivity": "internal", "containsPII": false, "sanitization": "enum"},
+        {"name": "session_age_seconds", "type": "integer", "required": true, "description": "Edad de sesion al capturar", "sensitivity": "internal", "containsPII": false, "sanitization": "entero no negativo"},
+        {"name": "device_type", "type": "string", "required": true, "enum": ["desktop", "mobile", "tablet", "unknown"], "description": "Tipo de dispositivo", "sensitivity": "internal", "containsPII": false, "sanitization": "enum"}
+      ]
+    },
+    {
+      "event_type": "auth_login_failed",
+      "classification": "oportunidad identificada",
+      "category": "autenticacion",
+      "description": "Intento de login fallido",
+      "businessHypothesis": "Necesitamos detectar fallos de acceso y su causa principal.",
+      "decisionEnabled": "Activar acciones de soporte, bloqueo progresivo o mejoras de UX de acceso.",
+      "delivery": {
+        "mode": "stream",
+        "justification": "Prevencion de abuso y continuidad operativa",
+        "frequencyControl": "dedupe_1m_por_hash_identidad"
+      },
+      "allowlist": ["auth_method", "failure_reason", "failure_code", "identity_hash", "device_type"],
+      "properties": [
+        {"name": "auth_method", "type": "string", "required": true, "enum": ["password"], "description": "Metodo de login", "sensitivity": "internal", "containsPII": false, "sanitization": "enum"},
+        {"name": "failure_reason", "type": "string", "required": true, "description": "Motivo resumido", "sensitivity": "internal", "containsPII": false, "sanitization": "catalogo de razones"},
+        {"name": "failure_code", "type": "string", "required": true, "description": "Codigo tecnico", "sensitivity": "internal", "containsPII": false, "sanitization": "allowlist"},
+        {"name": "identity_hash", "type": "string", "required": true, "description": "Hash irreversible de identidad ingresada", "sensitivity": "restricted", "containsPII": true, "sanitization": "sha256 + salt rotativo"},
+        {"name": "device_type", "type": "string", "required": true, "enum": ["desktop", "mobile", "tablet", "unknown"], "description": "Tipo de dispositivo", "sensitivity": "internal", "containsPII": false, "sanitization": "enum"}
+      ]
+    },
+    {
+      "event_type": "session_access_denied",
+      "classification": "oportunidad identificada",
+      "category": "sesiones",
+      "description": "Acceso denegado a ruta protegida por sesion ausente o invalida",
+      "businessHypothesis": "Necesitamos saber cuando usuarios son redirigidos por sesion invalida o ausente.",
+      "decisionEnabled": "Detectar expiraciones prematuras o problemas de sesion para corregir configuracion.",
+      "delivery": {
+        "mode": "stream",
+        "justification": "Impacta acceso a backoffice en tiempo real",
+        "frequencyControl": "dedupe_1m_por_ruta_y_usuario"
+      },
+      "allowlist": ["route_path", "denial_reason", "http_status", "had_session_cookie"],
+      "properties": [
+        {"name": "route_path", "type": "string", "required": true, "description": "Ruta protegida solicitada", "sensitivity": "internal", "containsPII": false, "sanitization": "normalizar path sin query"},
+        {"name": "denial_reason", "type": "string", "required": true, "description": "Motivo de rechazo", "sensitivity": "internal", "containsPII": false, "sanitization": "allowlist de razones"},
+        {"name": "http_status", "type": "integer", "required": true, "description": "Codigo HTTP asociado", "sensitivity": "internal", "containsPII": false, "sanitization": "rango 3xx-4xx"},
+        {"name": "had_session_cookie", "type": "boolean", "required": true, "description": "Existia cookie de sesion", "sensitivity": "internal", "containsPII": false, "sanitization": "boolean"}
+      ]
+    },
+    {
+      "event_type": "backoffice_navigation_clicked",
+      "classification": "oportunidad identificada",
+      "category": "navegacion",
+      "description": "Click en navegacion protegida del backoffice",
+      "businessHypothesis": "Necesitamos entender uso real de modulos protegidos en backoffice.",
+      "decisionEnabled": "Priorizar mejoras en modulos mas usados y simplificar rutas poco usadas.",
+      "delivery": {
+        "mode": "batch",
+        "justification": "Alto volumen; analitica de producto",
+        "frequencyControl": "debounce_5s + sampling_50pct + aggregate_15m"
+      },
+      "allowlist": ["from_path", "to_path", "nav_surface", "is_mobile"],
+      "properties": [
+        {"name": "from_path", "type": "string", "required": true, "description": "Ruta origen", "sensitivity": "internal", "containsPII": false, "sanitization": "normalizar path"},
+        {"name": "to_path", "type": "string", "required": true, "description": "Ruta destino", "sensitivity": "internal", "containsPII": false, "sanitization": "normalizar path"},
+        {"name": "nav_surface", "type": "string", "required": true, "enum": ["desktop", "mobile"], "description": "Superficie de navegacion", "sensitivity": "internal", "containsPII": false, "sanitization": "enum"},
+        {"name": "is_mobile", "type": "boolean", "required": true, "description": "Marca de viewport movil", "sensitivity": "internal", "containsPII": false, "sanitization": "boolean"}
+      ]
+    },
+    {
+      "event_type": "api_request_latency_sampled",
+      "classification": "oportunidad identificada",
+      "category": "rendimiento_api",
+      "description": "Muestra de latencia de requests en gateway/API",
+      "businessHypothesis": "Necesitamos visibilidad de latencia por endpoint para detectar degradacion.",
+      "decisionEnabled": "Priorizar optimizacion de endpoints y capacidad de infraestructura.",
+      "delivery": {
+        "mode": "batch",
+        "justification": "Frecuencia alta, valor en tendencia agregada",
+        "frequencyControl": "sampling_20pct + aggregate_5m_p95"
+      },
+      "allowlist": ["api_route", "method", "status_code", "latency_ms", "upstream_service", "request_source"],
+      "properties": [
+        {"name": "api_route", "type": "string", "required": true, "description": "Ruta de API", "sensitivity": "internal", "containsPII": false, "sanitization": "normalizar sin ids sensibles"},
+        {"name": "method", "type": "string", "required": true, "enum": ["GET", "POST", "PATCH", "DELETE"], "description": "Metodo HTTP", "sensitivity": "internal", "containsPII": false, "sanitization": "enum"},
+        {"name": "status_code", "type": "integer", "required": true, "description": "Respuesta HTTP", "sensitivity": "internal", "containsPII": false, "sanitization": "rango 100-599"},
+        {"name": "latency_ms", "type": "integer", "required": true, "description": "Latencia en milisegundos", "sensitivity": "internal", "containsPII": false, "sanitization": "entero no negativo"},
+        {"name": "upstream_service", "type": "string", "required": true, "description": "Servicio destino", "sensitivity": "internal", "containsPII": false, "sanitization": "allowlist de servicios"},
+        {"name": "request_source", "type": "string", "required": true, "enum": ["web_backoffice", "server_route"], "description": "Origen de request", "sensitivity": "internal", "containsPII": false, "sanitization": "enum"}
+      ]
+    },
+    {
+      "event_type": "api_request_failed",
+      "classification": "oportunidad identificada",
+      "category": "errores",
+      "description": "Fallo de request en cliente o gateway",
+      "businessHypothesis": "Necesitamos detectar fallos de peticiones al gateway/API y su impacto funcional.",
+      "decisionEnabled": "Escalar incidentes y priorizar correcciones por severidad y modulo.",
+      "delivery": {
+        "mode": "stream",
+        "justification": "Errores requieren alerta rapida",
+        "frequencyControl": "dedupe_30s_por_route_status_error"
+      },
+      "allowlist": ["api_route", "method", "status_code", "error_family", "error_message_sanitized", "retryable", "request_source"],
+      "properties": [
+        {"name": "api_route", "type": "string", "required": true, "description": "Ruta de API", "sensitivity": "internal", "containsPII": false, "sanitization": "normalizar"},
+        {"name": "method", "type": "string", "required": true, "enum": ["GET", "POST", "PATCH", "DELETE"], "description": "Metodo HTTP", "sensitivity": "internal", "containsPII": false, "sanitization": "enum"},
+        {"name": "status_code", "type": "integer", "required": true, "description": "Codigo HTTP fallido", "sensitivity": "internal", "containsPII": false, "sanitization": "rango 400-599"},
+        {"name": "error_family", "type": "string", "required": true, "description": "Familia de error", "sensitivity": "internal", "containsPII": false, "sanitization": "allowlist"},
+        {"name": "error_message_sanitized", "type": "string", "required": true, "description": "Mensaje sanitizado", "sensitivity": "restricted", "containsPII": false, "sanitization": "remover secretos, emails y trazas internas"},
+        {"name": "retryable", "type": "boolean", "required": true, "description": "Fallo recuperable", "sensitivity": "internal", "containsPII": false, "sanitization": "boolean"},
+        {"name": "request_source", "type": "string", "required": true, "enum": ["web_backoffice", "server_route"], "description": "Origen del request", "sensitivity": "internal", "containsPII": false, "sanitization": "enum"}
+      ]
+    },
+    {
+      "event_type": "inventory_form_abandoned",
+      "classification": "oportunidad identificada",
+      "category": "abandono",
+      "description": "Abandono de formulario de inventario sin envio",
+      "businessHypothesis": "Necesitamos medir abandono de formularios de inventario antes de enviar.",
+      "decisionEnabled": "Reducir friccion en stock entry/exit y subir conversion operativa.",
+      "delivery": {
+        "mode": "batch",
+        "justification": "Evento de comportamiento no critico en tiempo real",
+        "frequencyControl": "debounce_10s + aggregate_30m"
+      },
+      "allowlist": ["form_name", "step", "dwell_time_seconds", "had_validation_error", "warehouse", "client_id", "product_id"],
+      "properties": [
+        {"name": "form_name", "type": "string", "required": true, "enum": ["stock_entry", "stock_exit"], "description": "Formulario abandonado", "sensitivity": "internal", "containsPII": false, "sanitization": "enum"},
+        {"name": "step", "type": "string", "required": true, "description": "Paso de abandono", "sensitivity": "internal", "containsPII": false, "sanitization": "allowlist"},
+        {"name": "dwell_time_seconds", "type": "integer", "required": true, "description": "Tiempo en formulario", "sensitivity": "internal", "containsPII": false, "sanitization": "entero no negativo"},
+        {"name": "had_validation_error", "type": "boolean", "required": true, "description": "Si hubo error de validacion previo", "sensitivity": "internal", "containsPII": false, "sanitization": "boolean"},
+        {"name": "warehouse", "type": "string", "required": true, "enum": ["los_angeles", "zaragoza"], "description": "Almacen asociado", "sensitivity": "internal", "containsPII": false, "sanitization": "normalizar"},
+        {"name": "client_id", "type": "string", "required": true, "description": "Cliente B2B asociado", "sensitivity": "internal", "containsPII": false, "sanitization": "validar"},
+        {"name": "product_id", "type": "string", "required": true, "description": "SKU asociado", "sensitivity": "internal", "containsPII": false, "sanitization": "validar"}
+      ]
+    }
+  ],
+  "globalPrivacyGuards": {
+    "forbidden": [
+      "password",
+      "token",
+      "authorization_header",
+      "auth_cookie",
+      "full_request_payload",
+      "final_consumer_identity",
+      "final_consumer_address"
+    ],
+    "notes": "No incluir datos del destinatario final ni secretos de autenticacion"
+  }
+}
