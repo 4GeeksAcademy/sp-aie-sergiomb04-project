@@ -4,11 +4,11 @@ set -euo pipefail
 pids=()
 
 cleanup() {
-  for pid in "${pids[@]:-}"; do
-    if kill -0 "$pid" >/dev/null 2>&1; then
-      kill "$pid" >/dev/null 2>&1 || true
-    fi
-  done
+    for pid in "${pids[@]:-}"; do
+        if kill -0 "$pid" >/dev/null 2>&1; then
+            kill "$pid" >/dev/null 2>&1 || true
+        fi
+    done
 }
 
 trap cleanup EXIT INT TERM
