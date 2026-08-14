@@ -7,6 +7,7 @@ from tinydb import Query as TinyQuery
 from tinydb.table import Table
 
 from trackflow_api.auth import get_current_user
+from trackflow_api.cache import api_cache
 from trackflow_api.database import get_incidents_db
 from trackflow_api.models import (
     Incident,
@@ -15,6 +16,7 @@ from trackflow_api.models import (
     IncidentStatusUpdate,
     IncidentSummary,
     STATUS_TRANSITIONS,
+    UserRecord,
     incident_record_from_create,
 )
 
@@ -26,6 +28,30 @@ router = APIRouter(
 
 _INCIDENTS_TABLE = "incidents"
 _INCIDENT_QUERY = TinyQuery()
+_INCIDENTS_LIST_TTL_SECONDS = 20
+_INCIDENTS_SUMMARY_TTL_SECONDS = 30
+
+
+def _incidents_list_cache_key(
+    user_id: str,
+    status: str | None,
+    origin: str | None,
+    branch: str | None,
+    category: str | None,
+) -> str:
+    return (
+        "incidents:list:"
+        f"user={user_id}:status={status or 'all'}:origin={origin or 'all'}:"
+        f"branch={branch or 'all'}:category={category or 'all'}"
+    )
+
+
+def _incidents_summary_cache_key(user_id: str) -> str:
+    return f"incidents:summary:user={user_id}"
+
+
+def _invalidate_incidents_cache() -> None:
+    api_cache.invalidate_prefix("incidents:")
 
 
 def _get_table(db) -> Table:
@@ -46,6 +72,7 @@ def create_incident(payload: IncidentCreate) -> Incident:
         db.close()
         raise HTTPException(status_code=500, detail="Error interno al crear incidencia") from error
     db.close()
+    _invalidate_incidents_cache()
     return incident
 
 
@@ -55,12 +82,20 @@ def list_incidents(
     origin: str | None = Query(default=None),
     branch: str | None = Query(default=None),
     category: str | None = Query(default=None),
+    current_user: UserRecord = Depends(get_current_user),
 ) -> list[Incident]:
+    cache_key = _incidents_list_cache_key(current_user.id, status, origin, branch, category)
+    cached_payload = api_cache.get(cache_key)
+    if cached_payload is not None:
+        return [Incident.model_validate(record) for record in cached_payload]
+
+    db = None
     try:
         db = get_incidents_db()
         records = _get_table(db).all()
     except Exception as error:
-        db.close()
+        if db is not None:
+            db.close()
         raise HTTPException(status_code=500, detail="Error interno al listar incidencias") from error
     db.close()
 
@@ -73,16 +108,24 @@ def list_incidents(
     if category is not None:
         records = [r for r in records if r.get("category") == category]
 
+    api_cache.set(cache_key, records, _INCIDENTS_LIST_TTL_SECONDS)
     return [Incident.model_validate(r) for r in records]
 
 
 @router.get("/summary", response_model=IncidentSummary, status_code=status.HTTP_200_OK)
-def get_incidents_summary() -> IncidentSummary:
+def get_incidents_summary(current_user: UserRecord = Depends(get_current_user)) -> IncidentSummary:
+    cache_key = _incidents_summary_cache_key(current_user.id)
+    cached_summary = api_cache.get(cache_key)
+    if cached_summary is not None:
+        return IncidentSummary.model_validate(cached_summary)
+
+    db = None
     try:
         db = get_incidents_db()
         records = _get_table(db).all()
     except Exception as error:
-        db.close()
+        if db is not None:
+            db.close()
         raise HTTPException(status_code=500, detail="Error interno al obtener resumen") from error
     db.close()
 
@@ -105,13 +148,15 @@ def get_incidents_summary() -> IncidentSummary:
         b = r.get("branch", "unknown")
         by_branch[b] = by_branch.get(b, 0) + 1
 
-    return IncidentSummary(
+    summary = IncidentSummary(
         total=total,
         by_status=by_status,
         by_category=by_category,
         by_origin=by_origin,
         by_branch=by_branch,
     )
+    api_cache.set(cache_key, summary.model_dump(mode="json"), _INCIDENTS_SUMMARY_TTL_SECONDS)
+    return summary
 
 
 @router.get("/{incident_id}", response_model=Incident, status_code=status.HTTP_200_OK)
@@ -174,4 +219,5 @@ def patch_incident_status(incident_id: str, payload: IncidentStatusUpdate) -> In
     if updated_record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incidente no encontrado")
 
+    _invalidate_incidents_cache()
     return Incident.model_validate(updated_record)

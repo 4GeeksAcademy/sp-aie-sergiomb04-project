@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from tinydb import Query as TinyQuery
 
 from trackflow_api.auth import get_current_user
+from trackflow_api.cache import api_cache
 from trackflow_api.database import get_tinydb
 from trackflow_api.models import (
     Supplier,
@@ -12,6 +13,7 @@ from trackflow_api.models import (
     SupplierCreate,
     SupplierRateUpdate,
     SupplierStatusUpdate,
+    UserRecord,
     now_utc,
     supplier_record_from_create,
 )
@@ -22,6 +24,24 @@ router = APIRouter(
     dependencies=[Depends(get_current_user)],
 )
 _SUPPLIER_QUERY = TinyQuery()
+_SUPPLIERS_LIST_TTL_SECONDS = 45
+_SUPPLIERS_DETAIL_TTL_SECONDS = 30
+
+
+def _supplier_list_cache_key(
+    user_id: str,
+    country: SupplierCountry | None,
+    category: SupplierCategory | None,
+) -> str:
+    return f"suppliers:list:user={user_id}:country={country.value if country else 'all'}:category={category.value if category else 'all'}"
+
+
+def _supplier_detail_cache_key(user_id: str, supplier_id: str) -> str:
+    return f"suppliers:detail:user={user_id}:supplier_id={supplier_id}"
+
+
+def _invalidate_suppliers_cache() -> None:
+    api_cache.invalidate_prefix("suppliers:")
 
 
 def _read_supplier_by_id(db, supplier_id: str) -> dict | None:
@@ -38,6 +58,7 @@ def create_supplier(payload: SupplierCreate) -> Supplier:
         db.close()
         raise HTTPException(status_code=500, detail="Error interno al crear proveedor") from error
     db.close()
+    _invalidate_suppliers_cache()
     return supplier
 
 
@@ -45,12 +66,20 @@ def create_supplier(payload: SupplierCreate) -> Supplier:
 def list_suppliers(
     country: SupplierCountry | None = Query(default=None),
     category: SupplierCategory | None = Query(default=None),
+    current_user: UserRecord = Depends(get_current_user),
 ) -> list[Supplier]:
+    cache_key = _supplier_list_cache_key(current_user.id, country, category)
+    cached_payload = api_cache.get(cache_key)
+    if cached_payload is not None:
+        return [Supplier.model_validate(record) for record in cached_payload]
+
+    db = None
     try:
         db = get_tinydb()
         records = db.all()
     except Exception as error:
-        db.close()
+        if db is not None:
+            db.close()
         raise HTTPException(status_code=500, detail="Error interno al listar proveedores") from error
     db.close()
 
@@ -64,22 +93,34 @@ def list_suppliers(
             if category.value in record.get("categories", [])
         ]
 
+    api_cache.set(cache_key, records, _SUPPLIERS_LIST_TTL_SECONDS)
     return [Supplier.model_validate(record) for record in records]
 
 
 @router.get("/{supplier_id}", response_model=Supplier, status_code=status.HTTP_200_OK)
-def get_supplier(supplier_id: str) -> Supplier:
+def get_supplier(
+    supplier_id: str,
+    current_user: UserRecord = Depends(get_current_user),
+) -> Supplier:
+    cache_key = _supplier_detail_cache_key(current_user.id, supplier_id)
+    cached_record = api_cache.get(cache_key)
+    if cached_record is not None:
+        return Supplier.model_validate(cached_record)
+
+    db = None
     try:
         db = get_tinydb()
         record = _read_supplier_by_id(db, supplier_id)
     except Exception as error:
-        db.close()
+        if db is not None:
+            db.close()
         raise HTTPException(status_code=500, detail="Error interno al obtener proveedor") from error
     db.close()
 
     if record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proveedor no encontrado")
 
+    api_cache.set(cache_key, record, _SUPPLIERS_DETAIL_TTL_SECONDS)
     return Supplier.model_validate(record)
 
 
@@ -111,6 +152,7 @@ def patch_supplier_rate(supplier_id: str, payload: SupplierRateUpdate) -> Suppli
     if updated_record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proveedor no encontrado")
 
+    _invalidate_suppliers_cache()
     return Supplier.model_validate(updated_record)
 
 
@@ -138,6 +180,7 @@ def patch_supplier_status(supplier_id: str, payload: SupplierStatusUpdate) -> Su
     if updated_record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proveedor no encontrado")
 
+    _invalidate_suppliers_cache()
     return Supplier.model_validate(updated_record)
 
 
@@ -160,4 +203,5 @@ def delete_supplier(supplier_id: str) -> dict[str, str]:
         db.close()
         raise HTTPException(status_code=500, detail="Error interno al eliminar proveedor") from error
     db.close()
+    _invalidate_suppliers_cache()
     return {"detail": "Proveedor eliminado"}
