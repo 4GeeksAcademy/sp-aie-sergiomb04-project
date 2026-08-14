@@ -25,6 +25,9 @@ function toErrorResponse(upstreamResponse: Response): Promise<Response> {
 
 export async function POST(request: Request): Promise<Response> {
   const authHeaders = await getAuthorizedSessionHeaders();
+
+  console.log("AUTH HEADERS:", authHeaders);
+
   if (!authHeaders) {
     return Response.json({ detail: "Unauthorized" }, { status: 401 });
   }
@@ -32,12 +35,18 @@ export async function POST(request: Request): Promise<Response> {
   const body = await request.json();
 
   try {
-    const upstreamResponse = await fetch(buildTrackflowApiUrl("/api/incidents"), {
-      method: "POST",
-      headers: authHeaders,
-      body: JSON.stringify(body),
-      cache: "no-store",
-    });
+    const upstreamResponse = await fetch(
+      buildTrackflowApiUrl("/api/incidents"),
+      {
+        method: "POST",
+        headers: {
+          Authorization: authHeaders.get("Authorization")!,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+        cache: "no-store",
+      },
+    );
 
     if (!upstreamResponse.ok) {
       return toErrorResponse(upstreamResponse);

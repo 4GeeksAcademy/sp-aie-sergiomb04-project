@@ -1,4 +1,4 @@
-from __future__ import annotations
+from fastapi import Request
 
 from datetime import datetime, timezone
 
@@ -63,14 +63,24 @@ def _read_by_id(db, incident_id: str) -> dict | None:
 
 
 @router.post("", response_model=Incident, status_code=status.HTTP_201_CREATED)
-def create_incident(payload: IncidentCreate) -> Incident:
+async def create_incident(request: Request, payload: IncidentCreate) -> Incident:
+    print("=== CREATE INCIDENT ===")
+    print("BODY:", await request.body())
+    print("PAYLOAD:", payload.model_dump())
+    print("=======================")
+
     incident = incident_record_from_create(payload)
+
     try:
         db = get_incidents_db()
         _get_table(db).insert(incident.model_dump(mode="json"))
     except Exception as error:
         db.close()
-        raise HTTPException(status_code=500, detail="Error interno al crear incidencia") from error
+        raise HTTPException(
+            status_code=500,
+            detail="Error interno al crear incidencia"
+        ) from error
+
     db.close()
     _invalidate_incidents_cache()
     return incident
