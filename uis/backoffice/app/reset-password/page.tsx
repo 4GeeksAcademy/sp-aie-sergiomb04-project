@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { ResetPasswordForm } from "@/app/features/auth/components/ResetPasswordForm";
 
 export default function ResetPasswordPage() {
@@ -14,7 +15,9 @@ export default function ResetPasswordPage() {
           </p>
         </header>
 
-        <ResetPasswordForm />
+        <Suspense fallback={<div className="py-4 text-center text-sm text-slate-500">Cargando formulario...</div>}>
+          <ResetPasswordForm />
+        </Suspense>
       </section>
     </main>
   );

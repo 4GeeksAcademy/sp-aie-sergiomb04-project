@@ -23,18 +23,19 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
 - Consolidacion de experiencia UI con Tailwind y componentes reutilizables.
 - Preparacion del salto a app estructurada en Next.js para evolucion funcional.
 
-## Trabajo en curso para el Hito 4
-- App Next.js activa en uis/talent-pipeline-tracker con App Router y TypeScript.
-- Flujo de listado y detalle de candidaturas conectado a API REST.
-- Gestion de filtros, estados asincronos y notas ya integrada a nivel base.
-- Segun TASK.md, quedan mejoras/ajustes inmediatos: actualizacion de estado y etapa (PATCH /records/:id), mejora de UX/UI responsive en detalle y cierre del flujo de notas (consulta, alta y eliminacion).
+## Trabajo en curso y recientes entregables
+
+### Telemetría TrackFlow — Captura en Frontend y Stub Backend (Completado)
+- Endpoint stub `POST /telemetry/events` en FastAPI (`trackflow_api/routes/telemetry.py`) con validación de envelope Pydantic, logging y respuesta 200 OK (`{ "received": N }`).
+- Servicio cliente `TelemetryService` en TypeScript (`uis/backoffice/app/services/telemetry.ts`) con buffer/cola local, batch cada 10s/20 eventos, `navigator.sendBeacon` en `visibilitychange`, y reintentos con backoff exponencial.
+- `TelemetryProvider` para captura de errores globales no controlados y tracking de navegación en backoffice.
+- Instrumentación de eventos de inventario (`inbound_order_created`, `outbound_order_created`, `stock_threshold_triggered`, `outbound_order_rejected_insufficient_stock`, `inventory_form_validation_failed`, `inventory_form_abandoned`), latencia y fallos de API (`api_request_latency_sampled`, `api_request_failed`), y autenticación (`auth_login_succeeded`, `auth_login_failed` con hashing SHA-256 sin PII).
+- Tests automatizados en backend (pytest 114 passed) y frontend (jest 25 passed), typecheck y build exitosos.
 
 ## Proximos pasos
-1. Cerrar backlog tecnico de Hito 4 indicado en TASK.md.
-2. Estandarizar contratos de tipos compartidos entre app y paquete shared.
-3. Definir base de observabilidad (logs, errores de API, metricas de UI).
-4. Planificar transicion al Hito 5 (backend): APIs de dominio TrackFlow (inventario, tracking, devoluciones).
-5. Preparar roadmap de Hitos 6-10 con foco en datos, RAG, agentes y tiempo real.
+1. Fase 3 de telemetría: persistencia de eventos en base de datos.
+2. Dashboards de operaciones de almacén y reporte ejecutivo sobre datos de telemetría.
+3. Estandarizar contratos de tipos compartidos entre app y paquete shared.
 
 ## Riesgos y foco inmediato
 - Riesgo de desalineacion entre contexto TrackFlow y nombre/dominio de la app actual; conviene converger nomenclatura y casos de uso.

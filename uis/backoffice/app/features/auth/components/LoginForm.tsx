@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 
 import { login } from "@/app/features/auth/services/auth-api";
 import { LoginPayload } from "@/app/features/auth/types/auth";
+import { getDeviceType, setTelemetryUserId, sha256, track } from "@/app/services/telemetry";
 
 const INITIAL_FORM: LoginPayload = {
   email: "",
@@ -22,19 +23,42 @@ export function LoginForm() {
     event.preventDefault();
     setError(null);
 
+    const deviceType = getDeviceType();
+
     try {
-      await login(form);
+      const user = await login(form);
+
+      setTelemetryUserId(user.profile?.user_id || user.profile?.id || user.email);
+
+      track("auth_login_succeeded", {
+        auth_method: "password",
+        user_role: user.role,
+        identity_provider: "trackflow_internal",
+        session_age_seconds: 0,
+        device_type: deviceType,
+      });
 
       startTransition(() => {
         router.push("/");
         router.refresh();
       });
     } catch (unknownError: unknown) {
-      setError(
+      const errorMessage =
         unknownError instanceof Error
           ? unknownError.message
-          : "No se pudo conectar con el servicio de autenticacion"
-      );
+          : "No se pudo conectar con el servicio de autenticacion";
+
+      setError(errorMessage);
+
+      const identityHash = await sha256(form.email.trim().toLowerCase());
+
+      track("auth_login_failed", {
+        auth_method: "password",
+        failure_reason: errorMessage.slice(0, 100),
+        failure_code: errorMessage.includes("401") || errorMessage.includes("Credenciales") ? "invalid_credentials" : "auth_error",
+        identity_hash: identityHash,
+        device_type: deviceType,
+      });
     }
   };
 

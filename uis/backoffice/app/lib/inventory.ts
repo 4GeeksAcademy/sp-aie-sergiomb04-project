@@ -68,21 +68,85 @@ async function parseErrorMessage(response: Response): Promise<string> {
   return `Error HTTP ${response.status}`;
 }
 
+import { normalizeWarehouse, track } from "@/app/services/telemetry";
+
 async function requestInventory<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    ...init,
-    cache: "no-store",
-  });
+  const method = (init?.method || "GET") as "GET" | "POST" | "PATCH" | "DELETE";
+  const startTime = typeof performance !== "undefined" ? performance.now() : Date.now();
 
-  if (!response.ok) {
-    throw new Error(await parseErrorMessage(response));
+  try {
+    const response = await fetch(path, {
+      ...init,
+      cache: "no-store",
+    });
+
+    const elapsed = typeof performance !== "undefined" ? performance.now() - startTime : Date.now() - startTime;
+    const latencyMs = Math.max(1, Math.round(elapsed));
+
+    // Track latency sample
+    track("api_request_latency_sampled", {
+      api_route: path,
+      method,
+      status_code: response.status,
+      latency_ms: latencyMs,
+      upstream_service: "inventory_service",
+      request_source: "web_backoffice",
+    });
+
+    if (!response.ok) {
+      const errorMessage = await parseErrorMessage(response);
+
+      // Track failed request
+      track("api_request_failed", {
+        api_route: path,
+        method,
+        status_code: response.status,
+        error_family: response.status >= 500 ? "server_error" : "client_error",
+        error_message_sanitized: errorMessage.slice(0, 200),
+        retryable: response.status >= 500 || response.status === 429,
+        request_source: "web_backoffice",
+      });
+
+      throw new Error(errorMessage);
+    }
+
+    return (await response.json()) as T;
+  } catch (err) {
+    if (err instanceof Error && !err.message.startsWith("Error HTTP")) {
+      track("api_request_failed", {
+        api_route: path,
+        method,
+        status_code: 500,
+        error_family: "network_error",
+        error_message_sanitized: err.message.slice(0, 200),
+        retryable: true,
+        request_source: "web_backoffice",
+      });
+    }
+    throw err;
   }
-
-  return (await response.json()) as T;
 }
 
 export async function listInventoryProducts(): Promise<InventoryProduct[]> {
-  return requestInventory<InventoryProduct[]>("/api/inventory/products");
+  const products = await requestInventory<InventoryProduct[]>("/api/inventory/products");
+
+  // Check and report stock thresholds
+  const DEFAULT_MINIMUM_THRESHOLD = 10;
+  for (const product of products) {
+    if (product.current_stock < DEFAULT_MINIMUM_THRESHOLD) {
+      track("stock_threshold_triggered", {
+        warehouse: normalizeWarehouse(product.warehouse),
+        client_id: product.client_name,
+        product_id: product.sku,
+        product_category: product.category,
+        quantity: product.current_stock,
+        minimum_threshold: DEFAULT_MINIMUM_THRESHOLD,
+        deficit_units: Math.max(0, DEFAULT_MINIMUM_THRESHOLD - product.current_stock),
+      });
+    }
+  }
+
+  return products;
 }
 
 export async function getInventoryProduct(id: number): Promise<InventoryProduct> {
