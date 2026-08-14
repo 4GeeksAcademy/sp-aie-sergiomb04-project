@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from trackflow_api.auth import get_password_hash
-from trackflow_api.database import get_users_db
+from trackflow_api.database import get_users_db, init_inventory_db
 from trackflow_api.main import app
 
 
@@ -28,6 +28,7 @@ def monkeypatch_env(monkeypatch: pytest.MonkeyPatch, db_path: Path) -> None:
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path.parent / 'trackflow-inventory-test.db'}")
     monkeypatch.setenv("SECRET_KEY", "test-secret")
     monkeypatch.setenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
+    init_inventory_db()
 
 
 @pytest.fixture

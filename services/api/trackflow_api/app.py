@@ -11,6 +11,7 @@ import logging
 
 from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 
 from .auth import get_current_user
@@ -32,6 +33,15 @@ app = FastAPI(
     version="1.0.0",
     description="Backend Python unificado para incidencias y suppliers de TrackFlow.",
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 logger = logging.getLogger("trackflow_api.timing")
 
 

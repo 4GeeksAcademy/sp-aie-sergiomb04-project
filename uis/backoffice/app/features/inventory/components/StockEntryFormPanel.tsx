@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { createStockEntry, listInventoryProducts } from "@/app/lib/inventory";
 import type { InventoryProduct } from "@/app/features/inventory/types/inventory";
+import { normalizeWarehouse, track } from "@/app/services/telemetry";
 
 const INITIAL_FORM = {
   sku_id: "",
@@ -23,6 +24,20 @@ export function StockEntryFormPanel() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const mountTimeRef = useRef<number | null>(null);
+  const hadValidationErrorRef = useRef<boolean>(false);
+  const submittedSuccessfullyRef = useRef<boolean>(false);
+  const formRef = useRef(form);
+  const productsRef = useRef(products);
+
+  useEffect(() => {
+    formRef.current = form;
+  }, [form]);
+
+  useEffect(() => {
+    productsRef.current = products;
+  }, [products]);
+
   const loadProducts = useCallback(async () => {
     setIsLoadingProducts(true);
     setError(null);
@@ -38,9 +53,33 @@ export function StockEntryFormPanel() {
   }, []);
 
   useEffect(() => {
+    mountTimeRef.current = Date.now();
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadProducts();
   }, [loadProducts]);
+
+  // Track form abandonment on unmount
+  useEffect(() => {
+    return () => {
+      if (!submittedSuccessfullyRef.current) {
+        const currentForm = formRef.current;
+        const hasInput = Boolean(currentForm.sku_id || currentForm.quantity || currentForm.reference);
+        if (hasInput && mountTimeRef.current) {
+          const selected = productsRef.current.find((item) => String(item.id) === currentForm.sku_id);
+          const dwellSeconds = Math.round((Date.now() - mountTimeRef.current) / 1000);
+          track("inventory_form_abandoned", {
+            form_name: "stock_entry",
+            step: "form_input",
+            dwell_time_seconds: dwellSeconds,
+            had_validation_error: hadValidationErrorRef.current,
+            warehouse: normalizeWarehouse(selected?.warehouse),
+            client_id: selected?.client_name || "unknown",
+            product_id: selected?.sku || "unknown",
+          });
+        }
+      }
+    };
+  }, []);
 
   const selectedProduct = useMemo(
     () => products.find((item) => String(item.id) === form.sku_id),
@@ -55,14 +94,54 @@ export function StockEntryFormPanel() {
 
     try {
       if (!form.sku_id || !selectedProduct) {
+        hadValidationErrorRef.current = true;
+        track("inventory_form_validation_failed", {
+          form_name: "stock_entry",
+          error_code: "missing_sku",
+          field_name: "sku_id",
+          warehouse: normalizeWarehouse(selectedProduct?.warehouse),
+          client_id: selectedProduct?.client_name || "unknown",
+          product_id: selectedProduct?.sku || "unknown",
+          product_category: selectedProduct?.category || "fashion",
+          quantity: Number(form.quantity || 0),
+        });
         throw new Error("Debes seleccionar un SKU por nombre.");
       }
 
-      await createStockEntry({
+      if (!form.quantity || Number(form.quantity) <= 0) {
+        hadValidationErrorRef.current = true;
+        track("inventory_form_validation_failed", {
+          form_name: "stock_entry",
+          error_code: "invalid_quantity",
+          field_name: "quantity",
+          warehouse: normalizeWarehouse(selectedProduct.warehouse),
+          client_id: selectedProduct.client_name,
+          product_id: selectedProduct.sku,
+          product_category: selectedProduct.category,
+          quantity: Number(form.quantity || 0),
+        });
+        throw new Error("La cantidad debe ser mayor a 0.");
+      }
+
+      const response = await createStockEntry({
         sku_id: Number(form.sku_id),
         quantity: Number(form.quantity),
         reference: form.reference.trim(),
         warehouse: selectedProduct.warehouse,
+      });
+
+      submittedSuccessfullyRef.current = true;
+
+      // Track inbound_order_created event
+      track("inbound_order_created", {
+        warehouse: normalizeWarehouse(response.warehouse),
+        client_id: selectedProduct.client_name,
+        product_id: selectedProduct.sku,
+        product_category: selectedProduct.category,
+        quantity: response.quantity,
+        order_id: String(response.id),
+        reference: response.reference,
+        user_uuid: response.user_uuid,
       });
 
       setForm(INITIAL_FORM);

@@ -3,10 +3,9 @@ import { NextResponse } from "next/server";
 
 export const AUTH_COOKIE_NAME = "trackflow_backoffice_token";
 
-const DEFAULT_API_BASE_URL = "http://0.0.0.0:8000";
+const DEFAULT_API_BASE_URL = "http://localhost:8000";
 
 export function getTrackflowApiBaseUrl(): string {
-  console.log("getTrackflowApiBaseUrl called with TRACKFLOW_API_BASE_URL:", process.env.TRACKFLOW_API_BASE_URL);
   return (process.env.TRACKFLOW_API_BASE_URL ?? DEFAULT_API_BASE_URL).replace(/\/$/, "");
 }
 
@@ -43,7 +42,7 @@ export function applySessionCookie(response: NextResponse, token: string): NextR
   return response;
 }
 
-export function clearSessionCookie(response: NextResponse): NextResponse {
+export function clearSessionCookie<T = unknown>(response: NextResponse<T>): NextResponse<T> {
   response.cookies.set({
     name: AUTH_COOKIE_NAME,
     value: "",
