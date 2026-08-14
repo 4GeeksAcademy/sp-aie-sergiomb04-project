@@ -63,12 +63,7 @@ def _read_by_id(db, incident_id: str) -> dict | None:
 
 
 @router.post("", response_model=Incident, status_code=status.HTTP_201_CREATED)
-async def create_incident(request: Request, payload: IncidentCreate) -> Incident:
-    print("=== CREATE INCIDENT ===")
-    print("BODY:", await request.body())
-    print("PAYLOAD:", payload.model_dump())
-    print("=======================")
-
+async def create_incident(payload: IncidentCreate) -> Incident:
     incident = incident_record_from_create(payload)
 
     try:

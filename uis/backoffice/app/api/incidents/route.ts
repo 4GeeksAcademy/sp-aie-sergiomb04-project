@@ -26,8 +26,6 @@ function toErrorResponse(upstreamResponse: Response): Promise<Response> {
 export async function POST(request: Request): Promise<Response> {
   const authHeaders = await getAuthorizedSessionHeaders();
 
-  console.log("AUTH HEADERS:", authHeaders);
-
   if (!authHeaders) {
     return Response.json({ detail: "Unauthorized" }, { status: 401 });
   }

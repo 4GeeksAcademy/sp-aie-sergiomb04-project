@@ -62,17 +62,6 @@ def startup_inventory_database() -> None:
 
 @app.middleware("http")
 async def request_timing_middleware(request: Request, call_next):
-
-    if request.method == "POST" and request.url.path == "/api/incidents":
-        body = await request.body()
-
-        print("\n========== INCIDENT REQUEST ==========")
-        print("METHOD:", request.method)
-        print("PATH:", request.url.path)
-        print("HEADERS:", dict(request.headers))
-        print("BODY:", body.decode("utf-8", errors="replace"))
-        print("======================================\n")
-
     start = perf_counter()
     response = await call_next(request)
     elapsed_ms = (perf_counter() - start) * 1000
