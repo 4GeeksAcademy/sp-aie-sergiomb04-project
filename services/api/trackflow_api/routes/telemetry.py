@@ -10,7 +10,7 @@ import logging
 import os
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
@@ -54,7 +54,16 @@ class TelemetryBatchResponse(BaseModel):
     received: int
 
 
-# ─── Endpoint ──────────────────────────────────────────────────────────────────
+@router.options("/events", status_code=200)
+async def options_telemetry_events() -> Response:
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        },
+    )
 
 
 @router.post("/events", response_model=TelemetryBatchResponse, status_code=200)
