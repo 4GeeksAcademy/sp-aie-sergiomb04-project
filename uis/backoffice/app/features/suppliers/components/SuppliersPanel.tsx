@@ -96,6 +96,17 @@ export function SuppliersPanel() {
     [countryFilter, categoryFilter]
   );
 
+  const supplierTableRows = useMemo(
+    () =>
+      suppliers.map((supplier) => ({
+        supplier,
+        categoriesLabel: supplier.categories.map((category) => CATEGORY_LABELS[category]).join(", "),
+        rateLabel: `${supplier.rate_per_shipment.toFixed(2)} ${supplier.currency}`,
+        updatedAtLabel: formatApiDate(supplier.updated_at),
+      })),
+    [suppliers]
+  );
+
   const loadSuppliers = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -434,7 +445,7 @@ export function SuppliersPanel() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {suppliers.map((supplier) => (
+                {supplierTableRows.map(({ supplier, categoriesLabel, rateLabel, updatedAtLabel }) => (
                   <tr key={supplier.id}>
                     <td className="px-3 py-3 align-top">
                       <p className="font-semibold text-slate-900">{supplier.name}</p>
@@ -443,10 +454,10 @@ export function SuppliersPanel() {
                       </p>
                     </td>
                     <td className="px-3 py-3 align-top text-slate-700">
-                      {supplier.categories.map((category) => CATEGORY_LABELS[category]).join(", ")}
+                      {categoriesLabel}
                     </td>
                     <td className="px-3 py-3 align-top text-slate-700">
-                      {supplier.rate_per_shipment.toFixed(2)} {supplier.currency}
+                      {rateLabel}
                     </td>
                     <td className="px-3 py-3 align-top">
                       <span
@@ -459,7 +470,7 @@ export function SuppliersPanel() {
                       </span>
                     </td>
                     <td className="px-3 py-3 align-top text-slate-600">
-                      {formatApiDate(supplier.updated_at)}
+                      {updatedAtLabel}
                     </td>
                     <td className="px-3 py-3 align-top">
                       <div className="flex items-center gap-2 flex-nowrap">
