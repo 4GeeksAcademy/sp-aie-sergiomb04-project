@@ -1,5 +1,5 @@
-import { getNextStatuses } from "@/app/features/incidents/types/incident-domain";
-import { hasAnalysisResult, downloadCsvBlob } from "@/app/features/incidents/services/api";
+import { IncidentStatus, getNextStatuses } from "@/app/features/incidents/types/incident-domain";
+import { hasAnalysisResult } from "@/app/features/incidents/services/api";
 import {
   buildTrackflowApiUrl,
   createAuthorizedHeaders,
@@ -33,7 +33,7 @@ describe("getNextStatuses", () => {
 
   // Failure mode: invalid status
   it("returns empty array for unknown status", () => {
-    const result = getNextStatuses("unknown" as any);
+    const result = getNextStatuses("unknown" as unknown as IncidentStatus);
     expect(result).toEqual([]);
   });
 });
@@ -87,7 +87,7 @@ describe("hasAnalysisResult", () => {
 
   // undefined is !== null so hasAnalysisResult returns true for undefined
   it("returns true for undefined (since undefined !== null)", () => {
-    expect(hasAnalysisResult(undefined as any)).toBe(true);
+    expect(hasAnalysisResult(undefined as unknown as { source_file: string })).toBe(true);
   });
 });
 
