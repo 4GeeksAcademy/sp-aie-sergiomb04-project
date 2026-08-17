@@ -6,6 +6,8 @@ from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
+from sqlalchemy import Column, JSON
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field as SQLField
 from sqlmodel import SQLModel
 
@@ -479,3 +481,22 @@ class OutboundOrder(SQLModel, table=True):
     warehouse: str = SQLField(index=True)
     created_at: datetime = SQLField(default_factory=now_utc, index=True)
     user_uuid: str = SQLField(index=True)
+
+
+# ─── Telemetry ORM Model (SQLModel) ───────────────────────────────────────────
+
+class TelemetryEventRecord(SQLModel, table=True):
+    __tablename__ = "telemetry_events"
+
+    event_id: str = SQLField(primary_key=True, index=True)
+    timestamp: str = SQLField(index=True)
+    session_id: str
+    user_id: str | None = SQLField(default=None, nullable=True)
+    event_type: str = SQLField(index=True)
+    service: str = SQLField(default="backoffice")
+    request_id: str
+    tags: dict[str, Any] = SQLField(
+        default_factory=dict,
+        sa_column=Column(JSON().with_variant(JSONB, "postgresql"), nullable=False),
+    )
+
