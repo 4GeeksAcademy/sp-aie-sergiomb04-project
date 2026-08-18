@@ -1,8 +1,4 @@
-"""Telemetry stub router — receives frontend telemetry batches, validates and logs them.
-
-This is a verification-only endpoint (no database persistence).
-Persistence will be added in Fase 3 of the telemetry project.
-"""
+"""Telemetry router — receives frontend telemetry batches, validates and persists them to the database."""
 
 from __future__ import annotations
 
@@ -10,18 +6,168 @@ import logging
 import os
 from typing import Any
 
-from fastapi import APIRouter, Response
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, Response
+from pydantic import BaseModel, Field, ValidationError
+from sqlmodel import Session
+
+from trackflow_api.database import get_db
+from trackflow_api.models import TelemetryEventRecord
 
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 
 logger = logging.getLogger("trackflow_api.telemetry")
 
-# Read the endpoint URL from env to establish the configuration pattern.
-# In the stub phase this is informational only.
 _TELEMETRY_ENDPOINT = os.getenv(
     "TELEMETRY_ENDPOINT", "http://localhost:8000/telemetry/events"
 )
+
+# ─── Property Allowlists per Event Type ───────────────────────────────────────
+
+EVENT_ALLOWLIST: dict[str, set[str]] = {
+    "inbound_order_created": {
+        "warehouse",
+        "client_id",
+        "product_id",
+        "product_category",
+        "quantity",
+        "order_id",
+        "reference",
+        "user_uuid",
+    },
+    "outbound_order_created": {
+        "warehouse",
+        "client_id",
+        "product_id",
+        "product_category",
+        "quantity",
+        "order_id",
+        "exit_type",
+        "tracking_number_present",
+        "user_uuid",
+    },
+    "stock_threshold_triggered": {
+        "warehouse",
+        "client_id",
+        "product_id",
+        "product_category",
+        "quantity",
+        "minimum_threshold",
+        "deficit_units",
+    },
+    "direct_stock_edit_rejected": {
+        "warehouse",
+        "client_id",
+        "product_id",
+        "product_category",
+        "quantity",
+        "attempted_action",
+        "rejection_reason",
+        "user_uuid",
+    },
+    "inventory_discrepancy_detected": {
+        "warehouse",
+        "client_id",
+        "product_id",
+        "product_category",
+        "quantity",
+        "physical_count",
+        "system_count",
+        "discrepancy_units",
+        "audit_id",
+    },
+    "outbound_order_rejected_insufficient_stock": {
+        "warehouse",
+        "client_id",
+        "product_id",
+        "product_category",
+        "quantity",
+        "available_stock",
+        "requested_quantity",
+        "user_uuid",
+        "rejection_reason",
+    },
+    "inventory_order_rejected_warehouse_mismatch": {
+        "warehouse",
+        "client_id",
+        "product_id",
+        "product_category",
+        "quantity",
+        "expected_warehouse",
+        "provided_warehouse",
+        "order_type",
+        "user_uuid",
+    },
+    "inventory_form_validation_failed": {
+        "form_name",
+        "error_code",
+        "field_name",
+        "warehouse",
+        "client_id",
+        "product_id",
+        "product_category",
+        "quantity",
+    },
+    "auth_login_succeeded": {
+        "auth_method",
+        "user_role",
+        "identity_provider",
+        "session_age_seconds",
+        "device_type",
+    },
+    "auth_login_failed": {
+        "auth_method",
+        "failure_reason",
+        "failure_code",
+        "identity_hash",
+        "device_type",
+    },
+    "session_access_denied": {
+        "route_path",
+        "denial_reason",
+        "http_status",
+        "had_session_cookie",
+    },
+    "backoffice_navigation_clicked": {
+        "from_path",
+        "to_path",
+        "nav_surface",
+        "is_mobile",
+    },
+    "api_request_latency_sampled": {
+        "api_route",
+        "method",
+        "status_code",
+        "latency_ms",
+        "upstream_service",
+        "request_source",
+    },
+    "api_request_failed": {
+        "api_route",
+        "method",
+        "status_code",
+        "error_family",
+        "error_message_sanitized",
+        "retryable",
+        "request_source",
+    },
+    "inventory_form_abandoned": {
+        "form_name",
+        "step",
+        "dwell_time_seconds",
+        "had_validation_error",
+        "warehouse",
+        "client_id",
+        "product_id",
+    },
+}
+
+
+def filter_properties_by_allowlist(
+    event_type: str, properties: dict[str, Any]
+) -> dict[str, Any]:
+    """Filter properties to only include fields allowed for the specific event type."""
+    allowed_keys = EVENT_ALLOWLIST.get(event_type, set())
+    return {k: v for k, v in properties.items() if k in allowed_keys}
 
 
 # ─── Pydantic models ──────────────────────────────────────────────────────────
@@ -45,13 +191,15 @@ class TelemetryEvent(BaseModel):
 class TelemetryBatchRequest(BaseModel):
     """Wrapper for a batch of telemetry events."""
 
-    events: list[TelemetryEvent]
+    events: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class TelemetryBatchResponse(BaseModel):
-    """Response acknowledging received events."""
+    """Response acknowledging received, stored, and rejected event counts."""
 
     received: int
+    stored: int
+    rejected: int
 
 
 @router.options("/events", status_code=200)
@@ -69,27 +217,50 @@ async def options_telemetry_events() -> Response:
 @router.post("/events", response_model=TelemetryBatchResponse, status_code=200)
 async def receive_telemetry_events(
     batch: TelemetryBatchRequest,
+    db: Session = Depends(get_db),
 ) -> TelemetryBatchResponse:
-    """Receive a batch of telemetry events, validate, log and acknowledge.
+    """Receive a batch of telemetry events, validate granularly, and persist valid events in bulk."""
+    total_received = len(batch.events)
+    records_to_insert: list[TelemetryEventRecord] = []
+    rejected_count = 0
 
-    This is a stub endpoint — it does NOT persist events to a database.
-    """
-    event_count = len(batch.events)
-    event_types = [event.event_type for event in batch.events]
+    for raw_event in batch.events:
+        try:
+            event = TelemetryEvent.model_validate(raw_event)
+            filtered_tags = filter_properties_by_allowlist(
+                event.event_type, event.properties
+            )
+            record = TelemetryEventRecord(
+                event_id=event.eventId,
+                timestamp=event.timestamp,
+                session_id=event.sessionId,
+                user_id=event.userId,
+                event_type=event.event_type,
+                service="backoffice",
+                request_id=event.requestId,
+                tags=filtered_tags,
+            )
+            records_to_insert.append(record)
+        except (ValidationError, Exception) as exc:
+            logger.warning("telemetry_event_rejected error=%s", exc)
+            rejected_count += 1
+
+    if records_to_insert:
+        db.add_all(records_to_insert)
+        db.commit()
+        stored_count = len(records_to_insert)
+    else:
+        stored_count = 0
 
     logger.info(
-        "telemetry_batch_received count=%d event_types=%s",
-        event_count,
-        event_types,
+        "telemetry_batch_processed received=%d stored=%d rejected=%d",
+        total_received,
+        stored_count,
+        rejected_count,
     )
 
-    for event in batch.events:
-        logger.info(
-            "telemetry_event eventId=%s event_type=%s timestamp=%s sessionId=%s",
-            event.eventId,
-            event.event_type,
-            event.timestamp,
-            event.sessionId,
-        )
-
-    return TelemetryBatchResponse(received=event_count)
+    return TelemetryBatchResponse(
+        received=total_received,
+        stored=stored_count,
+        rejected=rejected_count,
+    )
