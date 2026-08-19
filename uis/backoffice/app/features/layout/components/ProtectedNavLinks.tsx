@@ -9,6 +9,7 @@ const navItems = [
   { href: "/incidents", label: "Incidencias" },
   { href: "/suppliers", label: "Suppliers" },
   { href: "/backoffice/inventory/products", label: "Inventory" },
+  { href: "/telemetry", label: "Telemetría" },
 ];
 
 export function ProtectedNavLinks({ mobile = false }: ProtectedNavLinksProps) {

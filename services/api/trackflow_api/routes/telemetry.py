@@ -4,14 +4,20 @@ from __future__ import annotations
 
 import logging
 import os
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field, ValidationError
 from sqlmodel import Session
 
-from trackflow_api.database import get_db
+from trackflow_api.cache import api_cache
+from trackflow_api.database import get_db, get_inventory_engine
 from trackflow_api.models import TelemetryEventRecord
+from trackflow_api.telemetry.analysis import (
+    _to_iso_utc,
+    generate_telemetry_report,
+)
 
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 
@@ -264,3 +270,52 @@ async def receive_telemetry_events(
         stored=stored_count,
         rejected=rejected_count,
     )
+
+
+@router.options("/report", status_code=200)
+async def options_telemetry_report() -> Response:
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        },
+    )
+
+
+@router.get("/report", status_code=200)
+async def get_telemetry_report(
+    start_date: str | None = Query(default=None, description="Start date ISO 8601 UTC (inclusive)"),
+    end_date: str | None = Query(default=None, description="End date ISO 8601 UTC (exclusive)"),
+) -> dict[str, Any]:
+    """Retrieve operational telemetry report with 60-second in-memory TTL caching."""
+    now = datetime.now(timezone.utc)
+
+    try:
+        if start_date is not None and start_date.strip():
+            resolved_start = _to_iso_utc(start_date.strip())
+        else:
+            resolved_start = (now - timedelta(days=7)).isoformat()
+
+        if end_date is not None and end_date.strip():
+            resolved_end = _to_iso_utc(end_date.strip())
+        else:
+            resolved_end = now.isoformat()
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail=str(err)) from err
+
+    cache_key = f"telemetry_report:{resolved_start}:{resolved_end}"
+    cached_report = api_cache.get(cache_key)
+    if cached_report is not None:
+        return cached_report
+
+    report = generate_telemetry_report(
+        start_date=resolved_start,
+        end_date=resolved_end,
+        engine=get_inventory_engine(),
+    )
+
+    api_cache.set(cache_key, report, ttl_seconds=60)
+    return report
+
