@@ -25,15 +25,16 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
 
 ## Trabajo en curso y recientes entregables
 
-### Telemetría TrackFlow — Persistencia en Base de Datos (Completado)
-- Tabla `telemetry_events` estructurada en 8 columnas (`event_id`, `timestamp`, `session_id`, `user_id`, `event_type`, `service`, `request_id`, `tags` JSONB) con índices en `timestamp`, `event_type` y GIN en `tags`.
-- Script de migración SQL en `scripts/migrations/001_create_telemetry_events.sql` y modelo ORM SQLModel `TelemetryEventRecord` en `trackflow_api/models.py`.
-- Endpoint `POST /telemetry/events` con validación granular de eventos, filtrado estricto por allowlist de properties hacia `tags`, bulk insert en una única transacción de base de datos y respuesta `{ received, stored, rejected }` con invariante `received == stored + rejected`.
-- Frontend y modelo `TelemetryEvent` original 100% intactos (0 regresiones).
-- Tests automatizados en backend (pytest 117 passed), incluyendo pruebas de lote mixto con rechazo granular, allowlist y CORS.
+### Telemetría TrackFlow — Pipeline de Análisis y Endpoint de Reporte (Completado)
+- Módulo analítico en `services/telemetry/analysis.py` (y `trackflow_api/telemetry/analysis.py`) con 4 funciones operacionales vectorizadas en Pandas: `events_per_day`, `error_rate_by_type`, `auth_failure_rate` y `latency_by_route`.
+- Filtrado temporal SQL estricto en UTC (`timestamp >= :start AND timestamp < :end`) y extracción de dimensiones desde tags.
+- Endpoint `GET /telemetry/report` en FastAPI con resolución de período por defecto a 7 días y caché en memoria con TTL de 60 segundos basada en ventana temporal (`api_cache`).
+- Dashboard técnico en Backoffice Next.js (`/telemetry`) consumiendo el endpoint a través del proxy `/api/telemetry/report`, con soporte para rangos rápidos (24h, 7d, 30d), filtros personalizados y métricas operacionales detalladas.
+- Cobertura de tests automatizados completa (125 tests en backend con `pytest`, 27 tests en frontend con `jest`, ESLint sin errores y compilación `next build` exitosa).
+- Documentación de Pull Request en `.tasks/PullRequest.md`.
 
 ## Proximos pasos
-1. Dashboards de operaciones de almacén y reporte ejecutivo sobre datos de telemetría persistidos.
+1. Dashboards de operaciones de almacén integrando métricas operacionales de inventario.
 2. Estandarizar contratos de tipos compartidos entre app y paquete shared.
 
 ## Riesgos y foco inmediato
