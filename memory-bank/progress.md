@@ -31,10 +31,18 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
 - Endpoint `GET /telemetry/report` en FastAPI con resolución de período por defecto a 7 días y caché en memoria con TTL de 60 segundos basada en ventana temporal (`api_cache`).
 - Dashboard técnico en Backoffice Next.js (`/telemetry`) consumiendo el endpoint a través del proxy `/api/telemetry/report`, con soporte para rangos rápidos (24h, 7d, 30d), filtros personalizados y métricas operacionales detalladas.
 - Cobertura de tests automatizados completa (125 tests en backend con `pytest`, 27 tests en frontend con `jest`, ESLint sin errores y compilación `next build` exitosa).
-- Documentación de Pull Request en `.tasks/PullRequest.md`.
+
+### Diseño de Data Pipeline de Desempeño de Negocio (Parte 1 de 3 - Completado)
+- Documento de diseño técnico y de negocio en `data/pipelines/PIPELINE_DESIGN.md` alineado con `CONTEXT-empresa.md`.
+- Identificación y cierre de brecha entre telemetría técnica de ingeniería y reportes ejecutivos/operacionales para Thomas Harry (CEO) y Ana Whitfield (Head of Warehouse Operations).
+- Especificación completa de agregación para tabla destino `reporting.weekly_warehouse_client_performance` (grano semanal por almacén y cliente) cubriendo volumen de entrada, throughput de salida, quiebres de stock y tasa de discrepancia.
+- Estrategia de idempotencia basada en constraint `UNIQUE (warehouse, client_id, week_start)` y UPSERT atómico, gestión de eventos tardíos (late-arriving data) y deduplicación.
+- Esquema de auditoría en `reporting.pipeline_runs` y mapeo a flujos/tareas de Prefect con desacoplamiento en 3 capas (`data/pipelines/`, `data/process/`, `services/reporting/`).
 
 ## Proximos pasos
-1. Dashboards de operaciones de almacén integrando métricas operacionales de inventario.
+1. Implementación del pipeline de datos en Prefect (Parte 2) y transformaciones vectorizadas en `data/process/`.
+2. Implementación de subflows, tests y endpoints en `services/reporting/` (Parte 3).
+3. Dashboards de operaciones de almacén integrando métricas operacionales de inventario.
 2. Estandarizar contratos de tipos compartidos entre app y paquete shared.
 
 ## Riesgos y foco inmediato
