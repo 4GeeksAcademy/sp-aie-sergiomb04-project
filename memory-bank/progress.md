@@ -25,16 +25,34 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
 
 ## Trabajo en curso y recientes entregables
 
-### Telemetría TrackFlow — Captura en Frontend y Stub Backend (Completado)
-- Endpoint stub `POST /telemetry/events` en FastAPI (`trackflow_api/routes/telemetry.py`) con validación de envelope Pydantic, logging y respuesta 200 OK (`{ "received": N }`).
-- Servicio cliente `TelemetryService` en TypeScript (`uis/backoffice/app/services/telemetry.ts`) con buffer/cola local, batch cada 10s/20 eventos, `navigator.sendBeacon` en `visibilitychange`, y reintentos con backoff exponencial.
-- `TelemetryProvider` para captura de errores globales no controlados y tracking de navegación en backoffice.
-- Instrumentación de eventos de inventario (`inbound_order_created`, `outbound_order_created`, `stock_threshold_triggered`, `outbound_order_rejected_insufficient_stock`, `inventory_form_validation_failed`, `inventory_form_abandoned`), latencia y fallos de API (`api_request_latency_sampled`, `api_request_failed`), y autenticación (`auth_login_succeeded`, `auth_login_failed` con hashing SHA-256 sin PII).
-- Tests automatizados en backend (pytest 114 passed) y frontend (jest 25 passed), typecheck y build exitosos.
+### Telemetría TrackFlow — Pipeline de Análisis y Endpoint de Reporte (Completado)
+- Módulo analítico en `services/telemetry/analysis.py` (y `trackflow_api/telemetry/analysis.py`) con 4 funciones operacionales vectorizadas en Pandas: `events_per_day`, `error_rate_by_type`, `auth_failure_rate` y `latency_by_route`.
+- Filtrado temporal SQL estricto en UTC (`timestamp >= :start AND timestamp < :end`) y extracción de dimensiones desde tags.
+- Endpoint `GET /telemetry/report` en FastAPI con resolución de período por defecto a 7 días y caché en memoria con TTL de 60 segundos basada en ventana temporal (`api_cache`).
+- Dashboard técnico en Backoffice Next.js (`/telemetry`) consumiendo el endpoint a través del proxy `/api/telemetry/report`, con soporte para rangos rápidos (24h, 7d, 30d), filtros personalizados y métricas operacionales detalladas.
+- Cobertura de tests automatizados completa (125 tests en backend con `pytest`, 27 tests en frontend con `jest`, ESLint sin errores y compilación `next build` exitosa).
+
+### Diseño de Data Pipeline de Desempeño de Negocio (Parte 1 de 3 - Completado)
+- Documento de diseño técnico y de negocio en `data/pipelines/PIPELINE_DESIGN.md` alineado con `CONTEXT-empresa.md`.
+- Identificación y cierre de brecha entre telemetría técnica de ingeniería y reportes ejecutivos/operacionales para Thomas Harry (CEO) y Ana Whitfield (Head of Warehouse Operations).
+- Especificación completa de agregación para tabla destino `reporting.weekly_warehouse_client_performance` (grano semanal por almacén y cliente) cubriendo volumen de entrada, throughput de salida, quiebres de stock y tasa de discrepancia.
+- Estrategia de idempotencia basada en constraint `UNIQUE (warehouse, client_id, week_start)` y UPSERT atómico, gestión de eventos tardíos (late-arriving data) y deduplicación.
+- Esquema de auditoría en `reporting.pipeline_runs` y mapeo a flujos/tareas de Prefect con desacoplamiento en 3 capas (`data/pipelines/`, `data/process/`, `services/reporting/`).
+
+### Pipeline de Desempeño de Negocio Resiliente (Parte 2 de 3 - Completado)
+- Flujo principal en Prefect 3 (`weekly_warehouse_client_performance_flow`) y tareas modulares para extracción con retries (`extract_telemetry_events`), transformación con caché de 15 minutos (`transform_warehouse_client_metrics`), carga idempotente con UPSERT atómico (`load_reporting_metrics`) y aislamiento de pasos no críticos con `return_state=True` (`optional_pipeline_notification`).
+- Lógica analítica pura y vectorizada en Pandas dentro de `data/process/weekly_performance.py` para métricas semanales: `inbound_units_count`, `outbound_orders_count`, `stockout_events_count`, `discrepancy_events_count` y `discrepancy_rate` (con división segura).
+- Modelos ORM SQLModel para `WeeklyWarehouseClientPerformance` (constraint único `uq_weekly_warehouse_client`) y `PipelineRunRecord` para auditoría y observabilidad.
+- Soporte para ejecución por script CLI (`python data/pipelines/pipeline.py`) con parámetros configurables de semana.
+- 3 endpoints REST en FastAPI bajo `/reporting`:
+  1. `GET /reporting/pipeline-runs/latest`: Estado y metadata de la última ejecución.
+  2. `POST /reporting/pipeline-runs`: Disparo manual del flow del pipeline.
+  3. `GET /reporting/weekly-warehouse-client-performance`: Consulta filtrada de KPIs por semana, almacén y cliente.
+- Cobertura de tests automatizados completa (132 tests pasando en `pytest` cubriendo lógica de negocio, flujo Prefect, idempotencia y endpoints API).
 
 ## Proximos pasos
-1. Fase 3 de telemetría: persistencia de eventos en base de datos.
-2. Dashboards de operaciones de almacén y reporte ejecutivo sobre datos de telemetría.
+1. Implementación de subflows adicionales, reportes semanales y dashboards de operaciones de almacén (Parte 3).
+2. Integración de visualizaciones ejecutivas en el frontend de Next.js consumiendo los endpoints de reporting.
 3. Estandarizar contratos de tipos compartidos entre app y paquete shared.
 
 ## Riesgos y foco inmediato
