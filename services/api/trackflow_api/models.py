@@ -6,7 +6,7 @@ from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
-from sqlalchemy import Column, JSON
+from sqlalchemy import Column, JSON, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field as SQLField
 from sqlmodel import SQLModel
@@ -499,4 +499,44 @@ class TelemetryEventRecord(SQLModel, table=True):
         default_factory=dict,
         sa_column=Column(JSON().with_variant(JSONB, "postgresql"), nullable=False),
     )
+
+
+# ─── Reporting ORM Models (SQLModel) ──────────────────────────────────────────
+
+class WeeklyWarehouseClientPerformance(SQLModel, table=True):
+    __tablename__ = "weekly_warehouse_client_performance"
+    __table_args__ = (
+        UniqueConstraint("warehouse", "client_id", "week_start", name="uq_weekly_warehouse_client"),
+    )
+
+    id: str = SQLField(default_factory=lambda: str(uuid4()), primary_key=True)
+    warehouse: str = SQLField(index=True)
+    client_id: str = SQLField(index=True)
+    week_start: str = SQLField(index=True)
+    inbound_units_count: int = SQLField(default=0)
+    outbound_orders_count: int = SQLField(default=0)
+    stockout_events_count: int = SQLField(default=0)
+    discrepancy_events_count: int = SQLField(default=0)
+    discrepancy_rate: float = SQLField(default=0.0)
+    computed_at: str = SQLField(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
+class PipelineRunRecord(SQLModel, table=True):
+    __tablename__ = "pipeline_runs"
+
+    run_id: str = SQLField(default_factory=lambda: str(uuid4()), primary_key=True, index=True)
+    pipeline_name: str = SQLField(default="weekly_warehouse_client_performance_pipeline", index=True)
+    execution_status: str = SQLField(default="RUNNING", index=True)
+    target_week_start: str = SQLField(index=True)
+    records_extracted: int = SQLField(default=0)
+    records_loaded: int = SQLField(default=0)
+    started_at: str = SQLField(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    completed_at: str | None = SQLField(default=None, nullable=True)
+    duration_seconds: float | None = SQLField(default=None, nullable=True)
+    error_details: dict[str, Any] | None = SQLField(
+        default=None,
+        sa_column=Column(JSON().with_variant(JSONB, "postgresql"), nullable=True),
+    )
+    triggered_by: str = SQLField(default="scheduler")
+
 

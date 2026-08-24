@@ -39,11 +39,21 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
 - Estrategia de idempotencia basada en constraint `UNIQUE (warehouse, client_id, week_start)` y UPSERT atómico, gestión de eventos tardíos (late-arriving data) y deduplicación.
 - Esquema de auditoría en `reporting.pipeline_runs` y mapeo a flujos/tareas de Prefect con desacoplamiento en 3 capas (`data/pipelines/`, `data/process/`, `services/reporting/`).
 
+### Pipeline de Desempeño de Negocio Resiliente (Parte 2 de 3 - Completado)
+- Flujo principal en Prefect 3 (`weekly_warehouse_client_performance_flow`) y tareas modulares para extracción con retries (`extract_telemetry_events`), transformación con caché de 15 minutos (`transform_warehouse_client_metrics`), carga idempotente con UPSERT atómico (`load_reporting_metrics`) y aislamiento de pasos no críticos con `return_state=True` (`optional_pipeline_notification`).
+- Lógica analítica pura y vectorizada en Pandas dentro de `data/process/weekly_performance.py` para métricas semanales: `inbound_units_count`, `outbound_orders_count`, `stockout_events_count`, `discrepancy_events_count` y `discrepancy_rate` (con división segura).
+- Modelos ORM SQLModel para `WeeklyWarehouseClientPerformance` (constraint único `uq_weekly_warehouse_client`) y `PipelineRunRecord` para auditoría y observabilidad.
+- Soporte para ejecución por script CLI (`python data/pipelines/pipeline.py`) con parámetros configurables de semana.
+- 3 endpoints REST en FastAPI bajo `/reporting`:
+  1. `GET /reporting/pipeline-runs/latest`: Estado y metadata de la última ejecución.
+  2. `POST /reporting/pipeline-runs`: Disparo manual del flow del pipeline.
+  3. `GET /reporting/weekly-warehouse-client-performance`: Consulta filtrada de KPIs por semana, almacén y cliente.
+- Cobertura de tests automatizados completa (132 tests pasando en `pytest` cubriendo lógica de negocio, flujo Prefect, idempotencia y endpoints API).
+
 ## Proximos pasos
-1. Implementación del pipeline de datos en Prefect (Parte 2) y transformaciones vectorizadas en `data/process/`.
-2. Implementación de subflows, tests y endpoints en `services/reporting/` (Parte 3).
-3. Dashboards de operaciones de almacén integrando métricas operacionales de inventario.
-2. Estandarizar contratos de tipos compartidos entre app y paquete shared.
+1. Implementación de subflows adicionales, reportes semanales y dashboards de operaciones de almacén (Parte 3).
+2. Integración de visualizaciones ejecutivas en el frontend de Next.js consumiendo los endpoints de reporting.
+3. Estandarizar contratos de tipos compartidos entre app y paquete shared.
 
 ## Riesgos y foco inmediato
 - Riesgo de desalineacion entre contexto TrackFlow y nombre/dominio de la app actual; conviene converger nomenclatura y casos de uso.
