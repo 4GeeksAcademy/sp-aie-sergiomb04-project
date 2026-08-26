@@ -29,8 +29,6 @@ for path in [_REPO_ROOT, _API_DIR]:
         sys.path.insert(0, str(path))
 
 import pandas as pd
-from prefect import flow, task
-from prefect.cache_policies import NO_CACHE
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -44,6 +42,74 @@ from trackflow_api.database import get_inventory_engine, init_inventory_db
 from trackflow_api.models import PipelineRunRecord, WeeklyWarehouseClientPerformance
 
 logger = logging.getLogger("trackflow.pipelines.weekly_performance")
+
+
+# ─── Prefect Graceful Import & Fallback ───────────────────────────────────────
+
+class _StateMock:
+    """Mock state object when running without Prefect installed in the environment."""
+
+    def __init__(self, failed: bool = False, message: str = "") -> None:
+        self._failed = failed
+        self.message = message
+
+    def is_failed(self) -> bool:
+        return self._failed
+
+
+try:
+    from prefect import flow, task
+    from prefect.cache_policies import NO_CACHE
+    HAS_PREFECT = True
+except ImportError:
+    HAS_PREFECT = False
+    NO_CACHE = None
+
+    def flow(*args: Any, **kwargs: Any) -> Any:
+        def decorator(fn: Any) -> Any:
+            def wrapper(*a: Any, **kw: Any) -> Any:
+                return_state = kw.pop("return_state", False)
+                try:
+                    res = fn(*a, **kw)
+                    if return_state:
+                        return _StateMock(failed=False, message="")
+                    return res
+                except Exception as exc:
+                    if return_state:
+                        return _StateMock(failed=True, message=str(exc))
+                    raise
+            wrapper.fn = fn
+            return wrapper
+        if len(args) == 1 and callable(args[0]):
+            fn = args[0]
+            def wrapper(*a: Any, **kw: Any) -> Any:
+                return_state = kw.pop("return_state", False)
+                try:
+                    res = fn(*a, **kw)
+                    if return_state:
+                        return _StateMock(failed=False, message="")
+                    return res
+                except Exception as exc:
+                    if return_state:
+                        return _StateMock(failed=True, message=str(exc))
+                    raise
+            wrapper.fn = fn
+            return wrapper
+        return decorator
+
+    def task(*args: Any, **kwargs: Any) -> Any:
+        def decorator(fn: Any) -> Any:
+            def wrapper(*a: Any, **kw: Any) -> Any:
+                return fn(*a, **kw)
+            wrapper.fn = fn
+            return wrapper
+        if len(args) == 1 and callable(args[0]):
+            fn = args[0]
+            def wrapper(*a: Any, **kw: Any) -> Any:
+                return fn(*a, **kw)
+            wrapper.fn = fn
+            return wrapper
+        return decorator
 
 
 # ─── Cache Key Function for Transformation Task ───────────────────────────────
@@ -66,7 +132,7 @@ def _transformation_cache_key(context: Any, parameters: dict[str, Any]) -> str:
     return f"weekly_transform_{week_start}_{df_checksum}"
 
 
-# ─── Prefect Tasks ────────────────────────────────────────────────────────────
+# ─── Tasks ────────────────────────────────────────────────────────────────────
 
 @task(
     name="extract_telemetry_events",
@@ -231,7 +297,7 @@ def optional_pipeline_notification_task(
     }
 
 
-# ─── Prefect Subflows ─────────────────────────────────────────────────────────
+# ─── Subflows ─────────────────────────────────────────────────────────────────
 
 @flow(
     name="extract-telemetry-events-subflow",
@@ -293,7 +359,7 @@ def load_reporting_metrics_flow(
 def optional_notification_subflow(
     summary_data: dict[str, Any],
     simulate_failure: bool = False,
-) -> dict[str, Any]:
+) -> Any:
     """Auxiliary Subflow: handles alerts without risking main pipeline failure."""
     return optional_pipeline_notification_task(
         summary_data=summary_data,
@@ -419,10 +485,10 @@ def weekly_warehouse_client_performance_flow(
             return_state=True,
         )
 
-        if optional_state.is_failed():
+        if hasattr(optional_state, "is_failed") and optional_state.is_failed():
             logger.warning(
                 "Optional notification subflow failed (isolated, main flow succeeds): %s",
-                optional_state.message,
+                getattr(optional_state, "message", "Error in optional subflow"),
             )
         else:
             logger.info("Optional notification subflow completed successfully.")
