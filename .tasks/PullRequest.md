@@ -38,7 +38,12 @@ Se refactorizó el pipeline orquestador a **subflows tipados e independientes en
   - `GET & POST /api/reporting/pipeline-runs`: Proxy para consulta de estado y disparo manual.
 - **Navegación**: Enlace agregado en `ProtectedNavLinks.tsx`.
 
-### 4. Documentación y Memoria
+### 4. Configuración Docker y Compatibilidad de Entorno
+- **Montaje de Volumen (`docker-compose.yml`)**: Añadido el volumen `./data:/workspace/data` al contenedor `services` para que la orquestación del pipeline esté accesible dentro del contenedor de desarrollo.
+- **Dependencias (`services/requirements.txt`)**: Incluido `prefect>=3` en las dependencias del contenedor de servicios.
+- **Resolución de Rutas (`service.py`)**: Resolución robusta de `sys.path` para soportar tanto ejecución local en host como entornos contenerizados en `/workspace`.
+
+### 5. Documentación y Memoria
 - Actualización de `data/pipelines/PIPELINE_DESIGN.md` con la arquitectura de subflows de la Parte 3.
 - Actualización de `memory-bank/progress.md`.
 
