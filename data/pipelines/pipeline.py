@@ -1,11 +1,11 @@
 """Resilient Business Performance Data Pipeline (TrackFlow).
 
 Orchestrates weekly warehouse and client performance metric calculations from telemetry_events
-into reporting tables using Prefect 3, with vectorized Pandas transformations, caching,
+into reporting tables using Prefect 3 subflows, with vectorized Pandas transformations, caching,
 retry policies, error isolation and atomic idempotent UPSERT.
 
 Scheduled Execution: Weekly on Mondays at 05:00:00 UTC (Cron: 0 5 * * 1)
-CLI Execution: python data/pipelines/pipeline.py [--week-start YYYY-MM-DD] [--force]
+CLI Execution: python data/pipelines/pipeline.py [--week-start YYYY-MM-DD] [--triggered-by cli]
 """
 
 from __future__ import annotations
@@ -51,11 +51,11 @@ logger = logging.getLogger("trackflow.pipelines.weekly_performance")
 def _transformation_cache_key(context: Any, parameters: dict[str, Any]) -> str:
     """Generate deterministic cache key for the transformation task.
 
-    Parameters explained:
+    Parameters:
     - `context`: Prefect execution context (contains run metadata and timestamps).
     - `parameters`: Dictionary with task arguments (`raw_df` and `target_week_start`).
 
-    The hash combines the target week start and the row count / summary of raw events
+    The hash combines the target week start and the row count / schema of raw events
     so that identical input telemetry datasets for the same week avoid re-running
     expensive aggregations within the cache TTL window (15 minutes).
     """
@@ -231,6 +231,76 @@ def optional_pipeline_notification_task(
     }
 
 
+# ─── Prefect Subflows ─────────────────────────────────────────────────────────
+
+@flow(
+    name="extract-telemetry-events-subflow",
+    description="Subflow for extracting operational telemetry events within the target UTC window.",
+)
+def extract_telemetry_events_flow(
+    start_iso: str,
+    end_iso: str,
+    engine: Any = None,
+) -> pd.DataFrame:
+    """Extraction Subflow: queries raw events from telemetry_events with retry policies."""
+    logger.info("Starting extraction subflow for window: %s to %s", start_iso, end_iso)
+    raw_df = extract_telemetry_events_task(
+        start_iso=start_iso,
+        end_iso=end_iso,
+        engine=engine,
+    )
+    return raw_df
+
+
+@flow(
+    name="transform-warehouse-client-metrics-subflow",
+    description="Subflow for calculating weekly warehouse and client performance KPIs using vectorized Pandas.",
+)
+def transform_warehouse_client_metrics_flow(
+    raw_df: pd.DataFrame,
+    target_week_start: str,
+) -> pd.DataFrame:
+    """Transformation Subflow: transforms raw telemetry events into aggregated weekly KPIs."""
+    logger.info("Starting transformation subflow for week_start: %s", target_week_start)
+    metrics_df = transform_warehouse_client_metrics_task(
+        raw_df=raw_df,
+        target_week_start=target_week_start,
+    )
+    return metrics_df
+
+
+@flow(
+    name="load-reporting-metrics-subflow",
+    description="Subflow for atomically loading aggregated metrics into reporting tables with idempotent UPSERT.",
+)
+def load_reporting_metrics_flow(
+    metrics_df: pd.DataFrame,
+    engine: Any = None,
+) -> int:
+    """Loading Subflow: executes idempotent upsert into weekly_warehouse_client_performance."""
+    logger.info("Starting load subflow for %d metric records", len(metrics_df))
+    records_loaded = load_reporting_metrics_task(
+        metrics_df=metrics_df,
+        engine=engine,
+    )
+    return records_loaded
+
+
+@flow(
+    name="optional-notification-subflow",
+    description="Non-critical subflow for dispatching alerts or webhook notifications.",
+)
+def optional_notification_subflow(
+    summary_data: dict[str, Any],
+    simulate_failure: bool = False,
+) -> dict[str, Any]:
+    """Auxiliary Subflow: handles alerts without risking main pipeline failure."""
+    return optional_pipeline_notification_task(
+        summary_data=summary_data,
+        simulate_failure=simulate_failure,
+    )
+
+
 # ─── Audit Recording Helpers ──────────────────────────────────────────────────
 
 def _record_run_start(
@@ -285,11 +355,11 @@ def _record_run_completion(
             session.commit()
 
 
-# ─── Main Flow ────────────────────────────────────────────────────────────────
+# ─── Main Flow (Orchestrator) ─────────────────────────────────────────────────
 
 @flow(
     name="weekly-warehouse-client-performance-flow",
-    description="End-to-end resilient business performance pipeline flow.",
+    description="End-to-end resilient business performance pipeline flow orchestrating extraction, transformation, load, and notification subflows.",
 )
 def weekly_warehouse_client_performance_flow(
     target_week_start: str | None = None,
@@ -297,14 +367,14 @@ def weekly_warehouse_client_performance_flow(
     simulate_optional_failure: bool = False,
     engine: Any = None,
 ) -> dict[str, Any]:
-    """Execute the full business performance ETL pipeline.
+    """Execute the full business performance ETL pipeline via modular subflows.
 
     Flow Steps:
     1. Resolve target week Monday and extraction window.
     2. Initialize database schemas & audit record in `pipeline_runs`.
-    3. Extract operational events from `telemetry_events` (with retries).
-    4. Transform raw events vectorially (with caching).
-    5. Persist aggregated metrics using atomic UPSERT (with retries).
+    3. Extract operational events via `extract_telemetry_events_flow` (Subflow 1).
+    4. Transform raw events vectorially via `transform_warehouse_client_metrics_flow` (Subflow 2).
+    5. Persist aggregated metrics using atomic UPSERT via `load_reporting_metrics_flow` (Subflow 3).
     6. Execute optional notification step using `return_state=True` to isolate failures.
     7. Finalize audit record with timing and status.
     """
@@ -322,28 +392,28 @@ def weekly_warehouse_client_performance_flow(
     records_loaded = 0
 
     try:
-        # Step 2: Extraction Task
-        raw_df = extract_telemetry_events_task(
+        # Step 2: Extraction Subflow
+        raw_df = extract_telemetry_events_flow(
             start_iso=start_iso,
             end_iso=end_iso,
             engine=db_engine,
         )
         records_extracted = len(raw_df)
 
-        # Step 3: Transformation Task
-        metrics_df = transform_warehouse_client_metrics_task(
+        # Step 3: Transformation Subflow
+        metrics_df = transform_warehouse_client_metrics_flow(
             raw_df=raw_df,
             target_week_start=week_start,
         )
 
-        # Step 4: Idempotent Load Task
-        records_loaded = load_reporting_metrics_task(
+        # Step 4: Idempotent Load Subflow
+        records_loaded = load_reporting_metrics_flow(
             metrics_df=metrics_df,
             engine=db_engine,
         )
 
-        # Step 5: Optional non-critical task handled with return_state=True
-        optional_state = optional_pipeline_notification_task(
+        # Step 5: Optional non-critical step handled with return_state=True
+        optional_state = optional_notification_subflow(
             summary_data={"records_loaded": records_loaded, "target_week_start": week_start},
             simulate_failure=simulate_optional_failure,
             return_state=True,
@@ -351,11 +421,11 @@ def weekly_warehouse_client_performance_flow(
 
         if optional_state.is_failed():
             logger.warning(
-                "Optional notification step failed (isolated, main flow succeeds): %s",
+                "Optional notification subflow failed (isolated, main flow succeeds): %s",
                 optional_state.message,
             )
         else:
-            logger.info("Optional notification step completed successfully.")
+            logger.info("Optional notification subflow completed successfully.")
 
         # Step 6: Mark pipeline run as COMPLETED
         _record_run_completion(

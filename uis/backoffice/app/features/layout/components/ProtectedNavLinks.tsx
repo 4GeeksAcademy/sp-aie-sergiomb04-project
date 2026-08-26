@@ -10,6 +10,7 @@ const navItems = [
   { href: "/suppliers", label: "Suppliers" },
   { href: "/backoffice/inventory/products", label: "Inventory" },
   { href: "/telemetry", label: "Telemetría" },
+  { href: "/reporting", label: "Reportes" },
 ];
 
 export function ProtectedNavLinks({ mobile = false }: ProtectedNavLinksProps) {
