@@ -28,5 +28,7 @@ env/
 # Jupyter
 .ipynb_checkpoints/
 
-# Tareas (Copilot / Agentes)
+# Tareas (Copilot / Agentes) y Pull Requests
 .tasks/
+PullRequest.md
+**/PullRequest.md

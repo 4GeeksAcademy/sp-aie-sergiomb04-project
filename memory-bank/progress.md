@@ -57,6 +57,14 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
 - Dashboard Ejecutivo y Operacional en Backoffice Next.js (`/reporting`) consumiendo endpoints de reporting a través de proxies `/api/reporting/...`, con filtros por almacén (Los Ángeles, Zaragoza), marca cliente y semana, resumen de métricas, desglose tabular con badges de estado y control para recálculo manual.
 - Inmutabilidad estricta de `telemetry_events` y `services/telemetry/analysis.py`.
 
+### Script Nocturno de Telemetría y Control de Ejecución (Ticket #DEV-53 - Completado)
+- Tabla `job_runs` implementada con SQLModel con índice `(job_name, target_date)`, columnas para control de estado (`pending`, `processing`, `completed`, `failed`), timestamps en UTC y registro de mensajes de excepción.
+- Servicio `services/job_runner.py` (y `trackflow_api/job_runner.py`) implementando distributed lock nativo (`has_processing_lock`), validación de idempotencia (`has_completed_for_date`), creación de registros y transiciones de estado seguras (`mark_as_completed`, `mark_as_failed`).
+- Script CLI aislado `scripts/nightly_export.py` con resolución configurable de `target_date`, validaciones previas de lock/idempotencia, exportación de snapshot backup en CSV (`data/raw/telemetry_YYYY-MM-DD.csv`), disparo de subproceso de pipeline desacoplado y garantía anti-zombie con bloque `try/except/finally`.
+- Entrypoint CLI `data/pipelines/telemetry_kpi_daily/run.py` para procesamiento de telemetría diario con soporte `--no-prefect`.
+- Cobertura de tests automatizados completa (142 tests backend pasando en `pytest`, incluyendo 10 tests específicos para ciclo de vida, distributed lock, idempotencia y anti-zombie en `services/api/tests/test_nightly_telemetry.py`).
+- Generado archivo `.tasks/PullRequest.md` con especificación de PR, configuración de cron (`0 2 * * *`), logs de muestra y formato de exportación CSV.
+
 ## Proximos pasos
 1. Integración de agentes IA para análisis de anomalías en inventario y recomendaciones logísticas.
 2. Estandarizar contratos de tipos compartidos entre app y paquete shared.
