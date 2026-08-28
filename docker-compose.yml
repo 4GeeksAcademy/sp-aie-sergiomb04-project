@@ -51,6 +51,7 @@ services:
     volumes:
       - ./services/api:/workspace/services/api
       - ./scripts:/workspace/scripts
+      - ./data:/workspace/data
     networks:
       - trackflow-dev-net
 

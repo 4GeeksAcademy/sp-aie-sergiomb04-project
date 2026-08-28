@@ -50,12 +50,19 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
   3. `GET /reporting/weekly-warehouse-client-performance`: Consulta filtrada de KPIs por semana, almacén y cliente.
 - Cobertura de tests automatizados completa (132 tests pasando en `pytest` cubriendo lógica de negocio, flujo Prefect, idempotencia y endpoints API).
 
+### Pipeline de Desempeño de Negocio a Producción (Parte 3 de 3 - Completado)
+- Refactorización modular en Prefect 3 con subflows independientes tipados (`extract_telemetry_events_flow`, `transform_warehouse_client_metrics_flow`, `load_reporting_metrics_flow`, `optional_notification_subflow`) orquestados secuencialmente por `weekly_warehouse_client_performance_flow`.
+- Suite completa de tests unitarios aislados en memoria (`tests/pipelines/test_pipeline.py`) cubriendo 6 casos de prueba (100% de éxito): validación aislada de cada KPI (`inbound_units_count`, `outbound_orders_count`, `stockout_events_count`, `discrepancy_events_count`, `discrepancy_rate`), pruebas defensivas contra datos malformados/nulos/NaNs y validación contra cálculos matemáticos teóricos.
+- Preservación y verificación de ejecución CLI (`python data/pipelines/pipeline.py`) retornando código 0 y JSON estructurado.
+- Dashboard Ejecutivo y Operacional en Backoffice Next.js (`/reporting`) consumiendo endpoints de reporting a través de proxies `/api/reporting/...`, con filtros por almacén (Los Ángeles, Zaragoza), marca cliente y semana, resumen de métricas, desglose tabular con badges de estado y control para recálculo manual.
+- Inmutabilidad estricta de `telemetry_events` y `services/telemetry/analysis.py`.
+
 ## Proximos pasos
-1. Implementación de subflows adicionales, reportes semanales y dashboards de operaciones de almacén (Parte 3).
-2. Integración de visualizaciones ejecutivas en el frontend de Next.js consumiendo los endpoints de reporting.
-3. Estandarizar contratos de tipos compartidos entre app y paquete shared.
+1. Integración de agentes IA para análisis de anomalías en inventario y recomendaciones logísticas.
+2. Estandarizar contratos de tipos compartidos entre app y paquete shared.
+3. Avanzar en portal de seguimiento para transportistas y clientes finales.
 
 ## Riesgos y foco inmediato
 - Riesgo de desalineacion entre contexto TrackFlow y nombre/dominio de la app actual; conviene converger nomenclatura y casos de uso.
 - Riesgo de deuda tecnica si se amplia UI sin contratos de datos estables.
-- Foco inmediato: completar Hito 4 con calidad de UX y consistencia de estado para habilitar backend sin retrabajo.
+- Foco inmediato: mantener consistencia de estado y orquestación resiliente en nuevos pipelines y dashboards.
