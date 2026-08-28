@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from enum import StrEnum
 from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
-from sqlalchemy import Column, JSON, UniqueConstraint
+from sqlalchemy import Column, Date, Index, JSON, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field as SQLField
 from sqlmodel import SQLModel
@@ -538,5 +538,31 @@ class PipelineRunRecord(SQLModel, table=True):
         sa_column=Column(JSON().with_variant(JSONB, "postgresql"), nullable=True),
     )
     triggered_by: str = SQLField(default="scheduler")
+
+
+# ─── Job Runs ORM Model (SQLModel) ──────────────────────────────────────────
+
+class JobRunStatusEnum(StrEnum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class JobRun(SQLModel, table=True):
+    __tablename__ = "job_runs"
+    __table_args__ = (
+        Index("ix_job_runs_job_name_target_date", "job_name", "target_date"),
+    )
+
+    id: str = SQLField(default_factory=lambda: str(uuid4()), primary_key=True, index=True)
+    job_name: str = SQLField(default="nightly_export", index=True)
+    target_date: date = SQLField(sa_column=Column(Date, nullable=False, index=True))
+    status: str = SQLField(default=JobRunStatusEnum.PENDING.value, index=True)
+    started_at: datetime = SQLField(default_factory=now_utc)
+    finished_at: datetime | None = SQLField(default=None, nullable=True)
+    error_message: str | None = SQLField(default=None, nullable=True)
+    created_at: datetime = SQLField(default_factory=now_utc)
+
 
 

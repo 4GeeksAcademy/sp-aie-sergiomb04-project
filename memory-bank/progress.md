@@ -50,6 +50,14 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
   3. `GET /reporting/weekly-warehouse-client-performance`: Consulta filtrada de KPIs por semana, almacén y cliente.
 - Cobertura de tests automatizados completa (132 tests pasando en `pytest` cubriendo lógica de negocio, flujo Prefect, idempotencia y endpoints API).
 
+### Script Nocturno de Telemetría y Control de Ejecución (Ticket #DEV-53 - Completado)
+- Tabla `job_runs` implementada con SQLModel con índice `(job_name, target_date)`, columnas para control de estado (`pending`, `processing`, `completed`, `failed`), timestamps en UTC y registro de mensajes de excepción.
+- Servicio `services/job_runner.py` (y `trackflow_api/job_runner.py`) implementando distributed lock nativo (`has_processing_lock`), validación de idempotencia (`has_completed_for_date`), creación de registros y transiciones de estado seguras (`mark_as_completed`, `mark_as_failed`).
+- Script CLI aislado `scripts/nightly_export.py` con resolución configurable de `target_date`, validaciones previas de lock/idempotencia, exportación de snapshot backup en CSV (`data/raw/telemetry_YYYY-MM-DD.csv`), disparo de subproceso de pipeline desacoplado y garantía anti-zombie con bloque `try/except/finally`.
+- Entrypoint CLI `data/pipelines/telemetry_kpi_daily/run.py` para procesamiento de telemetría diario con soporte `--no-prefect`.
+- Cobertura de tests automatizados completa (142 tests backend pasando en `pytest`, incluyendo 10 tests específicos para ciclo de vida, distributed lock, idempotencia y anti-zombie en `services/api/tests/test_nightly_telemetry.py`).
+- Generado archivo `.tasks/PullRequest.md` con especificación de PR, configuración de cron (`0 2 * * *`), logs de muestra y formato de exportación CSV.
+
 ## Proximos pasos
 1. Implementación de subflows adicionales, reportes semanales y dashboards de operaciones de almacén (Parte 3).
 2. Integración de visualizaciones ejecutivas en el frontend de Next.js consumiendo los endpoints de reporting.
@@ -58,4 +66,4 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
 ## Riesgos y foco inmediato
 - Riesgo de desalineacion entre contexto TrackFlow y nombre/dominio de la app actual; conviene converger nomenclatura y casos de uso.
 - Riesgo de deuda tecnica si se amplia UI sin contratos de datos estables.
-- Foco inmediato: completar Hito 4 con calidad de UX y consistencia de estado para habilitar backend sin retrabajo.
+- Foco inmediato: completar Hito 4 con calidad de UX y consistencia de estado para habilitar backend sin retrabajo.
