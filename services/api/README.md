@@ -32,7 +32,10 @@ Servicio FastAPI unificado para TrackFlow con dos modulos en un mismo backend:
 - `GET /auth/me`
 - `POST /auth/forgot-password`
 - `POST /auth/reset-password`
-- `POST /auth/change-password`
+- `POST /reporting/pipeline-runs` (despacho asíncrono con `202 Accepted` por defecto)
+- `GET /tasks/{task_id}` (polling de estado normalizado)
+- `POST /tasks/pipeline-run` (disparo asíncrono de pipeline)
+- `GET /tasks/dlq` (consulta de Dead Letter Queue de tareas fallidas)
 
 ## Autenticacion
 
@@ -42,6 +45,7 @@ Variables de entorno soportadas:
 
 - `SECRET_KEY`: clave de firma del JWT
 - `ACCESS_TOKEN_EXPIRE_MINUTES`: expiracion del token en minutos
+- `REDIS_URL`: URL de conexión a Redis para Celery (por defecto `redis://localhost:6379/0`)
 - `TRACKFLOW_SUPPLIERS_DB_PATH`: ruta opcional del TinyDB de proveedores
 - `TRACKFLOW_USERS_DB_PATH`: ruta opcional del TinyDB de usuarios/perfiles/auth
 - `TRACKFLOW_INCIDENTS_DB_PATH`: ruta opcional del TinyDB de incidencias
@@ -52,6 +56,35 @@ Variables de entorno soportadas:
 - `RESEND_FROM_EMAIL`: remitente verificado en Resend
 
 Ejemplo de configuracion en `services/api/.env.example`.
+
+## Celery, Redis & Flower
+
+### Levantar Infraestructura con Docker Compose
+```bash
+# Levantar Redis, Worker y Flower junto a los servicios
+docker compose up -d redis worker flower services
+
+# Ver logs del worker
+docker compose logs -f worker
+
+# Acceder al panel de monitoreo Flower
+# URL: http://localhost:5555
+```
+
+### Ejecutar Worker localmente en desarrollo
+```bash
+cd services/api
+
+# Iniciar Celery Worker
+uv run celery -A trackflow_api.celery_app worker --loglevel=info
+
+# Iniciar Flower (Dashboard de monitoreo)
+uv run celery -A trackflow_api.celery_app flower --port=5555
+```
+
+### Detener Worker
+- En terminal local: `Ctrl + C` (o `SIGINT`/`SIGTERM` para apagado graceful).
+- En Docker: `docker compose stop worker flower redis`.
 
 ## Ejecutar con uv
 
@@ -96,31 +129,18 @@ uv run create-user
 ## Probar endpoints rapido
 
 ```bash
-# Analizar CSV
-curl -X POST "http://localhost:8000/api/incidents/analyze" \
-  -H "Authorization: Bearer <token>" \
-  -F "file=@../../scripts/incidents-analysis/incidents-trackflow.csv"
-
-# Exportar ultimo resultado
-curl -L "http://localhost:8000/api/incidents/results/export" \
-  -H "Authorization: Bearer <token>" \
-  -o incidents-analysis-results.csv
-
-# Registrar usuario
-curl -X POST "http://localhost:8000/users" \
+# Disparar tarea asíncrona de reporte de pipeline
+curl -X POST "http://localhost:8000/reporting/pipeline-runs" \
   -H "Content-Type: application/json" \
-  -d '{
-    "email": "ops@trackflow.test",
-    "password": "Secret123",
-    "name": "Ops User",
-    "phone": "+34 600 000 000",
-    "address": "Calle Mayor 1"
-  }'
+  -d '{"target_week_start": "2026-08-17", "force_recompute": false}'
+# Respuesta 202: {"task_id":"...","status":"pending","message":"Task accepted and queued for background processing"}
 
-# Login
-curl -X POST "http://localhost:8000/auth/login" \
-  -H "Content-Type: application/json" \
-  -d '{"email": "ops@trackflow.test", "password": "Secret123"}'
+# Consultar estado de tarea (Polling)
+curl "http://localhost:8000/tasks/<task_id>"
+# Respuesta 200: {"task_id":"...","status":"success","result":{...},"error":null}
+
+# Consultar Dead Letter Queue (DLQ)
+curl "http://localhost:8000/tasks/dlq"
 ```
 
 ## Tests
@@ -132,9 +152,3 @@ uv run pytest
 # Ejecutar tests con cobertura
 uv run pytest --cov
 ```
-
-## Notas
-
-- El servicio usa la misma validacion y calculo de metricas del script en `scripts/incidents-analysis/domain`.
-- Si no hay analisis previo, el endpoint de export devuelve `404`.
-- Gestion de entorno via `uv` — no requiere configuracion adicional de virtualenv.

@@ -46,12 +46,77 @@ services:
       PASSWORD_RESET_BASE_URL: ${PASSWORD_RESET_BASE_URL}
       RESEND_API_KEY: ${RESEND_API_KEY}
       RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL}
+      REDIS_URL: redis://redis:6379/0
     ports:
       - "${SERVICES_PORT}:${SERVICES_PORT}"
     volumes:
       - ./services/api:/workspace/services/api
       - ./scripts:/workspace/scripts
       - ./data:/workspace/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - trackflow-dev-net
+
+  redis:
+    image: redis:alpine
+    container_name: trackflow-redis-dev
+    command: ["redis-server", "--maxmemory-policy", "noeviction"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - trackflow-dev-net
+
+  worker:
+    build:
+      context: ./services
+      dockerfile: Dockerfile
+    container_name: trackflow-worker-dev
+    working_dir: /workspace/services/api
+    command: ["celery", "-A", "trackflow_api.celery_app", "worker", "--loglevel=info"]
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      TRACKFLOW_DB_PATH: ${TRACKFLOW_DB_PATH}
+      SECRET_KEY: ${SECRET_KEY}
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./services/api:/workspace/services/api
+      - ./scripts:/workspace/scripts
+      - ./data:/workspace/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - trackflow-dev-net
+
+  flower:
+    build:
+      context: ./services
+      dockerfile: Dockerfile
+    container_name: trackflow-flower-dev
+    working_dir: /workspace/services/api
+    command: ["celery", "-A", "trackflow_api.celery_app", "flower", "--port=5555", "--broker=redis://redis:6379/0"]
+    env_file:
+      - ./.env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "5555:5555"
+    volumes:
+      - ./services/api:/workspace/services/api
+      - ./scripts:/workspace/scripts
+      - ./data:/workspace/data
+    depends_on:
+      redis:
+        condition: service_healthy
     networks:
       - trackflow-dev-net
 

@@ -65,6 +65,17 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
 - Cobertura de tests automatizados completa (142 tests backend pasando en `pytest`, incluyendo 10 tests específicos para ciclo de vida, distributed lock, idempotencia y anti-zombie en `services/api/tests/test_nightly_telemetry.py`).
 - Generado archivo `.tasks/PullRequest.md` con especificación de PR, configuración de cron (`0 2 * * *`), logs de muestra y formato de exportación CSV.
 
+### Implementación de Colas de Mensajes y Tareas Asíncronas con Celery + Redis (Completado)
+- Configuración de arquitectura Productor/Consumidor con Celery 5 y Redis como broker y result backend en `services/celery_app.py` y `services/api/trackflow_api/celery_app.py`, habilitando `task_track_started = True`, TTL de resultados a 1 hora y time limits (`task_time_limit=300`, `task_soft_time_limit=240`).
+- Infraestructura Docker orquestada en `docker-compose.yml` con servicios `redis` (`redis:alpine`, política `noeviction`, healthcheck activo `redis-cli ping`), `worker` (proceso independiente `celery worker`) y `flower` (dashboard de monitoreo en puerto `5555`).
+- Modelo y tabla `dead_letter_queue` implementada con SQLModel para persistencia de fallos definitivos con campos `task_id`, `task_name`, `retry_count`, `error_message`, `payload_ref` y `created_at`.
+- Tareas pesadas asíncronas en `trackflow_api/tasks.py` (`execute_weekly_performance_pipeline_task` y `execute_sample_heavy_task`) con payload ligero por referencia, logging estructurado por ciclo, reintento con backoff exponencial (`countdown = 2 ** retries * 5`) y persistencia automática en tabla DLQ al agotar reintentos.
+- Endpoints en FastAPI:
+  - `POST /reporting/pipeline-runs` y `POST /tasks/pipeline-run`: Respuesta inmediata `202 Accepted` (<200ms) con `task_id` y `status="pending"`.
+  - `GET /tasks/{task_id}`: Polling de estado normalizado (`pending`, `started`, `success`, `failure`).
+  - `GET /tasks/dlq`: Consulta paginada de registros en Dead Letter Queue.
+- Suite de tests unitarios y de integración en `tests/test_celery_tasks.py` cubriendo configuración Celery, encolado, polling, backoff exponencial y guardado en DLQ.
+
 ## Proximos pasos
 1. Integración de agentes IA para análisis de anomalías en inventario y recomendaciones logísticas.
 2. Estandarizar contratos de tipos compartidos entre app y paquete shared.
