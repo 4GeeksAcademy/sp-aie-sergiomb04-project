@@ -50,12 +50,38 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
   3. `GET /reporting/weekly-warehouse-client-performance`: Consulta filtrada de KPIs por semana, almacén y cliente.
 - Cobertura de tests automatizados completa (132 tests pasando en `pytest` cubriendo lógica de negocio, flujo Prefect, idempotencia y endpoints API).
 
+### Pipeline de Desempeño de Negocio a Producción (Parte 3 de 3 - Completado)
+- Refactorización modular en Prefect 3 con subflows independientes tipados (`extract_telemetry_events_flow`, `transform_warehouse_client_metrics_flow`, `load_reporting_metrics_flow`, `optional_notification_subflow`) orquestados secuencialmente por `weekly_warehouse_client_performance_flow`.
+- Suite completa de tests unitarios aislados en memoria (`tests/pipelines/test_pipeline.py`) cubriendo 6 casos de prueba (100% de éxito): validación aislada de cada KPI (`inbound_units_count`, `outbound_orders_count`, `stockout_events_count`, `discrepancy_events_count`, `discrepancy_rate`), pruebas defensivas contra datos malformados/nulos/NaNs y validación contra cálculos matemáticos teóricos.
+- Preservación y verificación de ejecución CLI (`python data/pipelines/pipeline.py`) retornando código 0 y JSON estructurado.
+- Dashboard Ejecutivo y Operacional en Backoffice Next.js (`/reporting`) consumiendo endpoints de reporting a través de proxies `/api/reporting/...`, con filtros por almacén (Los Ángeles, Zaragoza), marca cliente y semana, resumen de métricas, desglose tabular con badges de estado y control para recálculo manual.
+- Inmutabilidad estricta de `telemetry_events` y `services/telemetry/analysis.py`.
+
+### Script Nocturno de Telemetría y Control de Ejecución (Ticket #DEV-53 - Completado)
+- Tabla `job_runs` implementada con SQLModel con índice `(job_name, target_date)`, columnas para control de estado (`pending`, `processing`, `completed`, `failed`), timestamps en UTC y registro de mensajes de excepción.
+- Servicio `services/job_runner.py` (y `trackflow_api/job_runner.py`) implementando distributed lock nativo (`has_processing_lock`), validación de idempotencia (`has_completed_for_date`), creación de registros y transiciones de estado seguras (`mark_as_completed`, `mark_as_failed`).
+- Script CLI aislado `scripts/nightly_export.py` con resolución configurable de `target_date`, validaciones previas de lock/idempotencia, exportación de snapshot backup en CSV (`data/raw/telemetry_YYYY-MM-DD.csv`), disparo de subproceso de pipeline desacoplado y garantía anti-zombie con bloque `try/except/finally`.
+- Entrypoint CLI `data/pipelines/telemetry_kpi_daily/run.py` para procesamiento de telemetría diario con soporte `--no-prefect`.
+- Cobertura de tests automatizados completa (142 tests backend pasando en `pytest`, incluyendo 10 tests específicos para ciclo de vida, distributed lock, idempotencia y anti-zombie en `services/api/tests/test_nightly_telemetry.py`).
+- Generado archivo `.tasks/PullRequest.md` con especificación de PR, configuración de cron (`0 2 * * *`), logs de muestra y formato de exportación CSV.
+
+### Implementación de Colas de Mensajes y Tareas Asíncronas con Celery + Redis (Completado)
+- Configuración de arquitectura Productor/Consumidor con Celery 5 y Redis como broker y result backend en `services/celery_app.py` y `services/api/trackflow_api/celery_app.py`, habilitando `task_track_started = True`, TTL de resultados a 1 hora y time limits (`task_time_limit=300`, `task_soft_time_limit=240`).
+- Infraestructura Docker orquestada en `docker-compose.yml` con servicios `redis` (`redis:alpine`, política `noeviction`, healthcheck activo `redis-cli ping`), `worker` (proceso independiente `celery worker`) y `flower` (dashboard de monitoreo en puerto `5555`).
+- Modelo y tabla `dead_letter_queue` implementada con SQLModel para persistencia de fallos definitivos con campos `task_id`, `task_name`, `retry_count`, `error_message`, `payload_ref` y `created_at`.
+- Tareas pesadas asíncronas en `trackflow_api/tasks.py` (`execute_weekly_performance_pipeline_task` y `execute_sample_heavy_task`) con payload ligero por referencia, logging estructurado por ciclo, reintento con backoff exponencial (`countdown = 2 ** retries * 5`) y persistencia automática en tabla DLQ al agotar reintentos.
+- Endpoints en FastAPI:
+  - `POST /reporting/pipeline-runs` y `POST /tasks/pipeline-run`: Respuesta inmediata `202 Accepted` (<200ms) con `task_id` y `status="pending"`.
+  - `GET /tasks/{task_id}`: Polling de estado normalizado (`pending`, `started`, `success`, `failure`).
+  - `GET /tasks/dlq`: Consulta paginada de registros en Dead Letter Queue.
+- Suite de tests unitarios y de integración en `tests/test_celery_tasks.py` cubriendo configuración Celery, encolado, polling, backoff exponencial y guardado en DLQ.
+
 ## Proximos pasos
-1. Implementación de subflows adicionales, reportes semanales y dashboards de operaciones de almacén (Parte 3).
-2. Integración de visualizaciones ejecutivas en el frontend de Next.js consumiendo los endpoints de reporting.
-3. Estandarizar contratos de tipos compartidos entre app y paquete shared.
+1. Integración de agentes IA para análisis de anomalías en inventario y recomendaciones logísticas.
+2. Estandarizar contratos de tipos compartidos entre app y paquete shared.
+3. Avanzar en portal de seguimiento para transportistas y clientes finales.
 
 ## Riesgos y foco inmediato
 - Riesgo de desalineacion entre contexto TrackFlow y nombre/dominio de la app actual; conviene converger nomenclatura y casos de uso.
 - Riesgo de deuda tecnica si se amplia UI sin contratos de datos estables.
-- Foco inmediato: completar Hito 4 con calidad de UX y consistencia de estado para habilitar backend sin retrabajo.
+- Foco inmediato: mantener consistencia de estado y orquestación resiliente en nuevos pipelines y dashboards.

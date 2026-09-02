@@ -382,3 +382,25 @@ El proyecto respeta la siguiente separación arquitectónica:
 - **Inmutabilidad de Telemetría Técnica:** `services/telemetry/analysis.py` y `GET /telemetry/report` permanecen intactos y sin modificaciones.
 - **Destino Limpio:** Todas las tablas generadas pertenecen al esquema `reporting` (`reporting.weekly_warehouse_client_performance` y `reporting.pipeline_runs`), manteniendo `telemetry_events` como origen de solo lectura.
 - **Alineación con el Negocio:** KPIs, entidades (`los_angeles`, `zaragoza`), actores (Thomas Harry, Ana Whitfield, Miguel Torres) y tablas corresponden con precisión milimétrica al documento de dominio `CONTEXT-empresa.md`.
+
+---
+
+## 7. Arquitectura de Subflows y Suite de Pruebas Unitarias (Parte 3)
+
+### 7.1 Subflows Modulares en Prefect 3
+El pipeline orquestador en `data/pipelines/pipeline.py` se encuentra desacoplado en subflows independientes `@flow` para máxima trazabilidad y observabilidad en Prefect UI:
+- `extract_telemetry_events_flow`: Subflow tipado de extracción con reintentos configurables contra `telemetry_events`.
+- `transform_warehouse_client_metrics_flow`: Subflow tipado que invoca las transformaciones vectorizadas en Pandas con política de caché de 15 minutos.
+- `load_reporting_metrics_flow`: Subflow de persistencia atómica mediante UPSERT (`ON CONFLICT DO UPDATE`) garantizando idempotencia total.
+- `optional_notification_subflow`: Subflow no crítico aislado con `return_state=True`.
+- `weekly_warehouse_client_performance_flow`: Flujo orquestador principal que ejecuta secuencialmente los subflows.
+
+### 7.2 Suite de Pruebas Unitarias Aisladas
+La suite en `tests/pipelines/test_pipeline.py` garantiza la exactitud matemática y robustez del pipeline con 0 llamadas a bases de datos externas o APIs de red:
+- **`test_kpi1_inbound_units_count`**: Validación del volumen de entrada por almacén y cliente.
+- **`test_kpi2_outbound_orders_count`**: Validación del conteo de órdenes despachadas.
+- **`test_kpi3_stockout_discrepancies_and_rate`**: Validación de alertas de quiebre de stock, discrepancias y tasa de discrepancia.
+- **`test_defensive_data_handling`**: Validación de entradas malformadas, tags JSON inválidos, nulos/NaNs y división segura por cero.
+- **`test_mathematical_validation_hand_calculated`**: Validación contra valores teóricos calculados manualmente.
+- **`test_subflows_in_isolation`**: Validación de ejecución de subflows tipados en memoria.
+

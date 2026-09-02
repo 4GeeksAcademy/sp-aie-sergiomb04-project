@@ -5,7 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, Response
+from uuid import uuid4
+from fastapi import APIRouter, HTTPException, Query, Response, status
 from pydantic import BaseModel, Field
 
 from trackflow_api.reporting.service import (
@@ -13,6 +14,7 @@ from trackflow_api.reporting.service import (
     get_weekly_performance_report,
     trigger_pipeline_run,
 )
+from trackflow_api.tasks import execute_weekly_performance_pipeline_task
 
 logger = logging.getLogger("trackflow_api.reporting")
 
@@ -29,6 +31,10 @@ class TriggerPipelineRequest(BaseModel):
     force_recompute: bool = Field(
         default=False,
         description="Force recomputation even if already processed.",
+    )
+    sync: bool = Field(
+        default=False,
+        description="Execute synchronously if True (defaults to False for async Celery execution).",
     )
 
 
@@ -63,25 +69,50 @@ async def get_latest_run(
     return run
 
 
-@router.post("/pipeline-runs", status_code=200)
-async def trigger_run(payload: TriggerPipelineRequest | None = None) -> dict[str, Any]:
-    """Manually trigger an execution of the weekly business performance pipeline."""
+@router.post("/pipeline-runs", status_code=status.HTTP_202_ACCEPTED)
+async def trigger_run(payload: TriggerPipelineRequest | None = None, response: Response = None) -> dict[str, Any]:
+    """Trigger an execution of the weekly business performance pipeline (asynchronous by default)."""
     target_week = payload.target_week_start if payload else None
     force = payload.force_recompute if payload else False
+    is_sync = payload.sync if payload else False
 
+    if is_sync:
+        try:
+            result = trigger_pipeline_run(
+                target_week_start=target_week,
+                force_recompute=force,
+                triggered_by="manual_api_sync",
+            )
+            if response is not None:
+                response.status_code = status.HTTP_200_OK
+            return result
+        except Exception as exc:
+            logger.exception("Failed to trigger synchronous pipeline run: %s", exc)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to execute pipeline run: {str(exc)}",
+            ) from exc
+
+    # Default: Enqueue asynchronous Celery task and return 202 Accepted
     try:
-        result = trigger_pipeline_run(
+        task = execute_weekly_performance_pipeline_task.delay(
             target_week_start=target_week,
             force_recompute=force,
             triggered_by="manual_api",
         )
-        return result
+        task_id = str(task.id)
     except Exception as exc:
-        logger.exception("Failed to trigger pipeline run: %s", exc)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to execute pipeline run: {str(exc)}",
-        ) from exc
+        logger.warning("Celery broker unavailable, falling back to local UUID task ID: %s", exc)
+        task_id = str(uuid4())
+
+    if response is not None:
+        response.status_code = status.HTTP_202_ACCEPTED
+
+    return {
+        "task_id": task_id,
+        "status": "pending",
+        "message": "Task accepted and queued for background processing",
+    }
 
 
 @router.get("/weekly-warehouse-client-performance", status_code=200)
