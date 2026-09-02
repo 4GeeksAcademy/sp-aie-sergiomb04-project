@@ -291,10 +291,10 @@ def test_reporting_endpoints(seeded_telemetry_events, monkeypatch):
 
     client = TestClient(app)
 
-    # 1. Trigger manual pipeline run via POST /reporting/pipeline-runs
+    # 1. Trigger manual pipeline run via POST /reporting/pipeline-runs (with sync=True)
     post_res = client.post(
         "/reporting/pipeline-runs",
-        json={"target_week_start": "2026-08-17", "force_recompute": True},
+        json={"target_week_start": "2026-08-17", "force_recompute": True, "sync": True},
     )
     assert post_res.status_code == 200
     post_data = post_res.json()

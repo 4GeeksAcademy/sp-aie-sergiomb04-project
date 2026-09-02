@@ -565,4 +565,21 @@ class JobRun(SQLModel, table=True):
     created_at: datetime = SQLField(default_factory=now_utc)
 
 
+# ─── Dead Letter Queue (DLQ) ORM Model (SQLModel) ──────────────────────────
+
+class DeadLetterQueue(SQLModel, table=True):
+    __tablename__ = "dead_letter_queue"
+
+    id: str = SQLField(default_factory=lambda: str(uuid4()), primary_key=True, index=True)
+    task_id: str = SQLField(index=True, unique=True)
+    task_name: str = SQLField(index=True)
+    retry_count: int = SQLField(default=0)
+    error_message: str | None = SQLField(default=None, nullable=True)
+    payload_ref: dict[str, Any] | None = SQLField(
+        default=None,
+        sa_column=Column(JSON().with_variant(JSONB, "postgresql"), nullable=True),
+    )
+    created_at: datetime = SQLField(default_factory=now_utc, index=True)
+
+
 
