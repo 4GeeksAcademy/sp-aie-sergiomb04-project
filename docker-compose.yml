@@ -110,6 +110,10 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
     ports:
       - "5555:5555"
+    volumes:
+      - ./services/api:/workspace/services/api
+      - ./scripts:/workspace/scripts
+      - ./data:/workspace/data
     depends_on:
       redis:
         condition: service_healthy
