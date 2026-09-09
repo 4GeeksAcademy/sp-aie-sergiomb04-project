@@ -1,0 +1,32 @@
+{
+  "mse": {
+    "mse_eur2": 13322085784.56897,
+    "rmse_eur": 115421.34024767244,
+    "mean_actual_eur": 1299073.0533333335,
+    "rmse_pct_of_mean": 8.884899887000897
+  },
+  "psi": {
+    "psi_score": 5.526752090539307,
+    "interpretation": "Deriva Significativa (Esperable por crecimiento acumulado de 10 años)",
+    "num_bins": 5
+  },
+  "gini": {
+    "raw_gini": 0.04330407575795636,
+    "max_gini": 0.06379168075032005,
+    "normalized_gini": 0.6788357862437902
+  },
+  "k2_score": {
+    "k2_statistic": 0.5924280081916915,
+    "p_value": 0.7436282714948262,
+    "is_normal": true,
+    "interpretation": "Residuos compatibles con distribución normal (p > 0.05, no hay sesgo sistemático)"
+  },
+  "finance_friendly": {
+    "mae_eur": 92055.18470833311,
+    "mape_pct": 6.726619925072298,
+    "wape_pct": 7.086220784283512,
+    "total_actual_revenue_test_eur": 31177753.28,
+    "total_predicted_revenue_test_eur": 29324042.220800005,
+    "net_revenue_variance_pct": -5.945621041234938
+  }
+}

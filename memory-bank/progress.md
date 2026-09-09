@@ -76,6 +76,15 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
   - `GET /tasks/dlq`: Consulta paginada de registros en Dead Letter Queue.
 - Suite de tests unitarios y de integración en `tests/test_celery_tasks.py` cubriendo configuración Celery, encolado, polling, backoff exponencial y guardado en DLQ.
 
+### Modelo de Regresión para Predicción de Ventas / Sales Forecasting (Completado)
+- Gestión de entorno configurada con `uv` y dependencias (`pandas`, `numpy`, `scikit-learn`, `xgboost`, `matplotlib`, `scipy`, `pytest`) en `pyproject.toml`.
+- Módulo de preparación de datos y split temporal en `src/pipelines/data_prep.py` con división cronológica estricta: 8 años de entrenamiento (96 meses: 2016-2023) y 2 años de prueba (24 meses: 2024-2025), garantizando ausencia total de data leakage y ajuste de transformaciones exclusivamente en train.
+- Modelo **Random Forest Regressor** (`random_state=42`, `n_estimators=100`) implementado en `src/pipelines/train_forecast.py` con justificación técnica para Finanzas (explicabilidad por árboles, intervalos de incertidumbre empíricos percentil 5-95 y robustez ante picos estacionales).
+- Módulo de métricas de evaluación en `src/pipelines/evaluate.py` calculando explícitamente en el conjunto de test: **MSE** (`13.32B €²`, RMSE `115.4K €` / 8.88% de la media), **PSI** (`5.5268` reflejando crecimiento acumulado de 10 años), **Normalized Gini** (`0.6788` de capacidad de discriminación) y **K2 Score** (`0.5924`, $p=0.7436 > 0.05$ confirmando residuos normales sin sesgo sistemático), junto con **WAPE** (`7.09%`) y reporte exportado a `reports/metrics_report.json`.
+- Visualización de alta resolución generada en `reports/figures/sales_forecast_trackflow.png` mostrando ventas reales de los 2 años de prueba, predicciones y banda de variabilidad.
+- Suite de pruebas unitarias en `tests/pipelines/test_sales_split.py` pasando al 100% en `pytest` (`uv run pytest tests/pipelines/test_sales_split.py`).
+- Documentación completa en `README.md` y checklist de 17 tareas completado en `.tasks/INSTRUCCIONES_AGENTE_TRACKFLOW.md`.
+
 ## Proximos pasos
 1. Integración de agentes IA para análisis de anomalías en inventario y recomendaciones logísticas.
 2. Estandarizar contratos de tipos compartidos entre app y paquete shared.
@@ -85,3 +94,4 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
 - Riesgo de desalineacion entre contexto TrackFlow y nombre/dominio de la app actual; conviene converger nomenclatura y casos de uso.
 - Riesgo de deuda tecnica si se amplia UI sin contratos de datos estables.
 - Foco inmediato: mantener consistencia de estado y orquestación resiliente en nuevos pipelines y dashboards.
+

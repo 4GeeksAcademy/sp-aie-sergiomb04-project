@@ -1,0 +1,27 @@
+[project]
+name = "sp-aie-sergiomb04-project"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "ImSergioh", email = "50914599+sergiomb04@users.noreply.github.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "matplotlib>=3.11.1",
+    "numpy>=2.5.3",
+    "pandas>=3.0.5",
+    "pytest>=9.1.1",
+    "scikit-learn>=1.9.0",
+    "scipy>=1.18.1",
+    "xgboost>=3.4.1",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+
