@@ -85,6 +85,18 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
 - Suite de pruebas unitarias en `tests/pipelines/test_sales_split.py` pasando al 100% en `pytest` (`uv run pytest tests/pipelines/test_sales_split.py`).
 - Documentación completa en `README.md` y checklist de 17 tareas completado en `.tasks/INSTRUCCIONES_AGENTE_TRACKFLOW.md`.
 
+### Evaluación Formal de Modelo de Regresión (Ticket #ML-EVAL-2026-04 - Completado)
+- Estrategia de validación cruzada temporal forward-chaining implementada con `TimeSeriesSplit(n_splits=5)` en `src/pipelines/temporal_evaluation.py`, con comprobación algorítmica estricta de no-mezcla y no-barajado (`shuffle=False`).
+- Cálculo y reporte de métricas en formato formal `media ± desviación estándar`:
+  - **Train MAE:** $13,891.29 \pm 2,335.74$ EUR vs. **Val MAE:** $64,707.41 \pm 24,138.56$ EUR.
+  - **Train RMSE:** $17,784.19 \pm 3,076.44$ EUR vs. **Val RMSE:** $77,245.96 \pm 26,433.09$ EUR.
+  - Brecha de generalización persistente ($+59,461.77$ EUR RMSE / $+50,816.12$ EUR MAE).
+- Visualización dual de curva de aprendizaje en alta resolución generada en `data/eval/learning_curve.png` (RMSE y MAE vs tamaño creciente de entrenamiento: 16 a 80 meses).
+- Justificación exhaustiva de negocio para la priorización de **RMSE** frente a MAE, vinculada al riesgo de rotura de capacidad en almacenes de Los Ángeles y Zaragoza y penalizaciones contractuales con marcas B2B.
+- Reporte técnico formal emitido en `data/eval/evaluation_report.md` diagnosticando explícitamente **Overfitting (Alta Varianza)** y proponiendo una acción correctiva de regularización de hiperparámetros (`max_depth=5`, `min_samples_leaf=4`, `min_samples_split=6`) e ingeniería de variables autoregresivas (`lag_12_revenue_eur`, `rolling_mean_3m_revenue_eur`).
+- Suite de pruebas unitarias en `tests/pipelines/test_temporal_cv.py` (6 tests pasando al 100% en `pytest`, acumulando 12 tests en la suite de pipelines).
+- Registro de tareas (16/16) en `.tasks/TASK-regression-model-eval.md` y métricas serializadas en `data/eval/cv_metrics.json`.
+
 ## Proximos pasos
 1. Integración de agentes IA para análisis de anomalías en inventario y recomendaciones logísticas.
 2. Estandarizar contratos de tipos compartidos entre app y paquete shared.

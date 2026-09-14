@@ -1,0 +1,157 @@
+{
+  "temporal_cross_validation": {
+    "n_splits": 5,
+    "total_samples": 96,
+    "train_mae": {
+      "mean": 13891.293406847433,
+      "std": 2335.743412427051,
+      "formatted": "13,891.29 ± 2,335.74 EUR"
+    },
+    "val_mae": {
+      "mean": 64707.41098279135,
+      "std": 24138.55974101157,
+      "formatted": "64,707.41 ± 24,138.56 EUR"
+    },
+    "train_rmse": {
+      "mean": 17784.192934076345,
+      "std": 3076.4429634371327,
+      "formatted": "17,784.19 ± 3,076.44 EUR"
+    },
+    "val_rmse": {
+      "mean": 77245.96427930793,
+      "std": 26433.08523792945,
+      "formatted": "77,245.96 ± 26,433.09 EUR"
+    },
+    "mean_generalization_gap_rmse_eur": 59461.77134523158,
+    "mean_generalization_gap_mae_eur": 50816.117575943914,
+    "folds": [
+      {
+        "fold": 1,
+        "train_size": 16,
+        "val_size": 16,
+        "train_indices": [
+          0,
+          15
+        ],
+        "val_indices": [
+          16,
+          31
+        ],
+        "train_mae_eur": 18479.64208125013,
+        "val_mae_eur": 28960.16766874981,
+        "train_rmse_eur": 23831.766314600576,
+        "val_rmse_eur": 39879.162774903416,
+        "generalization_gap_rmse_eur": 16047.39646030284,
+        "generalization_gap_mae_eur": 10480.52558749968,
+        "train_period": "2016-01 to 2017-04",
+        "val_period": "2017-05 to 2018-08"
+      },
+      {
+        "fold": 2,
+        "train_size": 32,
+        "val_size": 16,
+        "train_indices": [
+          0,
+          31
+        ],
+        "val_indices": [
+          32,
+          47
+        ],
+        "train_mae_eur": 12461.399194821519,
+        "val_mae_eur": 71182.3653999992,
+        "train_rmse_eur": 16467.028517325656,
+        "val_rmse_eur": 87188.24641836002,
+        "generalization_gap_rmse_eur": 70721.21790103437,
+        "generalization_gap_mae_eur": 58720.966205177676,
+        "train_period": "2016-01 to 2018-08",
+        "val_period": "2018-09 to 2019-12"
+      },
+      {
+        "fold": 3,
+        "train_size": 48,
+        "val_size": 16,
+        "train_indices": [
+          0,
+          47
+        ],
+        "val_indices": [
+          48,
+          63
+        ],
+        "train_mae_eur": 12596.082951800736,
+        "val_mae_eur": 53013.34934999973,
+        "train_rmse_eur": 16436.063684941026,
+        "val_rmse_eur": 61985.75282433331,
+        "generalization_gap_rmse_eur": 45549.689139392285,
+        "generalization_gap_mae_eur": 40417.26639819899,
+        "train_period": "2016-01 to 2019-12",
+        "val_period": "2020-01 to 2021-04"
+      },
+      {
+        "fold": 4,
+        "train_size": 64,
+        "val_size": 16,
+        "train_indices": [
+          0,
+          63
+        ],
+        "val_indices": [
+          64,
+          79
+        ],
+        "train_mae_eur": 12340.181213705744,
+        "val_mae_eur": 67616.62998749962,
+        "train_rmse_eur": 15233.669537111227,
+        "val_rmse_eur": 77917.74707886617,
+        "generalization_gap_rmse_eur": 62684.077541754945,
+        "generalization_gap_mae_eur": 55276.448773793876,
+        "train_period": "2016-01 to 2021-04",
+        "val_period": "2021-05 to 2022-08"
+      },
+      {
+        "fold": 5,
+        "train_size": 80,
+        "val_size": 16,
+        "train_indices": [
+          0,
+          79
+        ],
+        "val_indices": [
+          80,
+          95
+        ],
+        "train_mae_eur": 13579.161592659046,
+        "val_mae_eur": 102764.54250770835,
+        "train_rmse_eur": 16952.436616403236,
+        "val_rmse_eur": 119258.91230007667,
+        "generalization_gap_rmse_eur": 102306.47568367343,
+        "generalization_gap_mae_eur": 89185.3809150493,
+        "train_period": "2016-01 to 2022-08",
+        "val_period": "2022-09 to 2023-12"
+      }
+    ]
+  },
+  "full_train_test_evaluation": {
+    "train_8y": {
+      "samples": 96,
+      "mae_eur": 14538.656066948528,
+      "rmse_eur": 18453.643800332145
+    },
+    "test_2y": {
+      "samples": 24,
+      "mae_eur": 92055.18470833311,
+      "rmse_eur": 115421.34024767244
+    },
+    "generalization_gap": {
+      "mae_diff_eur": 77516.52864138458,
+      "rmse_diff_eur": 96967.6964473403
+    }
+  },
+  "diagnostic": {
+    "classification": "overfitting",
+    "variance_status": "high_variance",
+    "bias_status": "low_bias",
+    "evidence": "Persistent generalization gap between train and validation across all 5 folds. Train RMSE ~17.8k EUR vs Val RMSE ~77.2k EUR (+59.5k EUR gap). Full train RMSE 16.5k EUR vs Test RMSE 115.4k EUR."
+  }
+}
