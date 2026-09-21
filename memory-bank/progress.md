@@ -97,8 +97,22 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
 - Suite de pruebas unitarias en `tests/pipelines/test_temporal_cv.py` (6 tests pasando al 100% en `pytest`, acumulando 12 tests en la suite de pipelines).
 - Registro de tareas (16/16) en `.tasks/TASK-regression-model-eval.md` y métricas serializadas en `data/eval/cv_metrics.json`.
 
+### Hito 7 — RAG y Base de Conocimiento (Completado)
+- Ingesta de corpus oficial de conocimiento en `docs/company-knowledge-base/` con los 4 documentos corporativos: `trackflow-sla-delivery.es.md`, `trackflow-returns-policy.es.md`, `trackflow-carrier-coverage.es.md` y `trackflow-storage-pricing.es.md`.
+- Módulo de preparación e indexación en `data/process/rag.py` con segmentación semántica autocontenida (3 chunks por documento, 12 chunks en total) preservando reglas completas y condiciones contractuales. Inserción idempotente mediante UUIDs deterministas (v5) en la colección Qdrant `trackflow_knowledge` (`Distance.COSINE`).
+- Módulo de recuperación y generación en `data/pipelines/rag.py` estructurado en funciones desacopladas:
+  - `retrieve()`: Búsqueda vectorial filtrando por umbral de similitud `min_score = 0.35` y retornando payloads limpios.
+  - `generate_answer()`: Formulación de respuestas con voz de Account Manager de TrackFlow en llamada comercial y estricto apego al contexto sin alucinaciones (Faithfulness), incorporando las restricciones clave (tiempos +40% en picos de alta demanda, devoluciones internacionales manuales con Sofía Ramos, tarifas de almacenamiento >50 m³ con aprobación de Miguel Torres, excepciones de transportistas con Carlos Vega, y respuesta honesta ante falta de datos).
+  - `query()`: Orquestador externo que compone `retrieve()` + `generate_answer()`.
+- Servicio de base vectorial **Qdrant** añadido a `docker-compose.yml` (`trackflow-qdrant-dev`, puerto 6333) y variables de entorno documentadas en `.env` y `.env.example`.
+- Endpoint REST `POST /knowledge/query` implementado en FastAPI (`services/api/trackflow_api/routes/knowledge.py`) devolviendo `{ "answer": "..." }` sin exponer fragmentos crudos ni puntuaciones al cliente.
+- Interfaz web interactiva en Next.js Backoffice (`uis/backoffice/app/(protected)/knowledge/page.tsx`) con preguntas sugeridas de negocio, estados de carga y error, navegación integrada en `ProtectedNavLinks.tsx` y proxy API en `app/api/knowledge/query/route.ts`.
+- Suite de pruebas unitarias aisladas con mocks pasando al 100%: 8 tests en `tests/pipelines/test_rag.py` y 3 tests en `services/api/tests/test_knowledge_routes.py`.
+- Dataset de evaluación `data/eval/test-queries.json` y script de evaluación `data/eval/eval_retrieval.py` alcanzando un **Recall@3 del 100.00%** (10/10 en posición 1), superando ampliamente el umbral del 80% exigido por `CONTEXT-trackflow.es.md`.
+- Documentación técnica formal de arquitectura, estrategia de chunking y prácticas de embeddings en `docs/rag/rag-design.md`.
+
 ## Proximos pasos
-1. Integración de agentes IA para análisis de anomalías en inventario y recomendaciones logísticas.
+1. Integración de agentes IA autónomos (LangGraph) reutilizando los pasos modulares de `retrieve` y `generate_answer`.
 2. Estandarizar contratos de tipos compartidos entre app y paquete shared.
 3. Avanzar en portal de seguimiento para transportistas y clientes finales.
 

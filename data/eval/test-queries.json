@@ -1,0 +1,62 @@
+[
+  {
+    "id": "q01-sla-standard",
+    "question": "¿Cuál es el tiempo de entrega del servicio estándar dentro del mismo país?",
+    "expected_document": "sla-delivery",
+    "expected_section": "SLA de Entrega - Modalidades de Envío y Tiempos Estándar"
+  },
+  {
+    "id": "q02-sla-peak-black-friday",
+    "question": "¿Cómo se gestiona el SLA de entrega durante períodos de alta demanda como Black Friday y Rebajas?",
+    "expected_document": "sla-delivery",
+    "expected_section": "SLA de Entrega - Excepciones en Picos de Alta Demanda (Black Friday / Rebajas)"
+  },
+  {
+    "id": "q03-sla-compensation",
+    "question": "¿Qué compensación contractual corresponde si no se alcanza el 90% de entregas a tiempo durante dos meses consecutivos?",
+    "expected_document": "sla-delivery",
+    "expected_section": "SLA de Entrega - Compromiso Contractual y Compensaciones"
+  },
+  {
+    "id": "q04-returns-window",
+    "question": "¿Cuál es la ventana estándar de devolución y quién asume los costos de envío de vuelta?",
+    "expected_document": "returns-policy",
+    "expected_section": "Política de Devoluciones - Ventana de Devolución y Asignación de Costos"
+  },
+  {
+    "id": "q05-returns-international",
+    "question": "¿Cómo se procesan las devoluciones internacionales y por qué no son automáticas?",
+    "expected_document": "returns-policy",
+    "expected_section": "Política de Devoluciones - Devoluciones Internacionales y Gestión de Producto"
+  },
+  {
+    "id": "q06-carrier-aragon-rural",
+    "question": "¿Qué transportista tiene la mejor cobertura para entregas en zonas rurales de Aragón?",
+    "expected_document": "carrier-coverage",
+    "expected_section": "Cobertura de Transportistas - España (Zaragoza)"
+  },
+  {
+    "id": "q07-carrier-us-heavy",
+    "question": "¿Cuál es el transportista preferido en Estados Unidos para paquetes pesados superiores a 5 kg?",
+    "expected_document": "carrier-coverage",
+    "expected_section": "Cobertura de Transportistas - Estados Unidos (Los Ángeles)"
+  },
+  {
+    "id": "q08-storage-pricing-grace",
+    "question": "¿Cuáles son las tarifas mensuales de almacenamiento por metro cúbico y cuál es el periodo de gracia?",
+    "expected_document": "storage-pricing",
+    "expected_section": "Tarifas de Almacenamiento - Tarifas Estándar y Periodo de Gracia"
+  },
+  {
+    "id": "q09-storage-long-term",
+    "question": "¿Qué tarifa de larga duración se aplica al inventario que lleva más de 180 días sin movimiento?",
+    "expected_document": "storage-pricing",
+    "expected_section": "Tarifas de Almacenamiento - Inventario de Larga Duración y Reportes de Antigüedad"
+  },
+  {
+    "id": "q10-storage-discount-approval",
+    "question": "¿Puede un account manager negociar y ofrecer un descuento de almacenamiento directamente a un cliente con alto volumen?",
+    "expected_document": "storage-pricing",
+    "expected_section": "Tarifas de Almacenamiento - Negociación de Tarifas Preferenciales y Descuentos"
+  }
+]
