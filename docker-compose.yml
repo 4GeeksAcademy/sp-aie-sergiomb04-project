@@ -117,6 +117,14 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: trackflow-qdrant-dev
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage:z
     networks:
       - trackflow-dev-net
 
@@ -130,3 +138,4 @@ volumes:
   uis_website_next:
   uis_backoffice_node_modules:
   uis_backoffice_next:
+  qdrant_storage:
