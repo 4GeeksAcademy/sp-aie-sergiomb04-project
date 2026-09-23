@@ -28,6 +28,10 @@ class AgentState(TypedDict, total=False):
     answer: str
     error: Optional[str]
     trace: List[Dict[str, Any]]
+    # Routing and tool metadata
+    source_route: Optional[str]
+    tool_used: Optional[str]
+    tool_result: Optional[Dict[str, Any]]
     # Optional runtime parameters
     k: Optional[int]
     min_score: Optional[float]
