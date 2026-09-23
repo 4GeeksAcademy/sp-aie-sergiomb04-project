@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from trackflow_api.app import app
+from trackflow_api.routes.agent import router as agent_router
 from trackflow_api.routes.auth import router as auth_router
 from trackflow_api.routes.incidents import router as incidents_router
 from trackflow_api.routes.inventory import router as inventory_router
@@ -22,4 +23,5 @@ app.include_router(telemetry_router)
 app.include_router(reporting_router)
 app.include_router(tasks_router)
 app.include_router(knowledge_router)
+app.include_router(agent_router)
 

@@ -111,8 +111,29 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
 - Dataset de evaluación `data/eval/test-queries.json` y script de evaluación `data/eval/eval_retrieval.py` alcanzando un **Recall@3 del 100.00%** (10/10 en posición 1), superando ampliamente el umbral del 80% exigido por `CONTEXT-trackflow.es.md`.
 - Documentación técnica formal de arquitectura, estrategia de chunking y prácticas de embeddings en `docs/rag/rag-design.md`.
 
+### Hito 8 — Agente de Soporte con LangGraph (Parte 1 de 2: Migración y Flujo del Agente - Completado)
+- Paquete del agente implementado en `services/agent/` desacoplando el flujo RAG en una máquina de estados con LangGraph:
+  - `state.py`: Definición de `AgentState` con información mínima y explícita (`question`, `is_valid`, `context`, `answer`, `error`, `trace`), evitando sobrecarga de historial innecesario.
+  - `nodes.py`: Nodos con responsabilidad única (`receive_question`, `retrieve_context`, `generate_answer_node`, `handle_no_context`, `handle_error`), reutilizando `retrieve()` y `generate_answer()` de `data/pipelines/rag.py` de forma modular sin invocar el `query()` monolítico.
+  - `edges.py`: Aristas condicionales explícitas que enrutan consultas vacías/inválidas a `handle_error` (omitiendo recuperación) y consultas sin contexto sobre el umbral a `handle_no_context` (evitando alucinaciones).
+  - `graph.py`: Compilación explícita con `MemorySaver` para checkpointing verificable en cada transición y función de ejecución `run_support_agent()`.
+  - `tracing.py`: Gestor y almacén `TraceStore` para auditoría e inspección de traces estructurados por `run_id` y `thread_id`.
+- Endpoint REST en FastAPI (`services/api/trackflow_api/routes/agent.py`) montado en `main.py`:
+  - `POST /agent/query`: Invocación del agente compilado con validación de entrada y manejo controlado de excepciones (HTTP 400/500) sin filtrar stack traces crudos ni payloads internos.
+  - `GET /agent/traces/{run_id}`: Consulta estructurada del trace de ejecución para auditoría y evaluación.
+  - `GET /agent/threads/{thread_id}/state`: Inspección del estado guardado en checkpoints por hilo.
+- Suite de evals automatizados en `tests/pipelines/test_agent_evals.py` (7 tests pasando al 100%):
+  - Verificación del orden estricto de ejecución en el trace (`receive_question` -> `retrieve_context` -> `generate_answer_node`).
+  - Validación de desvío por arista condicional ante preguntas vacías (omisión total de `retrieve_context`).
+  - Validación de desvío a fallback honesto sin contexto (`handle_no_context`).
+  - Anclaje factual estricto en la base de conocimiento de TrackFlow (tarifas de almacenamiento 18 USD / 16 EUR, políticas de devolución internacional manual con Sofía Ramos).
+  - Verificación de persistencia de checkpoints e historial de transiciones mediante `thread_id`.
+- Tests de endpoints FastAPI en `services/api/tests/test_agent_routes.py` (5 tests pasando al 100%).
+- Mantenimiento íntegro de la suite RAG preexistente (8 tests en `tests/pipelines/test_rag.py` pasando al 100%, acumulando 33 tests en `tests/pipelines/`).
+- Exportación de trace de muestra en `data/eval/sample_agent_trace.json`.
+
 ## Proximos pasos
-1. Integración de agentes IA autónomos (LangGraph) reutilizando los pasos modulares de `retrieve` y `generate_answer`.
+1. Agente de Soporte Parte 2: Incorporación de herramientas autónomas (tools) y aristas condicionales avanzadas (seguimiento de envíos, consulta de inventario).
 2. Estandarizar contratos de tipos compartidos entre app y paquete shared.
 3. Avanzar en portal de seguimiento para transportistas y clientes finales.
 
@@ -120,4 +141,5 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
 - Riesgo de desalineacion entre contexto TrackFlow y nombre/dominio de la app actual; conviene converger nomenclatura y casos de uso.
 - Riesgo de deuda tecnica si se amplia UI sin contratos de datos estables.
 - Foco inmediato: mantener consistencia de estado y orquestación resiliente en nuevos pipelines y dashboards.
+
 
