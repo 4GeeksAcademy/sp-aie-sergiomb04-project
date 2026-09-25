@@ -242,7 +242,7 @@ def create_app() -> Starlette:
         Route("/.well-known/openid-configuration", openid_configuration_endpoint, methods=["GET", "OPTIONS"]),
         Route("/oauth/token", token_endpoint, methods=["POST", "OPTIONS"]),
         # Mount FastMCP SSE routes directly
-        Mount("/mcp", app=fastmcp_http_app),
+        Route("/mcp", endpoint=fastmcp_http_app.routes[0].endpoint),
         Mount("/", app=fastmcp_sse_app),
     ]
 
@@ -260,6 +260,7 @@ def create_app() -> Starlette:
     app = Starlette(
         routes=routes,
         middleware=middleware,
+        lifespan=fastmcp_http_app.router.lifespan_context,
     )
     return app
 
