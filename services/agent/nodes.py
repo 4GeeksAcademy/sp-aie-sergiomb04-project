@@ -13,8 +13,11 @@ from data.pipelines.rag import (
     generate_answer,
     retrieve,
 )
+from services.agent.mcp_client import (
+    execute_mcp_incident_query,
+    execute_mcp_inventory_query,
+)
 from services.agent.state import AgentState
-from services.agent.tools import check_inventory_stock, get_incident_ticket
 
 logger = logging.getLogger("trackflow.agent.nodes")
 
@@ -110,22 +113,22 @@ def retrieve_context(state: AgentState) -> Dict[str, Any]:
 
 
 def incident_tool_node(state: AgentState) -> Dict[str, Any]:
-    """Node: Query real-time incident status using the live incident manager tool.
+    """Node: Query real-time incident status using the TrackFlow MCP Server client.
 
-    Single responsibility: Execute get_incident_ticket() with explicit numerical timeout
-    and honest fallback if not found or on timeout. Read-only operation.
+    Single responsibility: Execute execute_mcp_incident_query() with explicit numerical timeout
+    and honest fallback if not found or on timeout. Consumes Incidents Manager via MCP Server.
     """
     t0 = time.perf_counter()
     question = state.get("question", "")
 
-    result = get_incident_ticket(question)
+    result = execute_mcp_incident_query(question)
 
     trace = _record_step(
         state.get("trace", []),
         node_name="incident_tool_node",
         start_time=t0,
         summary={
-            "tool": "incidents",
+            "tool": "mcp:manage_incidents",
             "success": result.success,
             "ticket_id": result.ticket_id,
             "is_fallback": result.is_fallback,
@@ -143,22 +146,22 @@ def incident_tool_node(state: AgentState) -> Dict[str, Any]:
 
 
 def inventory_tool_node(state: AgentState) -> Dict[str, Any]:
-    """Node: Query real-time product stock using the live inventory manager tool.
+    """Node: Query real-time product stock using the TrackFlow MCP Server client.
 
-    Single responsibility: Execute check_inventory_stock() with explicit numerical timeout
-    and honest fallback if not found or on timeout. Read-only operation.
+    Single responsibility: Execute execute_mcp_inventory_query() with explicit numerical timeout
+    and honest fallback if not found or on timeout. Read-only operation via MCP Server.
     """
     t0 = time.perf_counter()
     question = state.get("question", "")
 
-    result = check_inventory_stock(question)
+    result = execute_mcp_inventory_query(question)
 
     trace = _record_step(
         state.get("trace", []),
         node_name="inventory_tool_node",
         start_time=t0,
         summary={
-            "tool": "inventory",
+            "tool": "mcp:query_inventory",
             "success": result.success,
             "product_query": result.product_query,
             "is_fallback": result.is_fallback,

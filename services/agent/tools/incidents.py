@@ -122,99 +122,14 @@ def get_incident_ticket(
     timeout: float = DEFAULT_INCIDENT_TIMEOUT_SECONDS,
     db_path: Optional[Path] = None,
 ) -> IncidentToolOutput:
-    """Query real-time incident status from the live incidents system.
+    """[DEPRECATED] Query real-time incident status.
 
-    Read-only operation with strict numerical timeout and honest fallback path.
-    Reads directly from trackflow_api database (in-process) without mocked data.
+    DEPRECATION NOTICE:
+    Direct invocations to Incidents Manager database are deprecated.
+    All incident operations are now routed exclusively through TrackFlow MCP Server
+    with OAuth 2.1 authentication and scope verification.
     """
-    import time
-    t0 = time.perf_counter()
+    logger.info("get_incident_ticket: Delegating to TrackFlow MCP Server client...")
+    from services.agent.mcp_client import execute_mcp_incident_query
+    return execute_mcp_incident_query(query_or_id, timeout=timeout)
 
-    clean_query = str(query_or_id).strip()
-    extracted_id = _extract_ticket_id(clean_query) or clean_query
-
-    # Enforce strict numerical timeout validation
-    effective_timeout = float(timeout) if timeout is not None else DEFAULT_INCIDENT_TIMEOUT_SECONDS
-
-    try:
-        from trackflow_api.database import get_incidents_db
-
-        # Enforce execution within timeout threshold
-        db = _get_incidents_db_instance()
-        try:
-            table = db.table("incidents")
-            records = table.all()
-        finally:
-            db.close()
-
-        duration_ms = (time.perf_counter() - t0) * 1000.0
-        if (duration_ms / 1000.0) > effective_timeout:
-            return IncidentToolOutput(
-                success=False,
-                ticket_id=extracted_id,
-                message="No pude confirmar el estado de ese ticket ahora mismo debido a que el servicio de incidentes agotó el tiempo de espera.",
-                error="Timeout exceeded",
-                is_fallback=True,
-                duration_ms=round(duration_ms, 2),
-            )
-
-        # Search matching record:
-        target_id_lower = extracted_id.lower()
-        matched = None
-
-        for rec in records:
-            rec_id = str(rec.get("id", "")).lower()
-            rec_csv = str(rec.get("_csv_id", "")).lower()
-            rec_title = str(rec.get("title", "")).lower()
-
-            if target_id_lower == rec_id or target_id_lower == rec_csv:
-                matched = rec
-                break
-            if extracted_id.upper() in rec_csv.upper() or extracted_id.upper() in rec_title.upper():
-                matched = rec
-                break
-
-        if matched:
-            status_val = matched.get("status", "desconocido")
-            title_val = matched.get("title", "Incidente sin título")
-            branch_val = matched.get("branch", "desconocida")
-            category_val = matched.get("category", "general")
-            csv_id_val = matched.get("_csv_id", matched.get("id"))
-
-            message = (
-                f"El ticket {csv_id_val} ('{title_val}') se encuentra actualmente en estado: '{status_val}'. "
-                f"Categoría: {category_val}, Sucursal/Almacén: {branch_val}."
-            )
-            return IncidentToolOutput(
-                success=True,
-                ticket_id=csv_id_val,
-                incident=dict(matched),
-                incidents=[dict(matched)],
-                message=message,
-                is_fallback=False,
-                duration_ms=round(duration_ms, 2),
-            )
-
-        # If not found, honest fallback response - NEVER invent a status
-        duration_ms = (time.perf_counter() - t0) * 1000.0
-        return IncidentToolOutput(
-            success=False,
-            ticket_id=extracted_id,
-            message=f"No pude confirmar el estado del ticket '{extracted_id}' porque no existe ningún registro con ese identificador en el sistema de incidentes de TrackFlow.",
-            error="Ticket not found",
-            is_fallback=True,
-            duration_ms=round(duration_ms, 2),
-        )
-
-    except Exception as exc:
-        duration_ms = (time.perf_counter() - t0) * 1000.0
-        logger.error(f"Error querying incident ticket '{extracted_id}': {exc}", exc_info=True)
-        # Safe fallback path - never crashes agent graph
-        return IncidentToolOutput(
-            success=False,
-            ticket_id=extracted_id,
-            message="No pude confirmar el estado de ese ticket ahora mismo debido a una indisponibilidad temporal en el gestor de incidentes.",
-            error=str(exc),
-            is_fallback=True,
-            duration_ms=round(duration_ms, 2),
-        )
