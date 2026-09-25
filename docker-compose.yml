@@ -47,15 +47,49 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY}
       RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL}
       REDIS_URL: redis://redis:6379/0
+      QDRANT_URL: http://qdrant:6333
+      MCP_SERVER_URL: http://mcp:8001
+      PYTHONPATH: /workspace
     ports:
       - "${SERVICES_PORT}:${SERVICES_PORT}"
     volumes:
-      - ./services/api:/workspace/services/api
+      - ./services:/workspace/services
+      - ./mcps:/workspace/mcps
+      - ./docs:/workspace/docs
       - ./scripts:/workspace/scripts
       - ./data:/workspace/data
     depends_on:
       redis:
         condition: service_healthy
+    networks:
+      - trackflow-dev-net
+
+  mcp:
+    build:
+      context: ./services
+      dockerfile: Dockerfile
+    container_name: trackflow-mcp-dev
+    working_dir: /workspace
+    command: ["sh", "-c", "uvicorn mcps.trackflow_mcp.server:app --reload --host 0.0.0.0 --port ${MCP_PORT:-8001}"]
+    env_file:
+      - ./.env
+    environment:
+      MCP_PORT: ${MCP_PORT:-8001}
+      PORT: ${MCP_PORT:-8001}
+      HOST: "0.0.0.0"
+      TRACKFLOW_INCIDENTS_DB_PATH: /workspace/services/api/trackflow_api/data/incidents.json
+      TRACKFLOW_DB_PATH: /workspace/services/api/trackflow_api/data/db.json
+      DATABASE_URL: ${DATABASE_URL}
+      SECRET_KEY: ${SECRET_KEY}
+      PYTHONPATH: /workspace
+    ports:
+      - "${MCP_PORT:-8001}:${MCP_PORT:-8001}"
+    volumes:
+      - ./services:/workspace/services
+      - ./mcps:/workspace/mcps
+      - ./docs:/workspace/docs
+      - ./scripts:/workspace/scripts
+      - ./data:/workspace/data
     networks:
       - trackflow-dev-net
 
@@ -87,8 +121,12 @@ services:
       TRACKFLOW_DB_PATH: ${TRACKFLOW_DB_PATH}
       SECRET_KEY: ${SECRET_KEY}
       REDIS_URL: redis://redis:6379/0
+      QDRANT_URL: http://qdrant:6333
+      PYTHONPATH: /workspace
     volumes:
-      - ./services/api:/workspace/services/api
+      - ./services:/workspace/services
+      - ./mcps:/workspace/mcps
+      - ./docs:/workspace/docs
       - ./scripts:/workspace/scripts
       - ./data:/workspace/data
     depends_on:
@@ -108,10 +146,13 @@ services:
       - ./.env
     environment:
       REDIS_URL: redis://redis:6379/0
+      PYTHONPATH: /workspace
     ports:
       - "5555:5555"
     volumes:
-      - ./services/api:/workspace/services/api
+      - ./services:/workspace/services
+      - ./mcps:/workspace/mcps
+      - ./docs:/workspace/docs
       - ./scripts:/workspace/scripts
       - ./data:/workspace/data
     depends_on:
