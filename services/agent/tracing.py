@@ -22,6 +22,8 @@ class AgentRunTrace:
     steps: List[Dict[str, Any]] = field(default_factory=list)
     answer: str = ""
     error: Optional[str] = None
+    source_route: Optional[str] = None
+    tool_used: Optional[str] = None
     created_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )

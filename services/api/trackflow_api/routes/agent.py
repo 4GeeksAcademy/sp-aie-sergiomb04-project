@@ -45,6 +45,10 @@ class AgentQueryResponse(BaseModel):
     )
     is_valid: bool = Field(..., description="Whether the question was valid.")
     error: Optional[str] = Field(None, description="Controlled error message if any.")
+    source_route: Optional[str] = Field(
+        None, description="Routing choice made by agent (rag, incident_tool, inventory_tool)."
+    )
+    tool_used: Optional[str] = Field(None, description="External tool invoked if applicable.")
 
 
 class TraceResponse(BaseModel):
@@ -57,6 +61,8 @@ class TraceResponse(BaseModel):
     steps: List[Dict[str, Any]]
     answer: str
     error: Optional[str] = None
+    source_route: Optional[str] = None
+    tool_used: Optional[str] = None
     created_at: str
     total_duration_ms: float
 
@@ -93,6 +99,8 @@ async def query_support_agent(payload: AgentQueryRequest) -> AgentQueryResponse:
             nodes_executed=result["nodes_executed"],
             is_valid=result["is_valid"],
             error=result["error"],
+            source_route=result.get("source_route"),
+            tool_used=result.get("tool_used"),
         )
     except HTTPException:
         raise

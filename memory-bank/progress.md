@@ -132,8 +132,53 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
 - Mantenimiento íntegro de la suite RAG preexistente (8 tests en `tests/pipelines/test_rag.py` pasando al 100%, acumulando 33 tests en `tests/pipelines/`).
 - Exportación de trace de muestra en `data/eval/sample_agent_trace.json`.
 
+### Hito 9 — Agente de Soporte con LangGraph (Parte 2 de 2: Herramientas Fuera del RAG - Completado)
+- Paquete de herramientas externas en `services/agent/tools/`:
+  - `incidents.py`: Tool tipada de solo lectura para consulta en tiempo real de tickets e incidencias en `get_incidents_db()`. Contratos tipados (`IncidentQueryInput`, `IncidentToolOutput`), extracción automática de identificadores (`TRF-XXXXXX`, UUID, ID numérico), timeout numérico estricto (3.0s) y fallback seguro ante fallos o tickets inexistentes sin inventar estados.
+  - `inventory.py`: Tool tipada de solo lectura para verificación de stock de productos en tiempo real (`check_inventory_stock`). Contratos tipados (`InventoryQueryInput`, `InventoryToolOutput`), cálculo de stock en vivo (entradas vs salidas), timeout numérico (3.0s) y fallback controlado ante productos inexistentes o caídas de base de datos.
+- Enrutamiento autónomo en `services/agent/edges.py`:
+  - `route_after_receive`: Clasificación dinámica de la intención del usuario a partir del contenido de la pregunta sin requerir instrucción explícita del usuario, dirigiendo consultas de tickets a `incident_tool_node`, consultas de inventario a `inventory_tool_node` y consultas de políticas/SLA/procedimientos a `retrieve_context` (RAG).
+- Grafo ampliado y compilado en `services/agent/graph.py`:
+  - Nuevos nodos con responsabilidad única (`incident_tool_node`, `inventory_tool_node`), transiciones terminales a `END`, preservación de `MemorySaver` para checkpointing y enriquecimiento de trazas con `source_route` y `tool_used`.
+- Actualización de API en `services/api/trackflow_api/routes/agent.py`:
+  - `POST /agent/query` y `GET /agent/traces/{run_id}` exponen `source_route` y `tool_used`.
+- Suite de evals automatizados en `tests/pipelines/test_agent_tools_evals.py` (6 tests pasando al 100%):
+  - Enrutamiento autónomo a tool de tickets con reporte de datos reales.
+  - Enrutamiento autónomo a RAG con anclaje a base de conocimiento.
+  - Enrutamiento autónomo a tool de inventario con existencias en vivo.
+  - Fallback honesto ante tickets inexistentes.
+  - Fallback defensivo por timeout numérico sin colgar el grafo.
+  - Contratos tipados y fallback de inventario.
+- Preservación íntegra de suite de pruebas: 39 tests pasando al 100% en `tests/pipelines/` y 5 tests pasando al 100% en `services/api/tests/test_agent_routes.py`.
+- Muestras de traces exportadas en `data/eval/sample_agent_ticket_tool_trace.json` y `data/eval/sample_agent_rag_trace.json`.
+
+### Servidor MCP con Autenticación OAuth y Migración del Agente (Completado)
+- Servidor MCP implementado bajo `mcps/trackflow_mcp/` usando **FastMCP** y protegido con autenticación OAuth 2.1 / OIDC mediante **MCP Auth** (`mcpauth`).
+- Configuración de resource server con endpoints de metadata y discovery:
+  - `GET /.well-known/oauth-protected-resource` (RFC 9728 Protected Resource Metadata).
+  - `GET /.well-known/oauth-authorization-server` (RFC 8414 Authorization Server Metadata con soporte S256 PKCE).
+  - `GET /.well-known/openid-configuration` (OIDC Discovery).
+  - `POST /oauth/token` (Endpoint de emisión/intercambio de tokens para testing y MCP Playground).
+  - `GET /health` (Healthcheck público).
+  - Transmisión por SSE (`/sse`, `/messages`) y Streamable HTTP (`/mcp`).
+- Middleware de seguridad `MCPBearerAuthMiddleware` con validación de JWTs Bearer y aplicación del principio de mínimo privilegio mediante scopes:
+  - `incidents:read`: Lectura y consulta de incidencias.
+  - `incidents:write`: Creación y actualización de estado de incidencias.
+  - `inventory:read`: Consulta de inventario y existencias.
+- Herramientas MCP expuestas con documentación y esquemas para auto-discovery:
+  - `manage_incidents`: Gestión completa de tickets del Incidents Manager (creación con validación de categoría/sede/origen, consulta por ID/CSV ID, y actualización de estado con cumplimiento estricto del ciclo de vida `STATUS_TRANSITIONS`).
+  - `query_inventory`: Consulta de solo lectura sobre existencias en almacenes (LA, ZGZ) con cálculo dinámico (entradas - salidas) y **rechazo explícito de cualquier mutación o intento de escritura** (`INVENTORY_MUTATION_FORBIDDEN`).
+- Registro de auditoría estructurado en logs (`[MCP_AUDIT]`) por cada invocación (tool, client_id, subject, scopes, resultado, latencia).
+- Códigos de error diferenciados para autenticación (`AUTH_401`), autorización (`AUTH_403`), validación (`VALIDATION_ERROR` / `INVALID_STATUS_TRANSITION`) y mutación denegada (`INVENTORY_MUTATION_FORBIDDEN`).
+- Migración del agente LangGraph (`services/agent/`):
+  - Creación del cliente MCP en `services/agent/mcp_client.py` consumiendo las tools del servidor MCP con token OAuth.
+  - Actualización de `incident_tool_node` e `inventory_tool_node` en `services/agent/nodes.py` para invocar exclusivamente el servidor MCP.
+  - Deprecación explícita de `services/agent/tools/incidents.py` delegando al cliente MCP para evitar caminos duplicados.
+  - Preservación íntegra del enrutamiento autónomo entre RAG y herramientas en `services/agent/edges.py`.
+- Suite de pruebas unitarias y de integración en `tests/trackflow_mcp_tests/test_mcp_server.py` validando discovery, auth, scopes, ciclo de vida de tickets, rechazo de escritura y logs de auditoría.
+
 ## Proximos pasos
-1. Agente de Soporte Parte 2: Incorporación de herramientas autónomas (tools) y aristas condicionales avanzadas (seguimiento de envíos, consulta de inventario).
+1. Integración en UI Backoffice Next.js con chat interactivo con soporte para selector de tools y visualización de trazas.
 2. Estandarizar contratos de tipos compartidos entre app y paquete shared.
 3. Avanzar en portal de seguimiento para transportistas y clientes finales.
 
@@ -141,5 +186,7 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
 - Riesgo de desalineacion entre contexto TrackFlow y nombre/dominio de la app actual; conviene converger nomenclatura y casos de uso.
 - Riesgo de deuda tecnica si se amplia UI sin contratos de datos estables.
 - Foco inmediato: mantener consistencia de estado y orquestación resiliente en nuevos pipelines y dashboards.
+
+
 
 

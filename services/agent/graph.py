@@ -17,6 +17,8 @@ from services.agent.nodes import (
     generate_answer_node,
     handle_error,
     handle_no_context,
+    incident_tool_node,
+    inventory_tool_node,
     receive_question,
     retrieve_context,
 )
@@ -31,7 +33,7 @@ _compiled_agent: Optional[CompiledStateGraph] = None
 
 
 def build_agent_graph() -> StateGraph:
-    """Build the state graph with explicit nodes, edges and conditions.
+    """Build the state graph with explicit nodes, tools, edges and conditions.
 
     Does not compile the graph; provides the raw StateGraph definition
     to allow inspection or custom checkpointers.
@@ -44,20 +46,25 @@ def build_agent_graph() -> StateGraph:
     workflow.add_node("generate_answer_node", generate_answer_node)
     workflow.add_node("handle_no_context", handle_no_context)
     workflow.add_node("handle_error", handle_error)
+    workflow.add_node("incident_tool_node", incident_tool_node)
+    workflow.add_node("inventory_tool_node", inventory_tool_node)
 
     # 2. Register flow entrypoint
     workflow.add_edge(START, "receive_question")
 
-    # 3. Register conditional edges with explicit branches
+    # 3. Register dynamic routing conditional edges
     workflow.add_conditional_edges(
         "receive_question",
         route_after_receive,
         {
             "retrieve_context": "retrieve_context",
+            "incident_tool_node": "incident_tool_node",
+            "inventory_tool_node": "inventory_tool_node",
             "handle_error": "handle_error",
         },
     )
 
+    # 4. Register conditional edges within RAG flow
     workflow.add_conditional_edges(
         "retrieve_context",
         route_after_retrieve,
@@ -67,10 +74,12 @@ def build_agent_graph() -> StateGraph:
         },
     )
 
-    # 4. Register terminal transitions
+    # 5. Register terminal transitions
     workflow.add_edge("generate_answer_node", END)
     workflow.add_edge("handle_no_context", END)
     workflow.add_edge("handle_error", END)
+    workflow.add_edge("incident_tool_node", END)
+    workflow.add_edge("inventory_tool_node", END)
 
     return workflow
 
@@ -86,7 +95,7 @@ def compile_agent_graph(
     workflow = build_agent_graph()
     try:
         compiled = workflow.compile(checkpointer=saver)
-        logger.info("Successfully compiled TrackFlow LangGraph support agent.")
+        logger.info("Successfully compiled TrackFlow LangGraph support agent with tools.")
         return compiled
     except Exception as exc:
         logger.critical(f"Fatal error compiling LangGraph support agent: {exc}", exc_info=True)
@@ -129,7 +138,7 @@ def run_support_agent(
         compiled_graph: Custom precompiled graph instance if provided.
 
     Returns:
-        Dictionary with answer, thread_id, run_id, nodes_executed, trace and context.
+        Dictionary with answer, thread_id, run_id, nodes_executed, trace, source_route and tool_used.
     """
     t_start = time.perf_counter()
     run_id = f"run_{uuid.uuid4().hex[:12]}"
@@ -144,6 +153,9 @@ def run_support_agent(
         "answer": "",
         "error": None,
         "trace": [],
+        "source_route": None,
+        "tool_used": None,
+        "tool_result": None,
         "k": k,
         "min_score": min_score,
         "collection_name": collection_name,
@@ -167,6 +179,8 @@ def run_support_agent(
             steps=trace_steps,
             answer=final_state.get("answer", ""),
             error=final_state.get("error"),
+            source_route=final_state.get("source_route"),
+            tool_used=final_state.get("tool_used"),
             total_duration_ms=round(total_duration, 2),
         )
         trace_store.save_trace(agent_trace)
@@ -176,6 +190,9 @@ def run_support_agent(
             "thread_id": active_thread_id,
             "run_id": run_id,
             "is_valid": final_state.get("is_valid", False),
+            "source_route": final_state.get("source_route"),
+            "tool_used": final_state.get("tool_used"),
+            "tool_result": final_state.get("tool_result"),
             "nodes_executed": nodes_executed,
             "error": final_state.get("error"),
             "context": final_state.get("context", []),
@@ -195,6 +212,8 @@ def run_support_agent(
             steps=[],
             answer=safe_error_msg,
             error=str(exc),
+            source_route=None,
+            tool_used=None,
             total_duration_ms=round(total_duration, 2),
         )
         trace_store.save_trace(error_trace)
@@ -204,6 +223,9 @@ def run_support_agent(
             "thread_id": active_thread_id,
             "run_id": run_id,
             "is_valid": False,
+            "source_route": None,
+            "tool_used": None,
+            "tool_result": None,
             "nodes_executed": [],
             "error": safe_error_msg,
             "context": [],
