@@ -14,6 +14,7 @@ from data.pipelines.rag import (
     retrieve,
 )
 from services.agent.state import AgentState
+from services.agent.tools import check_inventory_stock, get_incident_ticket
 
 logger = logging.getLogger("trackflow.agent.nodes")
 
@@ -102,6 +103,74 @@ def retrieve_context(state: AgentState) -> Dict[str, Any]:
 
     return {
         "context": chunks,
+        "source_route": "rag",
+        "tool_used": None,
+        "trace": trace,
+    }
+
+
+def incident_tool_node(state: AgentState) -> Dict[str, Any]:
+    """Node: Query real-time incident status using the live incident manager tool.
+
+    Single responsibility: Execute get_incident_ticket() with explicit numerical timeout
+    and honest fallback if not found or on timeout. Read-only operation.
+    """
+    t0 = time.perf_counter()
+    question = state.get("question", "")
+
+    result = get_incident_ticket(question)
+
+    trace = _record_step(
+        state.get("trace", []),
+        node_name="incident_tool_node",
+        start_time=t0,
+        summary={
+            "tool": "incidents",
+            "success": result.success,
+            "ticket_id": result.ticket_id,
+            "is_fallback": result.is_fallback,
+            "duration_ms": result.duration_ms,
+        },
+    )
+
+    return {
+        "answer": result.message,
+        "source_route": "incident_tool",
+        "tool_used": "incidents",
+        "tool_result": result.to_dict(),
+        "trace": trace,
+    }
+
+
+def inventory_tool_node(state: AgentState) -> Dict[str, Any]:
+    """Node: Query real-time product stock using the live inventory manager tool.
+
+    Single responsibility: Execute check_inventory_stock() with explicit numerical timeout
+    and honest fallback if not found or on timeout. Read-only operation.
+    """
+    t0 = time.perf_counter()
+    question = state.get("question", "")
+
+    result = check_inventory_stock(question)
+
+    trace = _record_step(
+        state.get("trace", []),
+        node_name="inventory_tool_node",
+        start_time=t0,
+        summary={
+            "tool": "inventory",
+            "success": result.success,
+            "product_query": result.product_query,
+            "is_fallback": result.is_fallback,
+            "duration_ms": result.duration_ms,
+        },
+    )
+
+    return {
+        "answer": result.message,
+        "source_route": "inventory_tool",
+        "tool_used": "inventory",
+        "tool_result": result.to_dict(),
         "trace": trace,
     }
 
