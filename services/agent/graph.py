@@ -14,7 +14,9 @@ from langgraph.graph.state import CompiledStateGraph
 
 from services.agent.edges import route_after_receive, route_after_retrieve
 from services.agent.nodes import (
+    casual_response_node,
     generate_answer_node,
+    guardrail_block_node,
     handle_error,
     handle_no_context,
     incident_tool_node,
@@ -33,7 +35,7 @@ _compiled_agent: Optional[CompiledStateGraph] = None
 
 
 def build_agent_graph() -> StateGraph:
-    """Build the state graph with explicit nodes, tools, edges and conditions.
+    """Build the state graph with explicit nodes, tools, edges, guardrails and conditions.
 
     Does not compile the graph; provides the raw StateGraph definition
     to allow inspection or custom checkpointers.
@@ -48,6 +50,8 @@ def build_agent_graph() -> StateGraph:
     workflow.add_node("handle_error", handle_error)
     workflow.add_node("incident_tool_node", incident_tool_node)
     workflow.add_node("inventory_tool_node", inventory_tool_node)
+    workflow.add_node("guardrail_block_node", guardrail_block_node)
+    workflow.add_node("casual_response_node", casual_response_node)
 
     # 2. Register flow entrypoint
     workflow.add_edge(START, "receive_question")
@@ -61,6 +65,8 @@ def build_agent_graph() -> StateGraph:
             "incident_tool_node": "incident_tool_node",
             "inventory_tool_node": "inventory_tool_node",
             "handle_error": "handle_error",
+            "guardrail_block_node": "guardrail_block_node",
+            "casual_response_node": "casual_response_node",
         },
     )
 
@@ -80,6 +86,8 @@ def build_agent_graph() -> StateGraph:
     workflow.add_edge("handle_error", END)
     workflow.add_edge("incident_tool_node", END)
     workflow.add_edge("inventory_tool_node", END)
+    workflow.add_edge("guardrail_block_node", END)
+    workflow.add_edge("casual_response_node", END)
 
     return workflow
 
@@ -95,7 +103,9 @@ def compile_agent_graph(
     workflow = build_agent_graph()
     try:
         compiled = workflow.compile(checkpointer=saver)
-        logger.info("Successfully compiled TrackFlow LangGraph support agent with tools.")
+        logger.info(
+            "Successfully compiled TrackFlow LangGraph support agent with tools and guardrails."
+        )
         return compiled
     except Exception as exc:
         logger.critical(f"Fatal error compiling LangGraph support agent: {exc}", exc_info=True)
@@ -123,6 +133,8 @@ def run_support_agent(
     k: Optional[int] = None,
     min_score: Optional[float] = None,
     collection_name: Optional[str] = None,
+    session_user: Optional[str] = None,
+    authorized_orders: Optional[List[str]] = None,
     checkpointer: Optional[BaseCheckpointSaver] = None,
     compiled_graph: Optional[CompiledStateGraph] = None,
 ) -> Dict[str, Any]:
@@ -134,11 +146,14 @@ def run_support_agent(
         k: Maximum number of context chunks to retrieve.
         min_score: Minimum similarity score filter.
         collection_name: Vector store collection name.
+        session_user: Authenticated user identifier for session authorization.
+        authorized_orders: List of order IDs authorized for the session.
         checkpointer: Custom checkpointer instance if not using default.
         compiled_graph: Custom precompiled graph instance if provided.
 
     Returns:
-        Dictionary with answer, thread_id, run_id, nodes_executed, trace, source_route and tool_used.
+        Dictionary with answer, thread_id, run_id, nodes_executed, trace, source_route,
+        tool_used, and guardrails status.
     """
     t_start = time.perf_counter()
     run_id = f"run_{uuid.uuid4().hex[:12]}"
@@ -159,6 +174,12 @@ def run_support_agent(
         "k": k,
         "min_score": min_score,
         "collection_name": collection_name,
+        "session_user": session_user,
+        "authorized_orders": authorized_orders,
+        "guardrail_action": None,
+        "guardrail_failure_type": None,
+        "guardrail_reason": None,
+        "is_blocked": False,
     }
 
     config = {"configurable": {"thread_id": active_thread_id}}
@@ -198,6 +219,10 @@ def run_support_agent(
             "context": final_state.get("context", []),
             "trace": trace_steps,
             "duration_ms": round(total_duration, 2),
+            "guardrail_action": final_state.get("guardrail_action"),
+            "guardrail_failure_type": final_state.get("guardrail_failure_type"),
+            "guardrail_reason": final_state.get("guardrail_reason"),
+            "is_blocked": final_state.get("is_blocked", False),
         }
     except Exception as exc:
         logger.error(f"Unexpected error executing agent run_id={run_id}: {exc}", exc_info=True)
@@ -231,4 +256,8 @@ def run_support_agent(
             "context": [],
             "trace": [],
             "duration_ms": round(total_duration, 2),
+            "guardrail_action": "ERROR",
+            "guardrail_failure_type": None,
+            "guardrail_reason": str(exc),
+            "is_blocked": False,
         }

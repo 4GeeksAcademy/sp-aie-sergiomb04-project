@@ -177,6 +177,31 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
   - Preservación íntegra del enrutamiento autónomo entre RAG y herramientas en `services/agent/edges.py`.
 - Suite de pruebas unitarias y de integración en `tests/trackflow_mcp_tests/test_mcp_server.py` validando discovery, auth, scopes, ciclo de vida de tickets, rechazo de escritura y logs de auditoría.
 
+### Hito 8 — Aseguramiento de Agentes: Harness y Guardrails (Parte 2 de 2 - Ticket #SEC-114 - Completado)
+- **System Prompt Seguro y Aislamiento de Entorno:**
+  - Rediseño e implementación del system prompt en `services/agent/prompts.py` y `data/pipelines/rag.py` bajo la identidad del agente de primera línea de CX de Valentina Cruz (CX Manager).
+  - Segregación estricta de autoridad: bloque supremo `<<<SYSTEM_INSTRUCTIONS>>>` inmutable frente a `<<<USER_INPUT>>>` y `<<<UNTRUSTED_REFERENCE_DATA>>>`.
+  - Definición explícita de dominios: tracking, devoluciones y SLAs segregados estrictamente por país (EE. UU. vs. España), e incidencias operativas.
+  - Prohibición explícita de uso como chatbot personal y prohibición estricta de divulgación de datos sensibles (tarifas negociadas con carriers, planos y rutas internas de almacenes, y pedidos de otros clientes).
+- **Harness y Guardrails Deterministas (`services/agent/guardrails/`):**
+  - `JailbreakSecurityGuard`: Bloqueo determinista ante intentos de omisión de instrucciones, prompts de sin reglas, olvido de identidad empresarial y extracción de system prompt (`FailureType.SECURITY`).
+  - `PersonalTaskGuard`: Detección y rechazo de tareas no relacionadas (ensayos, tareas escolares, poemas, código externo, terapia) con mensaje de reconducción al dominio CX (`FailureType.CONTENT`).
+  - `CasualScopeGuard`: Detección de saludos, trivia horaria y conceptos generales de logística con respuesta breve y reconducción obligatoria a la operativa de TrackFlow en Los Ángeles y Zaragoza.
+  - `SessionOrderAuthGuard`: Control de autorización por sesión (Caso 3 CONTEXT), bloqueando consultas de pedidos ajenos o no autorizados (`FailureType.CONTENT`).
+  - `CrossCountryPolicyGuard`: Bloqueo de solicitudes de mezcla de políticas de devolución transfronterizas entre España y Los Ángeles (Caso 4 CONTEXT, `FailureType.CONTENT`).
+  - `OutputGuard`: Inspección de salidas previa a la entrega al usuario frente a fallos estructurales (vacío/malformado), filtración de directivas internas y fuga de datos confidenciales de negocio.
+  - `Sanitizer`: Aislamiento y neutralización de inyecciones indirectas en fragmentos de RAG y tools mediante tags XML `untrusted_external_content` con `executable="false"`.
+- **Integración en LangGraph y API REST:**
+  - Incorporación en el grafo de nodos dedicados `guardrail_block_node` y `casual_response_node` con checkpointing en `services/agent/graph.py` y `services/agent/nodes.py`.
+  - Enrutamiento autónomo en `services/agent/edges.py` preservando compatibilidad con flujos preexistentes (RAG y external tools).
+  - Endpoints REST en FastAPI:
+    - `POST /agent/query`: Exposición de metadata de guardrails (`guardrail_action`, `guardrail_failure_type`, `guardrail_reason`) y parámetros de autorización de sesión (`session_user`, `authorized_orders`).
+    - `GET /agent/guardrails/summary` y `GET /agent/guardrails/metrics`: Reporte de observabilidad con agregados de activaciones por tipo (`ESTRUCTURAL`, `CONTENIDO`, `SEGURIDAD`) y por guardrail.
+    - `POST /agent/guardrails/reset`: Endpoint de reinicio para sesiones de test.
+- **Suites de Pruebas Automatizadas Deterministas:**
+  - `tests/pipelines/test_agent_guardrails.py`: Cobertura completa sin dependencia de LLM vivo para system prompt, 5 variantes de jailbreak, abuso de tareas personales, trivia con reconducción, autorización por sesión, políticas transfronterizas, inyección indirecta y output guards.
+  - `services/api/tests/test_agent_guardrails_routes.py`: Verificación de endpoints FastAPI, filtros y métricas vía TestClient.
+
 ## Proximos pasos
 1. Integración en UI Backoffice Next.js con chat interactivo con soporte para selector de tools y visualización de trazas.
 2. Estandarizar contratos de tipos compartidos entre app y paquete shared.

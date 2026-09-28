@@ -32,6 +32,13 @@ class AgentState(TypedDict, total=False):
     source_route: Optional[str]
     tool_used: Optional[str]
     tool_result: Optional[Dict[str, Any]]
+    # Guardrails and session context
+    session_user: Optional[str]
+    authorized_orders: Optional[List[str]]
+    guardrail_action: Optional[str]
+    guardrail_failure_type: Optional[str]
+    guardrail_reason: Optional[str]
+    is_blocked: Optional[bool]
     # Optional runtime parameters
     k: Optional[int]
     min_score: Optional[float]

@@ -69,6 +69,14 @@ def route_after_receive(state: AgentState) -> str:
         logger.debug("Question invalid: routing to handle_error")
         return "handle_error"
 
+    if state.get("is_blocked", False):
+        logger.info("Guardrail blocked question: routing to guardrail_block_node")
+        return "guardrail_block_node"
+
+    if state.get("source_route") == "casual":
+        logger.info("Casual scope detected: routing to casual_response_node")
+        return "casual_response_node"
+
     question = state.get("question", "")
 
     if is_incident_query(question):

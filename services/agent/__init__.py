@@ -1,4 +1,4 @@
-"""TrackFlow LangGraph Support Agent package."""
+"""TrackFlow LangGraph Support Agent package with Guardrails Harness."""
 
 from __future__ import annotations
 
@@ -7,6 +7,12 @@ from services.agent.graph import (
     compile_agent_graph,
     get_compiled_agent,
     run_support_agent,
+)
+from services.agent.guardrails import (
+    FailureType,
+    GuardrailAction,
+    GuardrailResult,
+    guardrail_metrics,
 )
 from services.agent.state import AgentState, AgentStepTrace
 from services.agent.tracing import AgentRunTrace, TraceStore, trace_store
@@ -21,4 +27,8 @@ __all__ = [
     "compile_agent_graph",
     "get_compiled_agent",
     "run_support_agent",
+    "FailureType",
+    "GuardrailAction",
+    "GuardrailResult",
+    "guardrail_metrics",
 ]
