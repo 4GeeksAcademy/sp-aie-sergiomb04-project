@@ -36,3 +36,9 @@ class AgentState(TypedDict, total=False):
     k: Optional[int]
     min_score: Optional[float]
     collection_name: Optional[str]
+    # Memory integration parameters
+    thread_id: Optional[str]
+    pending_proposal: Optional[Dict[str, Any]]
+    proposal_decision: Optional[Dict[str, Any]]
+    new_proposal: Optional[Dict[str, Any]]
+    relevant_memories: Optional[List[Dict[str, Any]]]

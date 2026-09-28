@@ -177,6 +177,31 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
   - Preservación íntegra del enrutamiento autónomo entre RAG y herramientas en `services/agent/edges.py`.
 - Suite de pruebas unitarias y de integración en `tests/trackflow_mcp_tests/test_mcp_server.py` validando discovery, auth, scopes, ciclo de vida de tickets, rechazo de escritura y logs de auditoría.
 
+### Hito — Memoria y Auto-mejora de Agentes (Parte 1 de 2: Memoria Persistente y Auto-mejora - Ticket #MEM-092 - Completado)
+- **Arquitectura de Memoria Persistente Aislada (`services/agent/memory/`)**:
+  - `AgentMemoryStore`: Backend de almacenamiento persistente aislado en SQLite (`data/agent_memory/agent_memory.db`) y snapshots estructurados en JSON (`data/agent_memory/memory_store.json`), completamente desacoplado de las colecciones Qdrant RAG corporativas (`trackflow_knowledge`).
+  - Interfaz explícita de lectura/escritura (`read_memories`, `save_approved_memory`, `set_pending_proposal`, `clear_pending_proposal`, `record_audit`) evitando acumulación implícita en el system prompt.
+- **Motor de Auto-evaluación y Formulación de Propuestas (`services/agent/memory/evaluator.py`)**:
+  - Evaluación determinista de memorabilidad con extracción estructurada (`MemoryProposal`) en el mismo turno de respuesta.
+  - Guardrails estrictos de exclusión: bloqueo absoluto de direcciones físicas B2B/B2C, rutas/planos internos de almacén, quejas puntuales de paquetes individuales sin patrón, contratos comerciales activos en negociación (área CRM de Miguel Torres) y tentativas de envenenamiento de memoria.
+  - Descarte por defecto de interacciones rutinarias no memorables (consultas de tracking puntuales, saludos/cierres y tareas efímeras de traducción).
+  - Emisión de propuesta dentro de la respuesta conversacional (`💡 He detectado una regla operativa... ¿Quieres que recuerde...?`) sin escribir directamente a memoria.
+- **Clasificador de Intención de Confirmación y Auditoría (`services/agent/memory/classifier.py`)**:
+  - Clasificación de intención del usuario (`APPROVE`, `REJECT`, `EDIT`, `AMBIGUOUS_OR_UNRELATED`) basada en delimitadores de palabras y análisis semántico, evitando matches ingenuos de subcadenas.
+  - Restricción estricta de una sola propuesta pendiente a la vez por hilo (`thread_id`).
+  - Resolución por defecto: ante silencio, ambigüedad o cambio de tema, la propuesta se descarta automáticamente sin asumir aprobación.
+  - Extracción de preguntas encadenadas (`remaining_query`) para responder de forma natural si el usuario aprueba y pregunta algo nuevo en el mismo mensaje.
+  - Registro de auditoría inmutable (`MemoryAuditRecord`) en tabla `memory_audit` y archivo `data/agent_memory/audit_log.json` para cada propuesta evaluada (aprobada, rechazada o descartada).
+- **Consolidación y Política de Expiración (`services/agent/memory/consolidator.py`)**:
+  - Consolidación por `(carrier, country)` para evitar fragmentación en las 8 empresas de transporte de EE. UU. y España.
+  - Política de TTL de 7 días para contextos transitorios de incidencias recurrentes (`incident_context`), filtrando entradas obsoletas de la memoria activa.
+- **Integración en Grafo LangGraph y API REST**:
+  - Integración en nodos `receive_question` (procesamiento prioritario de respuestas a propuestas pendientes), `retrieve_context` (inyección controlada de memorias operativas activas en el contexto del agente), `incident_tool_node`, `inventory_tool_node` y `generate_answer_node`.
+  - Endpoints en FastAPI (`services/api/trackflow_api/routes/agent.py`): `GET /agent/memory`, `GET /agent/memory/audit`, `POST /agent/memory/consolidate` y enriquecimiento de `POST /agent/query` con `new_proposal` y `proposal_decision`.
+- **Suite de Pruebas y Evals**:
+  - 51 tests automatizados en `tests/pipelines/test_agent_memory.py` pasando al 100%, cubriendo aislamiento, guardrails de PII/contratos/envenenamiento, descarte de consultas rutinarias, propuesta en respuesta, unicidad de propuesta pendiente, clasificador de intención, 4 ciclos completos de interacción, consolidación por carrier+país, y expiración TTL.
+  - 107 tests totales pasando en la suite completa de `tests/` (`uv run pytest`) y 5 tests pasando en `services/api/tests/test_agent_routes.py`.
+
 ## Proximos pasos
 1. Integración en UI Backoffice Next.js con chat interactivo con soporte para selector de tools y visualización de trazas.
 2. Estandarizar contratos de tipos compartidos entre app y paquete shared.

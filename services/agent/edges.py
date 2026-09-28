@@ -69,6 +69,11 @@ def route_after_receive(state: AgentState) -> str:
         logger.debug("Question invalid: routing to handle_error")
         return "handle_error"
 
+    # If direct answer was already formulated (e.g. pure memory confirmation/rejection)
+    if state.get("answer"):
+        logger.debug("Answer already formulated in receive_question: routing to generate_answer_node")
+        return "generate_answer_node"
+
     question = state.get("question", "")
 
     if is_incident_query(question):

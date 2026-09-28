@@ -16,6 +16,8 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from services.agent import (
     get_compiled_agent,
+    memory_consolidator,
+    memory_store,
     run_support_agent,
     trace_store,
 )
@@ -49,6 +51,12 @@ class AgentQueryResponse(BaseModel):
         None, description="Routing choice made by agent (rag, incident_tool, inventory_tool)."
     )
     tool_used: Optional[str] = Field(None, description="External tool invoked if applicable.")
+    new_proposal: Optional[Dict[str, Any]] = Field(
+        None, description="New memory proposal generated during this turn, if any."
+    )
+    proposal_decision: Optional[Dict[str, Any]] = Field(
+        None, description="Decision applied to a pending memory proposal in this turn."
+    )
 
 
 class TraceResponse(BaseModel):
@@ -101,6 +109,8 @@ async def query_support_agent(payload: AgentQueryRequest) -> AgentQueryResponse:
             error=result["error"],
             source_route=result.get("source_route"),
             tool_used=result.get("tool_used"),
+            new_proposal=result.get("new_proposal"),
+            proposal_decision=result.get("proposal_decision"),
         )
     except HTTPException:
         raise
@@ -151,3 +161,45 @@ async def get_thread_checkpoint_state(thread_id: str) -> Dict[str, Any]:
         "next": list(state_snapshot.next),
         "created_at": getattr(state_snapshot, "created_at", None),
     }
+
+
+@router.get(
+    "/memory",
+    status_code=status.HTTP_200_OK,
+    summary="List active memories persisted in agent memory store",
+)
+async def list_agent_memories(
+    category: Optional[str] = None,
+    carrier: Optional[str] = None,
+    country: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """List active memories stored in the dedicated persistent memory store."""
+    memories = memory_store.read_memories(
+        carrier=carrier,
+        country=country,
+    )
+    return [m.model_dump() for m in memories]
+
+
+@router.get(
+    "/memory/audit",
+    status_code=status.HTTP_200_OK,
+    summary="Inspect memory audit trail",
+)
+async def get_memory_audit(
+    thread_id: Optional[str] = None, limit: int = 50
+) -> List[Dict[str, Any]]:
+    """Retrieve audit records for proposed and resolved memories."""
+    records = memory_store.get_audit_log(thread_id=thread_id, limit=limit)
+    return [r.model_dump() for r in records]
+
+
+@router.post(
+    "/memory/consolidate",
+    status_code=status.HTTP_200_OK,
+    summary="Trigger memory consolidation and expiration cleanup",
+)
+async def consolidate_agent_memory() -> Dict[str, Any]:
+    """Execute memory consolidation and cleanup."""
+    report = memory_consolidator.run_consolidation()
+    return report.model_dump()
