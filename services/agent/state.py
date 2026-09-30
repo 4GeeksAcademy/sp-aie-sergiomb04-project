@@ -42,3 +42,10 @@ class AgentState(TypedDict, total=False):
     proposal_decision: Optional[Dict[str, Any]]
     new_proposal: Optional[Dict[str, Any]]
     relevant_memories: Optional[List[Dict[str, Any]]]
+    # Guardrails and session context
+    session_user: Optional[str]
+    authorized_orders: Optional[List[str]]
+    guardrail_action: Optional[str]
+    guardrail_failure_type: Optional[str]
+    guardrail_reason: Optional[str]
+    is_blocked: Optional[bool]

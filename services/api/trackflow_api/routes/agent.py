@@ -1,4 +1,4 @@
-"""FastAPI router exposing the TrackFlow LangGraph support agent."""
+"""FastAPI router exposing the TrackFlow LangGraph support agent with Guardrails and Memory."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from services.agent import (
     get_compiled_agent,
+    guardrail_metrics,
     memory_consolidator,
     memory_store,
     run_support_agent,
@@ -34,6 +35,12 @@ class AgentQueryRequest(BaseModel):
     thread_id: Optional[str] = Field(
         None, description="Optional conversation/thread ID for checkpoint tracking."
     )
+    session_user: Optional[str] = Field(
+        None, description="Authenticated username/ID for session access control."
+    )
+    authorized_orders: Optional[List[str]] = Field(
+        None, description="List of tracking/order IDs authorized for this session."
+    )
 
 
 class AgentQueryResponse(BaseModel):
@@ -48,7 +55,7 @@ class AgentQueryResponse(BaseModel):
     is_valid: bool = Field(..., description="Whether the question was valid.")
     error: Optional[str] = Field(None, description="Controlled error message if any.")
     source_route: Optional[str] = Field(
-        None, description="Routing choice made by agent (rag, incident_tool, inventory_tool)."
+        None, description="Routing choice made by agent (rag, incident_tool, inventory_tool, casual)."
     )
     tool_used: Optional[str] = Field(None, description="External tool invoked if applicable.")
     new_proposal: Optional[Dict[str, Any]] = Field(
@@ -56,6 +63,15 @@ class AgentQueryResponse(BaseModel):
     )
     proposal_decision: Optional[Dict[str, Any]] = Field(
         None, description="Decision applied to a pending memory proposal in this turn."
+    )
+    guardrail_action: Optional[str] = Field(
+        None, description="Guardrail action: PASSED, REDIRECTED, or BLOCKED."
+    )
+    guardrail_failure_type: Optional[str] = Field(
+        None, description="Failure category if triggered: ESTRUCTURAL, CONTENIDO, or SEGURIDAD."
+    )
+    guardrail_reason: Optional[str] = Field(
+        None, description="Reason for guardrail block or redirection."
     )
 
 
@@ -75,6 +91,18 @@ class TraceResponse(BaseModel):
     total_duration_ms: float
 
 
+class GuardrailsSummaryResponse(BaseModel):
+    """Observability summary of guardrail activations."""
+
+    total_checks: int
+    total_passed: int
+    total_blocked: int
+    total_redirected: int
+    activations_by_failure_type: Dict[str, int]
+    activations_by_guard: Dict[str, int]
+    recent_events: List[Dict[str, Any]]
+
+
 @router.post(
     "/query",
     response_model=AgentQueryResponse,
@@ -82,7 +110,7 @@ class TraceResponse(BaseModel):
     summary="Query TrackFlow Support Agent (LangGraph)",
 )
 async def query_support_agent(payload: AgentQueryRequest) -> AgentQueryResponse:
-    """Invoke the compiled LangGraph support agent.
+    """Invoke the compiled LangGraph support agent with guardrails and memory harness.
 
     The endpoint contains zero business logic; it strictly orchestrates
     agent invocation and provides safe error boundaries.
@@ -98,6 +126,8 @@ async def query_support_agent(payload: AgentQueryRequest) -> AgentQueryResponse:
         result = run_support_agent(
             question=clean_question,
             thread_id=payload.thread_id,
+            session_user=payload.session_user,
+            authorized_orders=payload.authorized_orders,
         )
 
         return AgentQueryResponse(
@@ -111,6 +141,9 @@ async def query_support_agent(payload: AgentQueryRequest) -> AgentQueryResponse:
             tool_used=result.get("tool_used"),
             new_proposal=result.get("new_proposal"),
             proposal_decision=result.get("proposal_decision"),
+            guardrail_action=result.get("guardrail_action"),
+            guardrail_failure_type=result.get("guardrail_failure_type"),
+            guardrail_reason=result.get("guardrail_reason"),
         )
     except HTTPException:
         raise
@@ -120,6 +153,40 @@ async def query_support_agent(payload: AgentQueryRequest) -> AgentQueryResponse:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error interno procesando la consulta en el agente de soporte.",
         )
+
+
+@router.get(
+    "/guardrails/summary",
+    response_model=GuardrailsSummaryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Summary of guardrail activations and failure types",
+)
+async def get_guardrails_summary() -> GuardrailsSummaryResponse:
+    """Retrieve observability metrics on guardrail activations, blocks and redirections."""
+    summary_data = guardrail_metrics.get_summary()
+    return GuardrailsSummaryResponse(**summary_data)
+
+
+@router.get(
+    "/guardrails/metrics",
+    response_model=GuardrailsSummaryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Alias for guardrails metrics summary",
+)
+async def get_guardrails_metrics() -> GuardrailsSummaryResponse:
+    """Retrieve observability metrics on guardrail activations."""
+    return await get_guardrails_summary()
+
+
+@router.post(
+    "/guardrails/reset",
+    status_code=status.HTTP_200_OK,
+    summary="Reset guardrail metrics (for test sessions)",
+)
+async def reset_guardrails_metrics() -> Dict[str, str]:
+    """Reset accumulated guardrail metrics."""
+    guardrail_metrics.reset()
+    return {"message": "Guardrail metrics reset successfully"}
 
 
 @router.get(
