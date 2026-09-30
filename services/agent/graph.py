@@ -58,6 +58,7 @@ def build_agent_graph() -> StateGraph:
         route_after_receive,
         {
             "retrieve_context": "retrieve_context",
+            "generate_answer_node": "generate_answer_node",
             "incident_tool_node": "incident_tool_node",
             "inventory_tool_node": "inventory_tool_node",
             "handle_error": "handle_error",
@@ -148,6 +149,7 @@ def run_support_agent(
 
     initial_state: AgentState = {
         "question": question,
+        "thread_id": active_thread_id,
         "is_valid": False,
         "context": [],
         "answer": "",
@@ -159,6 +161,10 @@ def run_support_agent(
         "k": k,
         "min_score": min_score,
         "collection_name": collection_name,
+        "pending_proposal": None,
+        "proposal_decision": None,
+        "new_proposal": None,
+        "relevant_memories": None,
     }
 
     config = {"configurable": {"thread_id": active_thread_id}}
@@ -198,6 +204,8 @@ def run_support_agent(
             "context": final_state.get("context", []),
             "trace": trace_steps,
             "duration_ms": round(total_duration, 2),
+            "new_proposal": final_state.get("new_proposal"),
+            "proposal_decision": final_state.get("proposal_decision"),
         }
     except Exception as exc:
         logger.error(f"Unexpected error executing agent run_id={run_id}: {exc}", exc_info=True)
