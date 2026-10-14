@@ -1,4 +1,4 @@
-"""TrackFlow LangGraph Support Agent package."""
+"""TrackFlow LangGraph Support Agent package with Guardrails Harness and Persistent Memory."""
 
 from __future__ import annotations
 
@@ -8,9 +8,12 @@ from services.agent.graph import (
     get_compiled_agent,
     run_support_agent,
 )
-from services.agent.state import AgentState, AgentStepTrace
-from services.agent.tracing import AgentRunTrace, TraceStore, trace_store
-
+from services.agent.guardrails import (
+    FailureType,
+    GuardrailAction,
+    GuardrailResult,
+    guardrail_metrics,
+)
 from services.agent.memory import (
     AgentMemoryStore,
     MemoryAuditRecord,
@@ -27,6 +30,8 @@ from services.agent.memory import (
     memory_evaluator,
     memory_store,
 )
+from services.agent.state import AgentState, AgentStepTrace
+from services.agent.tracing import AgentRunTrace, TraceStore, trace_store
 
 __all__ = [
     "AgentState",
@@ -52,4 +57,8 @@ __all__ = [
     "intent_classifier",
     "MemoryConsolidator",
     "memory_consolidator",
+    "FailureType",
+    "GuardrailAction",
+    "GuardrailResult",
+    "guardrail_metrics",
 ]

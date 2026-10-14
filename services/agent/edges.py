@@ -69,6 +69,14 @@ def route_after_receive(state: AgentState) -> str:
         logger.debug("Question invalid: routing to handle_error")
         return "handle_error"
 
+    if state.get("is_blocked", False):
+        logger.info("Guardrail blocked question: routing to guardrail_block_node")
+        return "guardrail_block_node"
+
+    if state.get("source_route") == "casual":
+        logger.info("Casual scope detected: routing to casual_response_node")
+        return "casual_response_node"
+
     # If direct answer was already formulated (e.g. pure memory confirmation/rejection)
     if state.get("answer"):
         logger.debug("Answer already formulated in receive_question: routing to generate_answer_node")

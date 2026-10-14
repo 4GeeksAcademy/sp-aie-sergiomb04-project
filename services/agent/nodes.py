@@ -1,4 +1,4 @@
-"""Single-responsibility nodes for TrackFlow LangGraph support agent with persistent memory integration."""
+"""Single-responsibility nodes for TrackFlow LangGraph support agent with Guardrails Harness and Memory."""
 
 from __future__ import annotations
 
@@ -13,6 +13,12 @@ from data.pipelines.rag import (
     NO_CONTEXT_MESSAGE,
     generate_answer,
     retrieve,
+)
+from services.agent.guardrails import (
+    GuardrailAction,
+    evaluate_input_guards,
+    validate_agent_output,
+    wrap_untrusted_context,
 )
 from services.agent.mcp_client import (
     execute_mcp_incident_query,
@@ -52,124 +58,157 @@ def receive_question(state: AgentState) -> Dict[str, Any]:
     """Node: Receive, inspect and validate the user question.
 
     Single responsibility: Ensure question is non-empty and well-formed.
-    Evaluates pending memory proposals against user intent if one is unresolved.
+    Evaluates deterministic input guardrails (Jailbreak, Personal Task, Session Auth,
+    Cross-Country, Casual Scope).
+    If passed, evaluates pending memory proposals against user intent if one is unresolved.
     """
     t0 = time.perf_counter()
     raw_question = state.get("question", "")
     clean_question = raw_question.strip() if isinstance(raw_question, str) else ""
 
     thread_id = state.get("thread_id", "")
-    pending_proposal = memory_store.get_pending_proposal(thread_id) if thread_id else None
+    session_user = state.get("session_user")
+    authorized_orders = state.get("authorized_orders")
 
-    proposal_decision: Optional[Dict[str, Any]] = None
+    # 1. Guardrails evaluation on input
+    is_blocked = False
+    guardrail_action = "PASSED"
+    guardrail_failure_type = None
+    guardrail_reason = None
     direct_answer: Optional[str] = None
+    source_route: Optional[str] = state.get("source_route")
 
-    if pending_proposal and clean_question:
-        intent_res = intent_classifier.classify(clean_question, pending_proposal.summary)
-        decision_intent = intent_res.intent
-        now_iso = datetime.now(timezone.utc).isoformat()
-        audit_id = f"aud_{uuid.uuid4().hex[:10]}"
-
-        if decision_intent == ProposalIntent.APPROVE:
-            exp = memory_consolidator.calculate_expiration(pending_proposal)
-            saved_record = memory_store.save_approved_memory(
-                proposal=pending_proposal,
-                authorized_by="user",
-                expires_at=exp,
+    if clean_question:
+        guard_res = evaluate_input_guards(
+            clean_question,
+            authorized_orders=authorized_orders,
+            session_user=session_user,
+        )
+        guardrail_action = guard_res.action.value
+        if not guard_res.passed:
+            is_blocked = True
+            direct_answer = guard_res.response_message or ""
+            guardrail_failure_type = (
+                guard_res.failure_type.value if guard_res.failure_type else None
             )
-            audit_entry = MemoryAuditRecord(
-                audit_id=audit_id,
-                proposal_id=pending_proposal.proposal_id,
-                thread_id=thread_id,
-                timestamp=now_iso,
-                trigger_message=pending_proposal.trigger_message,
-                proposed_content=pending_proposal.proposed_content,
-                category=pending_proposal.category.value,
-                user_decision_message=clean_question,
-                decision_intent=ProposalIntent.APPROVE,
-                outcome="approved",
-                authorized_by="user",
-                notes=f"Memory approved and saved under entity_key '{saved_record.entity_key}'.",
+            guardrail_reason = guard_res.reason
+        elif guard_res.action == GuardrailAction.REDIRECTED:
+            source_route = "casual"
+            direct_answer = guard_res.response_message or ""
+            guardrail_failure_type = (
+                guard_res.failure_type.value if guard_res.failure_type else None
             )
-            memory_store.record_audit(audit_entry)
-            memory_store.clear_pending_proposal(thread_id)
-            confirmation_note = "Entendido, he guardado esta regla en la memoria operativa para futuras consultas."
+            guardrail_reason = guard_res.reason
 
-        elif decision_intent == ProposalIntent.REJECT:
-            audit_entry = MemoryAuditRecord(
-                audit_id=audit_id,
-                proposal_id=pending_proposal.proposal_id,
-                thread_id=thread_id,
-                timestamp=now_iso,
-                trigger_message=pending_proposal.trigger_message,
-                proposed_content=pending_proposal.proposed_content,
-                category=pending_proposal.category.value,
-                user_decision_message=clean_question,
-                decision_intent=ProposalIntent.REJECT,
-                outcome="rejected",
-                authorized_by=None,
-                notes="User rejected memory proposal. Proposal discarded.",
-            )
-            memory_store.record_audit(audit_entry)
-            memory_store.clear_pending_proposal(thread_id)
-            confirmation_note = "Entendido, he descartado la propuesta y no se guardará en memoria."
+    # 2. If blocked or casual, prevent memory poisoning by skipping memory proposal resolution
+    proposal_decision: Optional[Dict[str, Any]] = None
+    if not is_blocked and source_route != "casual":
+        pending_proposal = memory_store.get_pending_proposal(thread_id) if thread_id else None
+        if pending_proposal and clean_question:
+            intent_res = intent_classifier.classify(clean_question, pending_proposal.summary)
+            decision_intent = intent_res.intent
+            now_iso = datetime.now(timezone.utc).isoformat()
+            audit_id = f"aud_{uuid.uuid4().hex[:10]}"
 
-        elif decision_intent == ProposalIntent.EDIT:
-            exp = memory_consolidator.calculate_expiration(pending_proposal)
-            saved_record = memory_store.save_approved_memory(
-                proposal=pending_proposal,
-                authorized_by="user",
-                modified_content=intent_res.edited_content,
-                expires_at=exp,
-            )
-            audit_entry = MemoryAuditRecord(
-                audit_id=audit_id,
-                proposal_id=pending_proposal.proposal_id,
-                thread_id=thread_id,
-                timestamp=now_iso,
-                trigger_message=pending_proposal.trigger_message,
-                proposed_content=pending_proposal.proposed_content,
-                category=pending_proposal.category.value,
-                user_decision_message=clean_question,
-                decision_intent=ProposalIntent.EDIT,
-                outcome="edited_and_approved",
-                authorized_by="user",
-                notes=f"Memory edited and approved: {intent_res.edited_content}",
-            )
-            memory_store.record_audit(audit_entry)
-            memory_store.clear_pending_proposal(thread_id)
-            confirmation_note = f"Entendido, he actualizado y guardado la regla en memoria operativa: '{intent_res.edited_content}'."
+            if decision_intent == ProposalIntent.APPROVE:
+                exp = memory_consolidator.calculate_expiration(pending_proposal)
+                saved_record = memory_store.save_approved_memory(
+                    proposal=pending_proposal,
+                    authorized_by="user",
+                    expires_at=exp,
+                )
+                audit_entry = MemoryAuditRecord(
+                    audit_id=audit_id,
+                    proposal_id=pending_proposal.proposal_id,
+                    thread_id=thread_id,
+                    timestamp=now_iso,
+                    trigger_message=pending_proposal.trigger_message,
+                    proposed_content=pending_proposal.proposed_content,
+                    category=pending_proposal.category.value,
+                    user_decision_message=clean_question,
+                    decision_intent=ProposalIntent.APPROVE,
+                    outcome="approved",
+                    authorized_by="user",
+                    notes=f"Memory approved and saved under entity_key '{saved_record.entity_key}'.",
+                )
+                memory_store.record_audit(audit_entry)
+                memory_store.clear_pending_proposal(thread_id)
+                confirmation_note = "Entendido, he guardado esta regla en la memoria operativa para futuras consultas."
 
-        else:
-            # AMBIGUOUS_OR_UNRELATED: Default discard (never assume approval on ambiguity)
-            audit_entry = MemoryAuditRecord(
-                audit_id=audit_id,
-                proposal_id=pending_proposal.proposal_id,
-                thread_id=thread_id,
-                timestamp=now_iso,
-                trigger_message=pending_proposal.trigger_message,
-                proposed_content=pending_proposal.proposed_content,
-                category=pending_proposal.category.value,
-                user_decision_message=clean_question,
-                decision_intent=ProposalIntent.AMBIGUOUS_OR_UNRELATED,
-                outcome="discarded_ambiguous",
-                authorized_by=None,
-                notes="Ambiguity or topic change: pending proposal discarded by default.",
-            )
-            memory_store.record_audit(audit_entry)
-            memory_store.clear_pending_proposal(thread_id)
-            confirmation_note = None
+            elif decision_intent == ProposalIntent.REJECT:
+                audit_entry = MemoryAuditRecord(
+                    audit_id=audit_id,
+                    proposal_id=pending_proposal.proposal_id,
+                    thread_id=thread_id,
+                    timestamp=now_iso,
+                    trigger_message=pending_proposal.trigger_message,
+                    proposed_content=pending_proposal.proposed_content,
+                    category=pending_proposal.category.value,
+                    user_decision_message=clean_question,
+                    decision_intent=ProposalIntent.REJECT,
+                    outcome="rejected",
+                    authorized_by=None,
+                    notes="User rejected memory proposal. Proposal discarded.",
+                )
+                memory_store.record_audit(audit_entry)
+                memory_store.clear_pending_proposal(thread_id)
+                confirmation_note = "Entendido, he descartado la propuesta y no se guardará en memoria."
 
-        proposal_decision = {
-            "intent": decision_intent.value,
-            "confirmation_note": confirmation_note,
-            "proposal_id": pending_proposal.proposal_id,
-        }
+            elif decision_intent == ProposalIntent.EDIT:
+                exp = memory_consolidator.calculate_expiration(pending_proposal)
+                saved_record = memory_store.save_approved_memory(
+                    proposal=pending_proposal,
+                    authorized_by="user",
+                    modified_content=intent_res.edited_content,
+                    expires_at=exp,
+                )
+                audit_entry = MemoryAuditRecord(
+                    audit_id=audit_id,
+                    proposal_id=pending_proposal.proposal_id,
+                    thread_id=thread_id,
+                    timestamp=now_iso,
+                    trigger_message=pending_proposal.trigger_message,
+                    proposed_content=pending_proposal.proposed_content,
+                    category=pending_proposal.category.value,
+                    user_decision_message=clean_question,
+                    decision_intent=ProposalIntent.EDIT,
+                    outcome="edited_and_approved",
+                    authorized_by="user",
+                    notes=f"Memory edited and approved: {intent_res.edited_content}",
+                )
+                memory_store.record_audit(audit_entry)
+                memory_store.clear_pending_proposal(thread_id)
+                confirmation_note = f"Entendido, he actualizado y guardado la regla en memoria operativa: '{intent_res.edited_content}'."
 
-        if intent_res.remaining_query:
-            clean_question = intent_res.remaining_query
-        elif confirmation_note:
-            direct_answer = confirmation_note
+            else:
+                audit_entry = MemoryAuditRecord(
+                    audit_id=audit_id,
+                    proposal_id=pending_proposal.proposal_id,
+                    thread_id=thread_id,
+                    timestamp=now_iso,
+                    trigger_message=pending_proposal.trigger_message,
+                    proposed_content=pending_proposal.proposed_content,
+                    category=pending_proposal.category.value,
+                    user_decision_message=clean_question,
+                    decision_intent=ProposalIntent.AMBIGUOUS_OR_UNRELATED,
+                    outcome="discarded_ambiguous",
+                    authorized_by=None,
+                    notes="Ambiguity or topic change: pending proposal discarded by default.",
+                )
+                memory_store.record_audit(audit_entry)
+                memory_store.clear_pending_proposal(thread_id)
+                confirmation_note = None
+
+            proposal_decision = {
+                "intent": decision_intent.value,
+                "confirmation_note": confirmation_note,
+                "proposal_id": pending_proposal.proposal_id,
+            }
+
+            if intent_res.remaining_query:
+                clean_question = intent_res.remaining_query
+            elif confirmation_note:
+                direct_answer = confirmation_note
 
     is_valid = bool(clean_question) or bool(direct_answer)
     error = None if is_valid else "La pregunta no puede estar vacía o contener solo espacios."
@@ -181,8 +220,12 @@ def receive_question(state: AgentState) -> Dict[str, Any]:
         summary={
             "is_valid": is_valid,
             "question_length": len(clean_question),
-            "had_pending_proposal": pending_proposal is not None,
+            "had_pending_proposal": (
+                bool(thread_id and memory_store.get_pending_proposal(thread_id))
+            ),
             "proposal_decision": proposal_decision.get("intent") if proposal_decision else None,
+            "guardrail_action": guardrail_action,
+            "is_blocked": is_blocked,
         },
     )
 
@@ -192,6 +235,50 @@ def receive_question(state: AgentState) -> Dict[str, Any]:
         "error": error,
         "answer": direct_answer or "",
         "proposal_decision": proposal_decision,
+        "is_blocked": is_blocked,
+        "source_route": source_route,
+        "guardrail_action": guardrail_action,
+        "guardrail_failure_type": guardrail_failure_type,
+        "guardrail_reason": guardrail_reason,
+        "trace": trace,
+    }
+
+
+def guardrail_block_node(state: AgentState) -> Dict[str, Any]:
+    """Node: Return firm refusal for input guardrail security/content blocks."""
+    t0 = time.perf_counter()
+    answer = state.get("answer", "Solicitud bloqueada por directivas de seguridad de TrackFlow.")
+    trace = _record_step(
+        state.get("trace", []),
+        node_name="guardrail_block_node",
+        start_time=t0,
+        summary={
+            "action": "blocked",
+            "failure_type": state.get("guardrail_failure_type"),
+            "reason": state.get("guardrail_reason"),
+        },
+    )
+    return {
+        "answer": answer,
+        "trace": trace,
+    }
+
+
+def casual_response_node(state: AgentState) -> Dict[str, Any]:
+    """Node: Return brief casual response with obligatory redirection to TrackFlow CX."""
+    t0 = time.perf_counter()
+    answer = state.get("answer", "Hola. ¿En qué puedo ayudarte respecto a tus envíos en TrackFlow?")
+    trace = _record_step(
+        state.get("trace", []),
+        node_name="casual_response_node",
+        start_time=t0,
+        summary={
+            "action": "redirected",
+            "reason": state.get("guardrail_reason"),
+        },
+    )
+    return {
+        "answer": answer,
         "trace": trace,
     }
 
@@ -201,7 +288,7 @@ def retrieve_context(state: AgentState) -> Dict[str, Any]:
 
     Single responsibility: Execute retrieve() strictly without generation.
     Also augments context with relevant active memories from the persistent store,
-    keeping enterprise RAG collections strictly read-only.
+    keeping enterprise RAG collections strictly read-only, and wraps chunks in untrusted XML tags.
     """
     t0 = time.perf_counter()
     question = state.get("question", "")
@@ -212,33 +299,33 @@ def retrieve_context(state: AgentState) -> Dict[str, Any]:
     collection_name = state.get("collection_name")
 
     try:
-        chunks = retrieve(
+        raw_chunks = retrieve(
             query=question,
             k=k,
             min_score=min_score,
             collection_name=collection_name,
         )
+        chunks = wrap_untrusted_context(raw_chunks)
     except Exception as exc:
         logger.error(f"Error during context retrieval: {exc}", exc_info=True)
         chunks = []
 
-    # Augment context with approved active memories (isolated from RAG Qdrant)
-    memories_used = 0
+    # Augment with active relevant memories
+    active_memories: List[Dict[str, Any]] = []
     try:
-        memories = memory_store.read_memories(query=question)
-        for mem in memories:
-            chunks.insert(
-                0,
+        found_mems = memory_store.search_memories(question, limit=3)
+        for m in found_mems:
+            active_memories.append(m.model_dump())
+            chunks.append(
                 {
-                    "source_document": "memoria_agente_trackflow",
-                    "section": f"Regla Operativa ({mem.category.value})",
-                    "text": mem.content,
-                    "_score": 1.0,
-                },
+                    "source_document": f"memory:{m.category.value}",
+                    "section": f"operational_rule:{m.entity_key}",
+                    "text": m.content,
+                    "is_memory": True,
+                }
             )
-            memories_used += 1
     except Exception as exc:
-        logger.error(f"Error reading memories during retrieval: {exc}")
+        logger.error(f"Error searching active memories: {exc}", exc_info=True)
 
     trace = _record_step(
         state.get("trace", []),
@@ -246,13 +333,16 @@ def retrieve_context(state: AgentState) -> Dict[str, Any]:
         start_time=t0,
         summary={
             "retrieved_count": len(chunks),
-            "memories_injected": memories_used,
-            "sources": list({c.get("source_document") for c in chunks if c.get("source_document")}),
+            "memories_count": len(active_memories),
+            "sources": list(
+                {c.get("source_document") for c in chunks if c.get("source_document")}
+            ),
         },
     )
 
     return {
         "context": chunks,
+        "relevant_memories": active_memories,
         "source_route": "rag",
         "tool_used": None,
         "trace": trace,
@@ -264,6 +354,7 @@ def incident_tool_node(state: AgentState) -> Dict[str, Any]:
 
     Single responsibility: Execute execute_mcp_incident_query() with explicit numerical timeout
     and honest fallback if not found or on timeout. Consumes Incidents Manager via MCP Server.
+    Validates output before returning.
     """
     t0 = time.perf_counter()
     question = state.get("question", "")
@@ -271,12 +362,15 @@ def incident_tool_node(state: AgentState) -> Dict[str, Any]:
     thread_id = state.get("thread_id", "")
 
     result = execute_mcp_incident_query(question)
-    answer = result.message
+    raw_message = result.message
 
     if proposal_decision and proposal_decision.get("confirmation_note"):
-        answer = f"{proposal_decision['confirmation_note']}\n\n{answer}"
+        raw_message = f"{proposal_decision['confirmation_note']}\n\n{raw_message}"
 
-    # Self-evaluation for memorable incident patterns (e.g. recurrent route delays)
+    # Output guardrail validation
+    answer, _ = validate_agent_output(raw_message)
+
+    # Self-evaluation for memorable incident patterns
     new_proposal = None
     if thread_id and question:
         has_pending = memory_store.get_pending_proposal(thread_id) is not None
@@ -319,6 +413,7 @@ def inventory_tool_node(state: AgentState) -> Dict[str, Any]:
 
     Single responsibility: Execute execute_mcp_inventory_query() with explicit numerical timeout
     and honest fallback if not found or on timeout. Read-only operation via MCP Server.
+    Validates output before returning.
     """
     t0 = time.perf_counter()
     question = state.get("question", "")
@@ -326,10 +421,13 @@ def inventory_tool_node(state: AgentState) -> Dict[str, Any]:
     thread_id = state.get("thread_id", "")
 
     result = execute_mcp_inventory_query(question)
-    answer = result.message
+    raw_message = result.message
 
     if proposal_decision and proposal_decision.get("confirmation_note"):
-        answer = f"{proposal_decision['confirmation_note']}\n\n{answer}"
+        raw_message = f"{proposal_decision['confirmation_note']}\n\n{raw_message}"
+
+    # Output guardrail validation
+    answer, _ = validate_agent_output(raw_message)
 
     # Self-evaluation for memorable context
     new_proposal = None
@@ -370,7 +468,7 @@ def inventory_tool_node(state: AgentState) -> Dict[str, Any]:
 
 
 def generate_answer_node(state: AgentState) -> Dict[str, Any]:
-    """Node: Synthesize final answer grounded on the pre-retrieved context.
+    """Node: Synthesize final answer grounded on the pre-retrieved context and apply Output Guardrails.
 
     Single responsibility: Invoke generate_answer(question, context) with
     the exact context produced by retrieve_context. Also evaluates interaction
@@ -382,17 +480,20 @@ def generate_answer_node(state: AgentState) -> Dict[str, Any]:
     thread_id = state.get("thread_id", "")
     proposal_decision = state.get("proposal_decision")
 
-    # If direct answer was already formulated in receive_question (e.g. pure confirmation)
+    # If direct answer was already formulated in receive_question
     if state.get("answer"):
-        answer = state.get("answer", "")
+        raw_answer = state.get("answer", "")
     else:
-        answer = generate_answer(question=question, context=context)
+        raw_answer = generate_answer(question=question, context=context)
         if proposal_decision and proposal_decision.get("confirmation_note"):
-            answer = f"{proposal_decision['confirmation_note']}\n\n{answer}"
+            raw_answer = f"{proposal_decision['confirmation_note']}\n\n{raw_answer}"
 
-    # Self-evaluation for new memorable context
+    # Validate output through output guardrails (structural, prompt leak, sensitive data)
+    final_answer, output_guard_result = validate_agent_output(raw_answer)
+
+    # Self-evaluation for new memorable context (only if valid output)
     new_proposal = None
-    if thread_id and question:
+    if output_guard_result.passed and thread_id and question:
         has_pending = memory_store.get_pending_proposal(thread_id) is not None
         eval_result = memory_evaluator.evaluate(
             message=question,
@@ -403,7 +504,7 @@ def generate_answer_node(state: AgentState) -> Dict[str, Any]:
             success = memory_store.set_pending_proposal(thread_id, eval_result.proposal)
             if success:
                 new_proposal = eval_result.proposal.model_dump()
-                answer = f"{answer}\n\n---\n{eval_result.proposal.prompt_question}"
+                final_answer = f"{final_answer}\n\n---\n{eval_result.proposal.prompt_question}"
 
     trace = _record_step(
         state.get("trace", []),
@@ -411,13 +512,17 @@ def generate_answer_node(state: AgentState) -> Dict[str, Any]:
         start_time=t0,
         summary={
             "context_chunks_used": len(context),
-            "answer_preview": answer[:80] + "..." if len(answer) > 80 else answer,
+            "answer_preview": (
+                final_answer[:80] + "..." if len(final_answer) > 80 else final_answer
+            ),
             "has_new_proposal": new_proposal is not None,
+            "output_guard_action": output_guard_result.action.value,
+            "output_guard_passed": output_guard_result.passed,
         },
     )
 
     return {
-        "answer": answer,
+        "answer": final_answer,
         "new_proposal": new_proposal,
         "trace": trace,
     }
@@ -434,7 +539,6 @@ def handle_no_context(state: AgentState) -> Dict[str, Any]:
     thread_id = state.get("thread_id", "")
     answer = NO_CONTEXT_MESSAGE
 
-    # Even in fallback, if the user was informing a memorable carrier or operational rule, evaluate it!
     new_proposal = None
     if thread_id and question:
         has_pending = memory_store.get_pending_proposal(thread_id) is not None

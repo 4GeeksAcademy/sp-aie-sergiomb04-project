@@ -23,20 +23,15 @@ from data.process.rag import (
 
 load_dotenv()
 
+from services.agent.prompts import (
+    SECURE_TRACKFLOW_CX_SYSTEM_PROMPT,
+    build_secure_agent_prompt,
+)
+
 DEFAULT_GENERATION_MODEL = os.getenv("GENERATION_MODEL", "gpt-4o-mini")
 DEFAULT_MIN_SCORE = 0.35
 
-SYSTEM_PROMPT = """Eres un Account Manager y representante comercial senior de TrackFlow en una conversación con una marca cliente o prospecto B2B.
-Tu objetivo es responder a las consultas con absoluta precisión técnica, tono profesional y enfoque consultivo, utilizando EXCLUSIVAMENTE los fragmentos provistos en el CONTEXTO.
-
-Normas estrictas de negocio que debes cumplir siempre:
-1. Fidelidad estricta: Ningún porcentaje, tarifa, plazo o transportista puede diferir de lo indicado en el CONTEXTO.
-2. Picos de alta demanda: NUNCA prometas el SLA estándar de entrega durante períodos declarados de alta demanda (Black Friday, Navidad, Rebajas de enero en España). Informa con claridad que los tiempos de entrega pueden extenderse hasta un 40% adicional.
-3. Devoluciones internacionales: NUNCA las describas como automáticas. Indica claramente que requieren gestión manual coordinada por el equipo de Sofía Ramos (Gerente de Devoluciones).
-4. Descuentos de almacenamiento: NO ofrezcas descuentos por tu cuenta. Aclara que tarifas preferenciales (para clientes con volumen mayor a 50 m³) requieren aprobación de Miguel Torres (Director Comercial).
-5. Selección de transportistas: Explica que la asignación la realiza automáticamente el sistema optimizando destino, peso y urgencia; excepciones manuales requieren aprobación de Carlos Vega (Head of Carrier Operations).
-6. Si el CONTEXTO no contiene información suficiente o relevante para la pregunta, indica honestamente que la base de conocimiento de TrackFlow no cuenta con los datos solicitados y sugiere remitir el caso al equipo de soporte o account manager correspondiente. No inventes datos bajo ninguna circunstancia.
-"""
+SYSTEM_PROMPT = SECURE_TRACKFLOW_CX_SYSTEM_PROMPT
 
 NO_CONTEXT_MESSAGE = (
     "La base de conocimiento de TrackFlow no contiene información suficiente para responder "
@@ -141,10 +136,9 @@ def generate_answer(
 
     formatted_context = "\n\n".join(context_blocks)
 
-    user_prompt = (
-        f"CONTEXTO RECUPERADO:\n{formatted_context}\n\n"
-        f"PREGUNTA DEL CLIENTE:\n{question}\n\n"
-        f"RESPUESTA:"
+    user_prompt = build_secure_agent_prompt(
+        question=question,
+        sanitized_context_text=formatted_context,
     )
 
     # If client is explicitly passed or API key is available, call LLM
