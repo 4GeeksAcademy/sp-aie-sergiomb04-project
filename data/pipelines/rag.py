@@ -23,21 +23,23 @@ from data.process.rag import (
 
 load_dotenv()
 
-from services.agent.prompts import (
-    SECURE_TRACKFLOW_CX_SYSTEM_PROMPT,
-    build_secure_agent_prompt,
-)
-
 DEFAULT_GENERATION_MODEL = os.getenv("GENERATION_MODEL", "gpt-4o-mini")
 DEFAULT_MIN_SCORE = 0.35
-
-SYSTEM_PROMPT = SECURE_TRACKFLOW_CX_SYSTEM_PROMPT
 
 NO_CONTEXT_MESSAGE = (
     "La base de conocimiento de TrackFlow no contiene información suficiente para responder "
     "a esta consulta. Por favor contacta al equipo comercial o a tu account manager para revisar "
     "las condiciones específicas de tu operación."
 )
+
+
+def __getattr__(name: str) -> Any:
+    if name == "SYSTEM_PROMPT":
+        from services.agent.prompts import SECURE_TRACKFLOW_CX_SYSTEM_PROMPT
+
+        return SECURE_TRACKFLOW_CX_SYSTEM_PROMPT
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+
 
 
 def _get_qdrant_client(client: Optional[QdrantClient] = None) -> QdrantClient:
@@ -136,6 +138,11 @@ def generate_answer(
 
     formatted_context = "\n\n".join(context_blocks)
 
+    from services.agent.prompts import (
+        SECURE_TRACKFLOW_CX_SYSTEM_PROMPT,
+        build_secure_agent_prompt,
+    )
+
     user_prompt = build_secure_agent_prompt(
         question=question,
         sanitized_context_text=formatted_context,
@@ -147,7 +154,7 @@ def generate_answer(
             response = client.chat.completions.create(
                 model=generation_model,
                 messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "system", "content": SECURE_TRACKFLOW_CX_SYSTEM_PROMPT},
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=0.2,
@@ -164,7 +171,7 @@ def generate_answer(
             response = llm_client.chat.completions.create(
                 model=generation_model,
                 messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "system", "content": SECURE_TRACKFLOW_CX_SYSTEM_PROMPT},
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=0.2,

@@ -418,6 +418,10 @@ class AgentMemoryStore:
 
         return results
 
+    def search_memories(self, query: str, limit: int = 5) -> List[MemoryRecord]:
+        """Convenience method to query active memories by search query string."""
+        return self.read_memories(query=query)[:limit]
+
     # -------------------------------------------------------------------------
     # Immutable Audit Logging
     # -------------------------------------------------------------------------

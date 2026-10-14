@@ -318,7 +318,7 @@ def retrieve_context(state: AgentState) -> Dict[str, Any]:
             active_memories.append(m.model_dump())
             chunks.append(
                 {
-                    "source_document": f"memory:{m.category.value}",
+                    "source_document": "memoria_agente_trackflow",
                     "section": f"operational_rule:{m.entity_key}",
                     "text": m.content,
                     "is_memory": True,

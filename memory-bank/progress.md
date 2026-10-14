@@ -224,9 +224,11 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
     - `POST /agent/query`: Exposición de metadata de guardrails (`guardrail_action`, `guardrail_failure_type`, `guardrail_reason`) y parámetros de autorización de sesión (`session_user`, `authorized_orders`).
     - `GET /agent/guardrails/summary` y `GET /agent/guardrails/metrics`: Reporte de observabilidad con agregados de activaciones por tipo (`ESTRUCTURAL`, `CONTENIDO`, `SEGURIDAD`) y por guardrail.
     - `POST /agent/guardrails/reset`: Endpoint de reinicio para sesiones de test.
-- **Suites de Pruebas Automatizadas Deterministas:**
   - `tests/pipelines/test_agent_guardrails.py`: Cobertura completa sin dependencia de LLM vivo para system prompt, 5 variantes de jailbreak, abuso de tareas personales, trivia con reconducción, autorización por sesión, políticas transfronterizas, inyección indirecta y output guards.
   - `services/api/tests/test_agent_guardrails_routes.py`: Verificación de endpoints FastAPI, filtros y métricas vía TestClient.
+  - Corrección de dependencia circular entre `data/pipelines/rag.py` y `services/agent/prompts.py` desacoplando carga de prompts.
+  - Robustecimiento de patrones regex con límites de palabra en `CrossCountryPolicyGuard` y soporte para variantes en español de anulación de reglas y tareas personales.
+  - Cobertura global de 132 tests pasando al 100% en la suite completa de `pytest`.
 
 ## Proximos pasos
 1. Integración en UI Backoffice Next.js con chat interactivo con soporte para selector de tools y visualización de trazas.

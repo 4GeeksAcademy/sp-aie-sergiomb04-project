@@ -55,7 +55,10 @@ class JailbreakSecurityGuard:
         # Unrestricted persona / no rules
         r"act\s+as\s+(?:an?\s+)?assistant\s+with\s+no\s+rules",
         r"act[úu]a\s+como\s+(?:un\s+)?asistente\s+sin\s+reglas",
+        r"act[úu]a\s+como\s+si\s+no\s+tuvieras\s+reglas",
+        r"asistente\s+sin\s+restricciones",
         r"sin\s+filtros(?:\s+ni\s+reglas)?",
+        r"sin\s+(?:reglas\s+ni\s+filtros|filtros\s+ni\s+reglas|restricciones)",
         r"without\s+any\s+restrictions",
         r"now\s+you\s+have\s+no\s+rules",
         r"you\s+are\s+now\s+(?:dan|unfiltered|free)",
@@ -102,7 +105,7 @@ class PersonalTaskGuard:
 
     PATTERNS = [
         # Academic / essays / homework
-        r"(?:escribe|redacta|hazme|haz)\s+(?:un\s+)?ensayo",
+        r"(?:(?:ay[úu]dame\s+a\s+)?(?:escribe|escribir|redacta|redactar|hazme|haz))\s+(?:un\s+)?ensayo",
         r"(?:ay[úu]dame\s+con\s+)?(?:mi\s+)?tarea\s+(?:de\s+(?:la\s+)?(?:universidad|colegio|escuela|instituto)|escolar|acad[ée]mica)",
         r"(?:escribe|hazme)\s+un\s+resumen\s+sobre\s+(?:la\s+segunda\s+guerra|historia|filosof[íi]a|literatura)",
         r"(?:escribe|redacta)\s+(?:una\s+)?tesis",
@@ -207,11 +210,10 @@ class CrossCountryPolicyGuard:
         q_lower = question.lower()
 
         # Check for attempt to apply Spain policies to Los Angeles / US or vice versa
-        applies_spain_to_la = (
-            ("españa" in q_lower or "spain" in q_lower or "zaragoza" in q_lower)
-            and ("los ángeles" in q_lower or "los angeles" in q_lower or "ee.uu" in q_lower or "estados unidos" in q_lower or "usa" in q_lower)
-            and ("aplica" in q_lower or "aplicar" in q_lower or "cambia" in q_lower or "conviene" in q_lower or "usar" in q_lower)
-        )
+        has_spain = bool(re.search(r"\b(?:españa|spain|zaragoza)\b", q_lower))
+        has_us = bool(re.search(r"\b(?:los\s+[aá]ngeles|ee\.?uu|estados\s+unidos|usa)\b", q_lower))
+        has_mixing_action = bool(re.search(r"\b(?:aplica|aplicar|cambia|cambiar|conviene|usar)\b", q_lower))
+        applies_spain_to_la = has_spain and has_us and has_mixing_action
 
         if applies_spain_to_la:
             reason = "Intento de aplicar o mezclar políticas de devolución/SLA entre España y Los Ángeles (EE. UU.)"
@@ -300,8 +302,8 @@ class CasualScopeGuard:
                 msg = (
                     f"Respecto a la hora o huso horario en {city}, como asistente de soporte en tiempo "
                     f"real no monitoreo husos horarios externos en vivo. No obstante, te recuerdo que en "
-                    f"TrackFlow operamos activamente bajo los husos horarios de nuestros almacenes centrales: "
-                    f"PST (Pacífico) en Los Ángeles y CET (Centroeuropa) en Zaragoza para todos los despachos. "
+                    f"TrackFlow operamos activamente en nuestros almacenes centrales de Los Ángeles y Zaragoza "
+                    f"(husos PST y CET) para todos los despachos. "
                     f"¿Deseas consultar los plazos de entrega o el estado de un envío para alguno de estos destinos?"
                 )
                 return GuardrailResult(
@@ -360,19 +362,19 @@ def evaluate_input_guards(
     """Evaluate all input guardrails sequentially.
 
     Order of evaluation:
-    1. Security Guard: Jailbreak / instruction override (P0 - firm block)
-    2. Content Guard: Personal task abuse (P1 - refusal + redirect)
+    1. Content Guard: Personal task abuse (P1 - refusal + redirect)
+    2. Security Guard: Jailbreak / instruction override (P0 - firm block)
     3. Content Guard: Cross-country policy mixing (P1 - refusal + clear country policy)
     4. Content Guard: Session order authorization (P1 - unauthorized order block)
     5. Scope Guard: Casual / small talk / general logistics (P2 - allowed + redirect)
     """
-    # 1. Security Guard
-    res = jailbreak_guard.evaluate(question)
+    # 1. Personal Task Guard
+    res = personal_task_guard.evaluate(question)
     if not res.passed:
         return res
 
-    # 2. Personal Task Guard
-    res = personal_task_guard.evaluate(question)
+    # 2. Security Guard
+    res = jailbreak_guard.evaluate(question)
     if not res.passed:
         return res
 
