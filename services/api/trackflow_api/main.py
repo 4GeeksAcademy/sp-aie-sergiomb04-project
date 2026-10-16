@@ -8,6 +8,7 @@ from trackflow_api.routes.inventory import router as inventory_router
 from trackflow_api.routes.knowledge import router as knowledge_router
 from trackflow_api.routes.profiles import router as profiles_router
 from trackflow_api.routes.reporting import router as reporting_router
+from trackflow_api.routes.rfp import router as rfp_router
 from trackflow_api.routes.suppliers import router as suppliers_router
 from trackflow_api.routes.tasks import router as tasks_router
 from trackflow_api.routes.telemetry import router as telemetry_router
@@ -24,4 +25,6 @@ app.include_router(reporting_router)
 app.include_router(tasks_router)
 app.include_router(knowledge_router)
 app.include_router(agent_router)
+app.include_router(rfp_router)
+
 

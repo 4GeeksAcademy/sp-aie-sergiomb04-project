@@ -31,6 +31,13 @@ def _resolve_inventory_database_url() -> str:
             return configured_url.replace("postgresql+psycopg2://", "postgresql+psycopg://", 1)
         if configured_url.startswith("postgresql://") and "+" not in configured_url.split("://", 1)[0]:
             return configured_url.replace("postgresql://", "postgresql+psycopg://", 1)
+        if configured_url.startswith("sqlite:///") and not configured_url.startswith("sqlite:///:memory:"):
+            rel_part = configured_url[len("sqlite:///"):]
+            candidate = Path(rel_part)
+            if not candidate.is_absolute() and not candidate.parent.exists():
+                api_candidate = _API_ROOT_DIR / candidate
+                api_candidate.parent.mkdir(parents=True, exist_ok=True)
+                return f"sqlite:///{api_candidate}"
         return configured_url
     return f"sqlite:///{_INVENTORY_SQLITE_PATH}"
 

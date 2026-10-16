@@ -230,16 +230,33 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
   - Robustecimiento de patrones regex con límites de palabra en `CrossCountryPolicyGuard` y soporte para variantes en español de anulación de reglas y tareas personales.
   - Cobertura global de 132 tests pasando al 100% en la suite completa de `pytest`.
 
+### Hito 9 — Flujos de Trabajo Agénticos: Recepción y Enrutamiento de RFPs (Parte 1 de 3 - Completado)
+- **Dependencias e Ingesta Documental (`data/pipelines/rfp_intake/ingestion.py`):**
+  - Incorporación de `markitdown[pdf]` y `py-readability-metrics` mediante `uv add`.
+  - Conversión de archivos PDF a Markdown con `MarkItDown` (`convert_pdf_to_markdown`) y cálculo de métricas de legibilidad con `py-readability-metrics` (`flesch_kincaid_grade`, `flesch_reading_ease`, `gunning_fog`, `coleman_liau`, `dale_chall`, `ari`, `smog`, `word_count`, `sentence_count`).
+  - Extracción estructurada de metadatos de negocio alineada a `CONTEXT-trackflow.es.md`: `client_name`, `client_country` (`Spain` o `USA`), `currency` (`EUR` o `USD`), `services_requested`, `monthly_volume`, `deadline`, `budget_range` y `departments_needed`.
+- **Persistencia SQLModel / PostgreSQL (`services/api/trackflow_api/models.py` y `data/pipelines/rfp_intake/persistence.py`):**
+  - Nuevas entidades persistidas en base de datos relacional (`RFPTicket` / `Ticket`, `RFPMetadata`, `DepartmentSection`, `RFPFinalDocument`) gestionando el ciclo de vida de la Parte 1 (`analizando`, `descartado`, `analisis_completo`).
+- **Grafo Dedicado LangGraph: Orchestrator-Worker-Synthesizer (`data/pipelines/rfp_intake/`):**
+  - **Paso 0 (`ingest_document_node`):** Conversión PDF $\rightarrow$ Markdown, métricas de legibilidad y persistencia de `RFPMetadata`.
+  - **Nodo 1 (`classifier_node` — Triage Agent):** Clasificación de RFPs formales e informales frente a documentos inválidos (como pitches comerciales de tarifas de transportistas entrantes), marcando `Ticket.status = "descartado"` con motivo explícito sin fallos silenciosos.
+  - **Nodo 2 (`orchestrator_node` — Decomposition):** Mapeo de requerimientos hacia los departamentos oficiales de TrackFlow (`warehouse` - Ana Whitfield, `lastmile` - Carlos Vega, `reverse` - Sofía Ramos), respetando exclusiones explícitas de alcance y segmentando extractos relevantes por departamento.
+  - **Nodos 3..N (`department_worker_node` — Workers Paralelos con `Send`):** Ejecución en paralelo únicamente para los departamentos requeridos, extrayendo `key_aspects` sin inventar cifras ausentes (registrando `open_questions` cuando faltan pallets, SKUs o volumen mensual) e incorporando las restricciones de cumplimiento (§5).
+  - **Nodo 4 (`synthesizer_node` — Synthesizer Agent):** Generación del resumen ejecutivo para Ventas (`"¿Qué pedirle a qué departamento?"` para el equipo de Miguel Torres), contrato estructurado de handoff (`handoff_payload` con `ready_for_part_2 = True`) y transición a `Ticket.status = "analisis_completo"`.
+- **Backend FastAPI (`services/api/trackflow_api/routes/rfp.py`) y Backoffice UI (`uis/backoffice/app/(protected)/rfp/page.tsx`):**
+  - `POST /api/rfp/upload`: Almacenamiento del PDF en `data/raw/<ticket_id>.pdf`, creación de `Ticket` en estado `analizando`, ejecución asíncrona del grafo con `BackgroundTasks` y respuesta inmediata `HTTP 202 Accepted`.
+  - `GET /api/rfp/{ticket_id}` y `GET /api/rfp`: Consulta de estado, metadatos, métricas de legibilidad y desglose por departamento.
+  - Interfaz en `uis/backoffice` (`/rfp`) con subida de PDF, polling automático de estados (`analizando` $\rightarrow$ `analisis_completo` / `descartado`), visualización de métricas de legibilidad, síntesis comercial y tarjetas de `key_aspects` por departamento.
+- **Datos Semilla, Scripts y Pruebas Automatizadas:**
+  - PDFs de prueba generados en `rfp-requests/trackflow/` (`CONTEXT-trackflow-request-1.pdf` ModaViva formal, `CONTEXT-trackflow-request-2.pdf` Luna Cosmetics informal, `CONTEXT-trackflow-request-3.pdf` pitch de transportista inválido).
+  - Script CLI standalone en `scripts/rfp_smoke_test.py`.
+  - Suite de pruebas en `tests/pipelines/test_rfp_intake.py` (8 tests) y `services/api/tests/test_rfp_routes.py` (2 tests) pasando al 100%.
+
 ## Proximos pasos
-1. Integración en UI Backoffice Next.js con chat interactivo con soporte para selector de tools y visualización de trazas.
-2. Estandarizar contratos de tipos compartidos entre app y paquete shared.
-3. Avanzar en portal de seguimiento para transportistas y clientes finales.
+1. Implementar la Parte 2 del Hito 9: generadores por departamento activo y ciclo generador-evaluador de legibilidad, pertinencia y cumplimiento (§5).
+2. Implementar la Parte 3 del Hito 9: flujo de aprobación independiente por responsable de departamento y nodo de arbitraje fijo (`volume-vs-capacity`, `returns-sla-breach`, `currency-mismatch`).
 
 ## Riesgos y foco inmediato
 - Riesgo de desalineacion entre contexto TrackFlow y nombre/dominio de la app actual; conviene converger nomenclatura y casos de uso.
 - Riesgo de deuda tecnica si se amplia UI sin contratos de datos estables.
 - Foco inmediato: mantener consistencia de estado y orquestación resiliente en nuevos pipelines y dashboards.
-
-
-
-
