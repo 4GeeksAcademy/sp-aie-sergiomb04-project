@@ -575,6 +575,57 @@ def department_worker_node(payload: DepartmentWorkerInput) -> dict[str, Any]:
 
 # ─── Nodo 4: Sintetizador (Synthesizer Agent) ──────────────────────────────────
 
+def _detect_cross_worker_conflicts(
+    client_country: str,
+    expected_currency: str,
+    worker_outputs: dict[str, dict[str, Any]],
+) -> list[dict[str, str]]:
+    """Detect structured contradictions across workers for downstream arbitration (§7)."""
+    conflicts: list[dict[str, str]] = []
+
+    # 1. currency-mismatch check
+    currencies_seen = set()
+    for dept_id, w_data in worker_outputs.items():
+        w_curr = (w_data.get("extracted_metrics") or {}).get("currency")
+        if w_curr:
+            currencies_seen.add(w_curr)
+            if expected_currency in ("USD", "EUR") and w_curr != expected_currency:
+                conflicts.append(
+                    {
+                        "trigger_id": "currency-mismatch",
+                        "department_id": dept_id,
+                        "arbiter": "Miguel Torres",
+                        "detail": f"Sección {dept_id} cotiza en {w_curr} pero client_country={client_country} exige {expected_currency}.",
+                    }
+                )
+    if len(currencies_seen) > 1:
+        conflicts.append(
+            {
+                "trigger_id": "currency-mismatch",
+                "department_id": "multiple",
+                "arbiter": "Miguel Torres",
+                "detail": f"Múltiples monedas detectadas entre workers activos: {sorted(currencies_seen)}.",
+            }
+        )
+
+    # 2. volume-vs-capacity check between warehouse and lastmile
+    wh_metrics = (worker_outputs.get("warehouse") or {}).get("extracted_metrics") or {}
+    lm_metrics = (worker_outputs.get("lastmile") or {}).get("extracted_metrics") or {}
+    wh_vol = wh_metrics.get("monthly_volume_orders")
+    lm_vol = lm_metrics.get("monthly_shipments")
+    if wh_vol is not None and lm_vol is not None and lm_vol > wh_vol:
+        conflicts.append(
+            {
+                "trigger_id": "volume-vs-capacity",
+                "department_id": "warehouse,lastmile",
+                "arbiter": "Miguel Torres (Director Comercial)",
+                "detail": f"Last Mile asume {lm_vol} envíos/mes pero la capacidad reportada en Warehouse es {wh_vol} pedidos/mes.",
+            }
+        )
+
+    return conflicts
+
+
 def synthesize_rfp_analysis(
     *,
     ticket_id: str,
@@ -591,6 +642,7 @@ def synthesize_rfp_analysis(
     monthly_volume = metadata.get("monthly_volume")
     deadline = metadata.get("deadline") or "No especificada"
     budget_range = metadata.get("budget_range") or "No especificado"
+    unsupported_departments = list(metadata.get("unsupported_departments") or [])
 
     all_depts = ["warehouse", "lastmile", "reverse"]
     excluded_depts = [d for d in all_depts if d not in departments_needed]
@@ -604,6 +656,10 @@ def synthesize_rfp_analysis(
     if excluded_depts:
         summary_lines.append(
             f"- **Departamentos excluidos por alcance del cliente:** {', '.join(excluded_depts)} (no requeridos en esta propuesta)"
+        )
+    if unsupported_departments:
+        summary_lines.append(
+            f"- **Solicitudes fuera de catálogo ignoradas por el orquestador:** {', '.join(unsupported_departments)} (no forman parte de los departamentos oficiales de TrackFlow)"
         )
 
     summary_lines.append("\n#### ¿Qué pedirle a qué departamento?")
@@ -646,6 +702,12 @@ def synthesize_rfp_analysis(
             "key_aspects": worker_data,
         }
 
+    potential_conflicts = _detect_cross_worker_conflicts(
+        client_country=client_country,
+        expected_currency=currency,
+        worker_outputs=worker_outputs,
+    )
+
     executive_summary = "\n".join(summary_lines)
 
     handoff_payload: dict[str, Any] = {
@@ -658,11 +720,13 @@ def synthesize_rfp_analysis(
         "currency": currency,
         "departments_needed": departments_needed,
         "excluded_departments": excluded_depts,
+        "unsupported_departments": unsupported_departments,
         "shared_metadata": metadata,
         "readability_metrics": readability_metrics,
         "executive_summary": executive_summary,
         "what_to_ask_each_department": what_to_ask,
         "department_briefs": department_briefs,
+        "potential_conflicts": potential_conflicts,
         "compliance_guidelines": {
             "required_currency": currency,
             "must_include_on_time_delivery_sla_pct": True,

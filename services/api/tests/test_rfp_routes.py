@@ -17,12 +17,12 @@ def test_post_rfp_upload_returns_202_and_processes_formal_rfp(
 ) -> None:
     """POST /api/rfp/upload saves PDF to data/raw/<ticket_id>.pdf, returns 202, and GET /api/rfp/{ticket_id} returns analisis_completo."""
     generate_all_seed_pdfs()
-    pdf_path = PROJECT_ROOT / "rfp-requests" / "trackflow" / "CONTEXT-trackflow-request-1.pdf"
+    pdf_path = PROJECT_ROOT / "rfp-requests" / "trackflow" / "trackflow-request-1.pdf"
 
     with pdf_path.open("rb") as f:
         resp = client.post(
             "/api/rfp/upload",
-            files={"file": ("CONTEXT-trackflow-request-1.pdf", f, "application/pdf")},
+            files={"file": ("trackflow-request-1.pdf", f, "application/pdf")},
         )
 
     assert resp.status_code == 202
@@ -53,12 +53,12 @@ def test_post_rfp_upload_invalid_document_transitions_to_descartado(
 ) -> None:
     """Uploading the invalid carrier pitch PDF transitions the ticket to 'descartado'."""
     generate_all_seed_pdfs()
-    pdf_path = PROJECT_ROOT / "rfp-requests" / "trackflow" / "CONTEXT-trackflow-request-3.pdf"
+    pdf_path = PROJECT_ROOT / "rfp-requests" / "trackflow" / "trackflow-request-3.pdf"
 
     with pdf_path.open("rb") as f:
         resp = client.post(
             "/api/rfp/upload",
-            files={"file": ("CONTEXT-trackflow-request-3.pdf", f, "application/pdf")},
+            files={"file": ("trackflow-request-3.pdf", f, "application/pdf")},
         )
 
     assert resp.status_code == 202

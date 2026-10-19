@@ -152,24 +152,27 @@ def test_isolated_lastmile_and_reverse_workers_enforce_business_constraints() ->
     assert any("48 horas" in c for c in reverse_aspects.constraints)
 
 
-def test_orchestrator_decomposition_respects_negated_departments() -> None:
-    """Orchestrator must only activate departments requested by client and exclude negated ones."""
+def test_orchestrator_decomposition_respects_negated_and_non_existent_departments() -> None:
+    """Orchestrator must only activate official BRIEFING departments and ignore non-existent ones."""
     text = (
-        "ModaViva (España) solicita almacenamiento en Zaragoza y logística inversa de devoluciones. "
+        "ModaViva (España) solicita almacenamiento en Zaragoza, despacho aduanero (customs brokerage), "
+        "campañas de marketing digital y logística inversa de devoluciones. "
         "ModaViva NO solicita servicios de transporte de última milla (transportista propio para última milla)."
     )
     depts, slices = decompose_rfp_by_department(text)
     assert depts == ["warehouse", "reverse"]
     assert "lastmile" not in depts
+    assert "customs_brokerage" not in depts
+    assert "marketing" not in depts
     assert "warehouse" in slices and "reverse" in slices
 
 
 # ─── 3. Smoke & Integration Tests with Official TrackFlow Seed PDFs ───────────
 
 def test_smoke_seed_pdf_1_formal_rfp_modaviva_completa_and_handoff() -> None:
-    """CONTEXT-trackflow-request-1.pdf (ModaViva, Spain) -> analisis_completo, EUR, warehouse + reverse only."""
+    """trackflow-request-1.pdf (ModaViva, Spain) -> analisis_completo, EUR, warehouse + reverse only."""
     generate_all_seed_pdfs()
-    src_pdf = PROJECT_ROOT / "rfp-requests" / "trackflow" / "CONTEXT-trackflow-request-1.pdf"
+    src_pdf = PROJECT_ROOT / "rfp-requests" / "trackflow" / "trackflow-request-1.pdf"
     tid = str(uuid4())
     raw_pdf = PROJECT_ROOT / "data" / "raw" / f"{tid}.pdf"
     raw_pdf.parent.mkdir(parents=True, exist_ok=True)
@@ -211,9 +214,9 @@ def test_smoke_seed_pdf_1_formal_rfp_modaviva_completa_and_handoff() -> None:
 
 
 def test_smoke_seed_pdf_2_informal_rfp_luna_cosmetics_completa_and_handoff() -> None:
-    """CONTEXT-trackflow-request-2.pdf (Luna Cosmetics, USA) -> analisis_completo, USD, warehouse + lastmile only."""
+    """trackflow-request-2.pdf (Luna Cosmetics, USA) -> analisis_completo, USD, warehouse + lastmile only."""
     generate_all_seed_pdfs()
-    src_pdf = PROJECT_ROOT / "rfp-requests" / "trackflow" / "CONTEXT-trackflow-request-2.pdf"
+    src_pdf = PROJECT_ROOT / "rfp-requests" / "trackflow" / "trackflow-request-2.pdf"
     tid = str(uuid4())
     raw_pdf = PROJECT_ROOT / "data" / "raw" / f"{tid}.pdf"
     raw_pdf.parent.mkdir(parents=True, exist_ok=True)
@@ -247,9 +250,9 @@ def test_smoke_seed_pdf_2_informal_rfp_luna_cosmetics_completa_and_handoff() -> 
 
 
 def test_smoke_seed_pdf_3_invalid_carrier_pitch_descartado() -> None:
-    """CONTEXT-trackflow-request-3.pdf (Carrier rate pitch) -> descartado without running workers."""
+    """trackflow-request-3.pdf (Carrier rate pitch) -> descartado without running workers."""
     generate_all_seed_pdfs()
-    src_pdf = PROJECT_ROOT / "rfp-requests" / "trackflow" / "CONTEXT-trackflow-request-3.pdf"
+    src_pdf = PROJECT_ROOT / "rfp-requests" / "trackflow" / "trackflow-request-3.pdf"
     tid = str(uuid4())
     raw_pdf = PROJECT_ROOT / "data" / "raw" / f"{tid}.pdf"
     raw_pdf.parent.mkdir(parents=True, exist_ok=True)

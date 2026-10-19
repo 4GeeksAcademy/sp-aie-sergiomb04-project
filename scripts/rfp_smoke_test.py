@@ -42,19 +42,19 @@ def run_all_smoke_tests() -> int:
 
     cases = [
         (
-            "CONTEXT-trackflow-request-1.pdf",
+            "trackflow-request-1.pdf",
             "analisis_completo",
             ["warehouse", "reverse"],
             "EUR",
         ),
         (
-            "CONTEXT-trackflow-request-2.pdf",
+            "trackflow-request-2.pdf",
             "analisis_completo",
             ["warehouse", "lastmile"],
             "USD",
         ),
         (
-            "CONTEXT-trackflow-request-3.pdf",
+            "trackflow-request-3.pdf",
             "descartado",
             [],
             None,
@@ -64,37 +64,42 @@ def run_all_smoke_tests() -> int:
     summary_results = []
     for filename, expected_status, expected_depts, expected_currency in cases:
         pdf_path = seed_dir / filename
-        result = process_single_pdf(pdf_path)
-        actual_status = result.get("status")
-        actual_depts = result.get("metadata", {}).get("departments_needed", [])
-        actual_currency = result.get("metadata", {}).get("currency")
+        tid = str(uuid4())
+        raw_file = PROJECT_ROOT / "data" / "raw" / f"{tid}.pdf"
+        try:
+            result = process_single_pdf(pdf_path, ticket_id=tid)
+            actual_status = result.get("status")
+            actual_depts = result.get("metadata", {}).get("departments_needed", [])
+            actual_currency = result.get("metadata", {}).get("currency")
 
-        assert actual_status == expected_status, (
-            f"[{filename}] Expected status '{expected_status}', got '{actual_status}'"
-        )
-        if expected_status == "analisis_completo":
-            assert set(actual_depts) == set(expected_depts), (
-                f"[{filename}] Expected departments {expected_depts}, got {actual_depts}"
+            assert actual_status == expected_status, (
+                f"[{filename}] Expected status '{expected_status}', got '{actual_status}'"
             )
-            assert actual_currency == expected_currency, (
-                f"[{filename}] Expected currency '{expected_currency}', got '{actual_currency}'"
-            )
-            assert result.get("handoff_payload", {}).get("ready_for_part_2") is True
+            if expected_status == "analisis_completo":
+                assert set(actual_depts) == set(expected_depts), (
+                    f"[{filename}] Expected departments {expected_depts}, got {actual_depts}"
+                )
+                assert actual_currency == expected_currency, (
+                    f"[{filename}] Expected currency '{expected_currency}', got '{actual_currency}'"
+                )
+                assert result.get("handoff_payload", {}).get("ready_for_part_2") is True
 
-        summary_results.append(
-            {
-                "file": filename,
-                "ticket_id": result["ticket_id"],
-                "status": actual_status,
-                "client_name": result.get("metadata", {}).get("client_name"),
-                "client_country": result.get("metadata", {}).get("client_country"),
-                "currency": actual_currency,
-                "departments_needed": actual_depts,
-                "readability_flesch_kincaid": result.get("readability_metrics", {}).get(
-                    "flesch_kincaid_grade"
-                ),
-            }
-        )
+            summary_results.append(
+                {
+                    "file": filename,
+                    "ticket_id": result["ticket_id"],
+                    "status": actual_status,
+                    "client_name": result.get("metadata", {}).get("client_name"),
+                    "client_country": result.get("metadata", {}).get("client_country"),
+                    "currency": actual_currency,
+                    "departments_needed": actual_depts,
+                    "readability_flesch_kincaid": result.get("readability_metrics", {}).get(
+                        "flesch_kincaid_grade"
+                    ),
+                }
+            )
+        finally:
+            raw_file.unlink(missing_ok=True)
 
     print(json.dumps({"smoke_test_status": "PASSED", "results": summary_results}, indent=2, ensure_ascii=False))
     return 0

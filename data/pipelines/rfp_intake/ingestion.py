@@ -342,14 +342,31 @@ def detect_departments_and_services(text: str) -> tuple[list[str], list[str]]:
     return services, departments
 
 
+def _detect_unsupported_departments(text: str) -> list[str]:
+    """Identify mentions of non-existent/unsupported TrackFlow departments to flag without spawning invalid workers."""
+    lower = text.lower()
+    unsupported_map = {
+        "manufacturing": ("fabricación", "manufactura", "manufacturing", "producción industrial"),
+        "customs_brokerage": ("agencia de aduanas", "customs brokerage", "despacho aduanero", "importación marítima"),
+        "marketing": ("campañas de marketing", "marketing agency", "publicidad digital", "gestión de redes sociales"),
+        "finance_factoring": ("factoring financiero", "préstamos comerciales", "crédito bancario"),
+    }
+    found: list[str] = []
+    for dept_key, keywords in unsupported_map.items():
+        if any(kw in lower for kw in keywords):
+            found.append(dept_key)
+    return found
+
+
 def extract_base_metadata(markdown_text: str) -> dict[str, Any]:
-    """Extract base RFP metadata required by CONTEXT-trackflow.es.md §2.3."""
+    """Extract base RFP metadata required by trackflow-BRIEFING.es.md §2.3."""
     client_name = _detect_client_name(markdown_text)
     client_country, currency = _detect_country_and_currency(markdown_text)
     monthly_volume = _detect_monthly_volume(markdown_text)
     deadline = _detect_deadline(markdown_text)
     budget_range = _detect_budget_range(markdown_text)
     services_requested, departments_needed = detect_departments_and_services(markdown_text)
+    unsupported_departments = _detect_unsupported_departments(markdown_text)
 
     return {
         "client_name": client_name,
@@ -360,4 +377,5 @@ def extract_base_metadata(markdown_text: str) -> dict[str, Any]:
         "deadline": deadline,
         "budget_range": budget_range,
         "departments_needed": departments_needed,
+        "unsupported_departments": unsupported_departments,
     }

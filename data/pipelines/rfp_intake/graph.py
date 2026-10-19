@@ -19,7 +19,11 @@ from data.pipelines.rfp_intake.nodes import (
     route_after_classifier,
     synthesizer_node,
 )
-from data.pipelines.rfp_intake.persistence import create_rfp_ticket, get_rfp_ticket_bundle
+from data.pipelines.rfp_intake.persistence import (
+    create_rfp_ticket,
+    get_rfp_ticket_bundle,
+    mark_ticket_discarded,
+)
 from data.pipelines.rfp_intake.state import DepartmentWorkerInput, RFPIntakeState
 from trackflow_api.models import RFPTicketStatusEnum
 
@@ -148,7 +152,13 @@ def run_rfp_intake_pipeline(
         "error": None,
     }
 
-    final_state = app.invoke(initial_state)
+    try:
+        final_state = app.invoke(initial_state)
+    except Exception as exc:
+        logger.error("Mid-pipeline failure for ticket_id=%s: %s", ticket.id, exc, exc_info=True)
+        mark_ticket_discarded(ticket.id, f"Pipeline error: {exc}")
+        raise
+
     bundle = get_rfp_ticket_bundle(ticket.id)
     if bundle is not None:
         bundle["nodes_executed"] = final_state.get("nodes_executed", [])

@@ -247,8 +247,10 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
   - `POST /api/rfp/upload`: Almacenamiento del PDF en `data/raw/<ticket_id>.pdf`, creación de `Ticket` en estado `analizando`, ejecución asíncrona del grafo con `BackgroundTasks` y respuesta inmediata `HTTP 202 Accepted`.
   - `GET /api/rfp/{ticket_id}` y `GET /api/rfp`: Consulta de estado, metadatos, métricas de legibilidad y desglose por departamento.
   - Interfaz en `uis/backoffice` (`/rfp`) con subida de PDF, polling automático de estados (`analizando` $\rightarrow$ `analisis_completo` / `descartado`), visualización de métricas de legibilidad, síntesis comercial y tarjetas de `key_aspects` por departamento.
-- **Datos Semilla, Scripts y Pruebas Automatizadas:**
-  - PDFs de prueba generados en `rfp-requests/trackflow/` (`CONTEXT-trackflow-request-1.pdf` ModaViva formal, `CONTEXT-trackflow-request-2.pdf` Luna Cosmetics informal, `CONTEXT-trackflow-request-3.pdf` pitch de transportista inválido).
+- **Datos Semilla, Scripts, Diseño y Pruebas Automatizadas:**
+  - PDFs de prueba generados en `rfp-requests/trackflow/` y `docs/milestone-9/rfp-requests/trackflow/` (`trackflow-request-1.pdf` / `CONTEXT-trackflow-request-1.pdf` ModaViva formal, `trackflow-request-2.pdf` / `CONTEXT-trackflow-request-2.pdf` Luna Cosmetics informal, `trackflow-request-3.pdf` / `CONTEXT-trackflow-request-3.pdf` pitch de transportista inválido).
+  - Detección y aislamiento de departamentos inexistentes (`unsupported_departments`), pre-validación de conflictos entre workers (`potential_conflicts`: `volume-vs-capacity`, `currency-mismatch`) y manejo anti-zombie en `run_rfp_intake_pipeline`.
+  - Documentación completa y respuestas a las 5 Preguntas de Diseño con checklist 32/32 en `docs/milestone-9/README.md`.
   - Script CLI standalone en `scripts/rfp_smoke_test.py`.
   - Suite de pruebas en `tests/pipelines/test_rfp_intake.py` (8 tests) y `services/api/tests/test_rfp_routes.py` (2 tests) pasando al 100%.
 

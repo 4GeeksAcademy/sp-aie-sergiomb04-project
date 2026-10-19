@@ -159,6 +159,9 @@ def generate_all_seed_pdfs() -> list[Path]:
     ]
     created_files: list[Path] = []
     specs = [
+        ("trackflow-request-1.pdf", REQUEST_1_LINES),
+        ("trackflow-request-2.pdf", REQUEST_2_LINES),
+        ("trackflow-request-3.pdf", REQUEST_3_LINES),
         ("CONTEXT-trackflow-request-1.pdf", REQUEST_1_LINES),
         ("CONTEXT-trackflow-request-2.pdf", REQUEST_2_LINES),
         ("CONTEXT-trackflow-request-3.pdf", REQUEST_3_LINES),
