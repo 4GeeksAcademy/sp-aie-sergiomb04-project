@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export function Footer() {
   return (
     <footer role="contentinfo" className="border-t border-gray-200 bg-white px-6 py-10 dark:border-slate-800 dark:bg-slate-900">
@@ -26,10 +28,15 @@ export function Footer() {
           <p className="text-gray-600 dark:text-slate-400">Los Angeles, USA</p>
           <p className="text-gray-600 dark:text-slate-400">Zaragoza, Espana</p>
         </div>
-      </div>
 
-      <div className="mt-10 text-center text-sm text-gray-500 dark:text-slate-500">
-        © 2026 TrackFlow. Todos los derechos reservados.
+        <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-gray-100 pt-6 text-xs text-gray-500 sm:flex-row dark:border-slate-800 dark:text-slate-500">
+          <p>© 2026 TrackFlow Tech. Todos los derechos reservados.</p>
+          <div className="flex gap-6">
+            <span className="hover:text-gray-700 dark:hover:text-slate-300 transition cursor-pointer">SLA Contractual &gt;90%</span>
+            <span className="hover:text-gray-700 dark:hover:text-slate-300 transition cursor-pointer">Política de Privacidad</span>
+            <span className="hover:text-gray-700 dark:hover:text-slate-300 transition cursor-pointer">Términos de Servicio</span>
+          </div>
+        </div>
       </div>
     </footer>
   );

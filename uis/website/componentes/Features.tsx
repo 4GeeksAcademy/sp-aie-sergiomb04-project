@@ -4,6 +4,7 @@ export type FeatureItem = {
 };
 
 type FeaturesProps = {
+  sectionId?: string;
   headingId: string;
   title: string;
   description: string;
@@ -33,6 +34,7 @@ function FeatureCard({ title, description, bordered = false }: FeatureCardProps)
 }
 
 export function Features({
+  sectionId,
   headingId,
   title,
   description,
@@ -41,14 +43,18 @@ export function Features({
   borderedCards = false,
 }: FeaturesProps) {
   return (
-    <section aria-labelledby={headingId} className={`${backgroundClassName} px-6 py-20`}>
+    <section
+      id={sectionId}
+      aria-labelledby={headingId}
+      className={`${backgroundClassName} px-6 py-20 scroll-mt-16`}
+    >
       <div className="mx-auto max-w-6xl text-center">
-        <h2 id={headingId} className="mb-4 text-3xl font-bold text-gray-900 dark:text-white">
+        <h2 id={headingId} className="mb-4 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl dark:text-white">
           {title}
         </h2>
-        <p className="mx-auto mb-12 max-w-2xl text-gray-600 dark:text-slate-300">{description}</p>
+        <p className="mx-auto mb-12 max-w-2xl text-base text-gray-600 dark:text-slate-300">{description}</p>
 
-        <div className="grid gap-8 text-left md:grid-cols-3">
+        <div className="grid gap-6 text-left sm:grid-cols-2 md:grid-cols-3">
           {items.map((item) => (
             <FeatureCard
               key={item.title}

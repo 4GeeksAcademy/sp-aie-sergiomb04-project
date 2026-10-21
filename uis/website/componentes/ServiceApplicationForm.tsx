@@ -137,7 +137,7 @@ export function ServiceApplicationForm() {
 
     setStatusMessage({
       tone: "success",
-      text: "Enviado correctamente (simulacion)",
+      text: "¡Solicitud recibida con éxito! Nuestro equipo de operaciones (Los Ángeles / Zaragoza) te responderá en menos de 24 horas hábiles.",
     });
     setValues(initialValues);
     setErrors({});
