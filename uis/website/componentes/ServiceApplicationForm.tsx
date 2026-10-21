@@ -176,7 +176,7 @@ export function ServiceApplicationForm() {
         hidden={currentStep !== 1}
       >
         <fieldset className="space-y-4">
-          <legend id="step-1-title" className="text-lg font-semibold text-gray-900">
+          <legend id="step-1-title" className="text-lg font-semibold text-gray-900 dark:text-white">
             Informacion de la empresa
           </legend>
 
@@ -228,7 +228,7 @@ export function ServiceApplicationForm() {
         </fieldset>
 
         <fieldset className="space-y-4">
-          <legend className="text-lg font-semibold text-gray-900">
+          <legend className="text-lg font-semibold text-gray-900 dark:text-white">
             Informacion de contacto
           </legend>
 
@@ -295,7 +295,7 @@ export function ServiceApplicationForm() {
         hidden={currentStep !== 2}
       >
         <fieldset className="space-y-4">
-          <legend id="step-2-title" className="text-lg font-semibold text-gray-900">
+          <legend id="step-2-title" className="text-lg font-semibold text-gray-900 dark:text-white">
             Operacion logistica
           </legend>
 
@@ -345,7 +345,7 @@ export function ServiceApplicationForm() {
         </fieldset>
 
         <fieldset className="space-y-4">
-          <legend className="text-lg font-semibold text-gray-900">
+          <legend className="text-lg font-semibold text-gray-900 dark:text-white">
             Detalles adicionales
           </legend>
 
@@ -368,7 +368,7 @@ export function ServiceApplicationForm() {
             id="prev-step"
             type="button"
             onClick={handlePreviousStep}
-            className="w-full rounded-lg border border-gray-300 bg-white px-8 py-3 font-medium transition hover:bg-gray-50 md:w-auto"
+            className="w-full rounded-lg border border-gray-300 bg-white px-8 py-3 font-medium text-gray-800 transition hover:bg-gray-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 md:w-auto"
           >
             Volver al paso 1
           </button>
@@ -382,7 +382,7 @@ export function ServiceApplicationForm() {
 
           <button
             type="reset"
-            className="mt-2 w-full rounded-lg bg-gray-500 px-8 py-3 font-medium text-white transition hover:bg-gray-600 md:mt-0 md:ml-2 md:w-auto"
+            className="mt-2 w-full rounded-lg bg-gray-500 px-8 py-3 font-medium text-white transition hover:bg-gray-600 dark:bg-slate-700 dark:hover:bg-slate-600 md:mt-0 md:ml-2 md:w-auto"
           >
             Restablecer
           </button>

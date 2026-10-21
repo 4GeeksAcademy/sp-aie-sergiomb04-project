@@ -340,22 +340,6 @@ fp_final_documents).
   - Integración en cabeceras de navegación (`ProtectedNavLinks`, `layout.tsx` en Backoffice y `Navbar.tsx` en Website), páginas públicas (`/login`, `/register`, `/forgot-password`, `/reset-password`) y secciones clave (`/products`, `/knowledge`, `/application`, etc.).
   - Verificación exitosa de compilación (`next build`) y pruebas (`jest`) en ambas aplicaciones.
 
-### Renovación Integral y Saneamiento de Landing Page en `uis/website` (Completado)
-- **Saneamiento de navegación y eliminación de rutas 404**:
-  - Reemplazados enlaces rotos (`/projects`, `/tasks`, `/reports`, `/dashboard`) por navegación por anclas (`#servicios`, `#rastreo`, `#operacion`, `#faq`), botón directo a `/application` y enlace al Portal Backoffice.
-- **Widget de Rastreo Multicarrier Demostrativo (`TrackingWidget.tsx`)**:
-  - Basado en datos reales de TrackFlow (Hub Los Ángeles, Hub Zaragoza, UPS, FedEx, SEUR, DHL), con chips de prueba rápida (`TRF-US-8941`, `TRF-ES-3312`, `TRF-INT-502`), estimaciones de entrega según SLA y timeline de eventos operativos.
-- **Flujo Operativo de Extremo a Extremo (`OperationalWorkflow.tsx`)**:
-  - 4 etapas del pipeline logístico: Inbound & Almacén ($m^3$, 30 días gracia), Ingesta & Picking, Smart Carrier Dispatcher y Logística Inversa con IA (<48h).
-- **Base de Conocimiento y FAQ Operativo (`FaqSection.tsx`)**:
-  - Preguntas y respuestas detalladas y accesibles basadas en las políticas oficiales de la compañía (SLAs de entrega, carriers por país, ventana de devolución de 30 días, costes de almacenamiento).
-- **Banner de Conversión y Footer Profesional (`CtaBanner.tsx` y `Footer.tsx`)**:
-  - Rediseño con 4 columnas, cobertura de hubs, contacto verificado y enlaces institucionales.
-- **Formulario de Solicitud Profesional**:
-  - Mensaje de confirmación orientado a respuesta comercial en <24h eliminando notas de simulación incompleta.
-- **Verificación Técnica**:
-  - `next build` en Turbopack superado al 100% con páginas estáticas pre-renderizadas y `eslint` pasando con cero advertencias.
-
 ## Proximos pasos
 1. Pasar a producción el flujo agéntico completo de RFPs en TrackFlow Tech tras revisión con los directores de departamento (Miguel Torres, Ana Whitfield, Carlos Vega, Sofía Ramos).
 2. Integrar el pipeline con el sistema de mensajería/email saliente para el envío automatizado de la propuesta económica final a los clientes potenciales.

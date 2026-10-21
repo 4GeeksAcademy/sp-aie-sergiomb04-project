@@ -21,14 +21,14 @@ function FeatureCard({ title, description, bordered = false }: FeatureCardProps)
   return (
     <article
       className={[
-        "rounded-2xl p-6 transition duration-200",
+        "rounded-xl p-6",
         bordered
-          ? "border border-gray-200/90 bg-white hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
-          : "bg-white/80 dark:bg-slate-900/60 shadow-sm",
+          ? "border border-gray-200 bg-white transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
+          : "bg-white/60 dark:bg-slate-900/60",
       ].join(" ")}
     >
-      <h3 className="mb-2 text-lg font-bold text-gray-900 dark:text-white">{title}</h3>
-      <p className="text-sm leading-relaxed text-gray-600 dark:text-slate-300">{description}</p>
+      <h3 className="mb-2 text-xl font-semibold text-gray-900 dark:text-white">{title}</h3>
+      <p className="text-gray-600 dark:text-slate-300">{description}</p>
     </article>
   );
 }

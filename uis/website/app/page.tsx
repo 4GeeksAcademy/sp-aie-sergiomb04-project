@@ -113,8 +113,7 @@ export default function Home() {
         title="¿Por qué confiar en TrackFlow Tech?"
         description="Eficiencia contrastada, menos incidencias operativas y un control total de tu cadena de suministro."
         items={benefitItems}
-        backgroundClassName="bg-white dark:bg-slate-900"
-        borderedCards
+        backgroundClassName="bg-gray-100 dark:bg-slate-950"
       />
 
       {/* Preguntas Frecuentes / Base de Conocimiento (Relleno y Confianza) */}

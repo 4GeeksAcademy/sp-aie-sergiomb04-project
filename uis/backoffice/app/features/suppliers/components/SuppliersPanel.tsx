@@ -350,19 +350,19 @@ export function SuppliersPanel() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
               Directorio de proveedores
             </h1>
-            <p className="mt-2 max-w-3xl text-slate-600">
+            <p className="mt-2 max-w-3xl text-slate-600 dark:text-slate-400">
               Gestiona tarifas, estados de operación y cobertura de proveedores en USA y Spain.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-500">{suppliers.length} proveedores</span>
+            <span className="text-sm text-slate-500 dark:text-slate-400">{suppliers.length} proveedores</span>
             <button
               type="button"
               onClick={() => {
@@ -371,7 +371,7 @@ export function SuppliersPanel() {
                 setForm(INITIAL_FORM);
                 setIsCreateModalOpen(true);
               }}
-              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+              className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
             >
               + Registrar proveedor
             </button>
@@ -380,9 +380,9 @@ export function SuppliersPanel() {
 
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] xl:items-end">
           <label className="space-y-2 text-sm">
-            <span className="font-medium text-slate-700">Filtrar por país</span>
+            <span className="font-medium text-slate-700 dark:text-slate-300">Filtrar por país</span>
             <select
-              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700"
+              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               value={countryFilter}
               onChange={(event) => setCountryFilter(event.target.value as SupplierCountry | "all")}
             >
@@ -396,9 +396,9 @@ export function SuppliersPanel() {
           </label>
 
           <label className="space-y-2 text-sm">
-            <span className="font-medium text-slate-700">Filtrar por categoría</span>
+            <span className="font-medium text-slate-700 dark:text-slate-300">Filtrar por categoría</span>
             <select
-              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700"
+              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               value={categoryFilter}
               onChange={(event) =>
                 setCategoryFilter(event.target.value as SupplierCategory | "all")
@@ -413,63 +413,63 @@ export function SuppliersPanel() {
             </select>
           </label>
 
-          <p className="text-xs text-slate-500 xl:pb-2">
+          <p className="text-xs text-slate-500 dark:text-slate-400 xl:pb-2">
             La tarifa se guarda sola tras {RATE_AUTOSAVE_DELAY_MS / 1000}s sin cambios.
           </p>
         </div>
 
         {error && (
-          <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+          <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400">
             {error}
           </p>
         )}
         {success && (
-          <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+          <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-400">
             {success}
           </p>
         )}
 
         {isLoading ? (
-          <p className="mt-6 text-sm text-slate-600">Cargando proveedores...</p>
+          <p className="mt-6 text-sm text-slate-600 dark:text-slate-400">Cargando proveedores...</p>
         ) : (
           <div className="mt-6 overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="bg-slate-50">
+            <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
+              <thead className="bg-slate-50 dark:bg-slate-800/80">
                 <tr>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Proveedor</th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Categorías</th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Tarifa</th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Estado</th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Actualizado</th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-700">Acciones</th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-700 dark:text-slate-300">Proveedor</th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-700 dark:text-slate-300">Categorías</th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-700 dark:text-slate-300">Tarifa</th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-700 dark:text-slate-300">Estado</th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-700 dark:text-slate-300">Actualizado</th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-700 dark:text-slate-300">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {supplierTableRows.map(({ supplier, categoriesLabel, rateLabel, updatedAtLabel }) => (
                   <tr key={supplier.id}>
                     <td className="px-3 py-3 align-top">
-                      <p className="font-semibold text-slate-900">{supplier.name}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="font-semibold text-slate-900 dark:text-white">{supplier.name}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         {supplier.country} · {supplier.currency}
                       </p>
                     </td>
-                    <td className="px-3 py-3 align-top text-slate-700">
+                    <td className="px-3 py-3 align-top text-slate-700 dark:text-slate-300">
                       {categoriesLabel}
                     </td>
-                    <td className="px-3 py-3 align-top text-slate-700">
+                    <td className="px-3 py-3 align-top text-slate-700 dark:text-slate-300">
                       {rateLabel}
                     </td>
                     <td className="px-3 py-3 align-top">
                       <span
                         className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${supplier.status === "active"
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-amber-100 text-amber-800"
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
+                            : "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
                           }`}
                       >
                         {STATUS_LABELS[supplier.status]}
                       </span>
                     </td>
-                    <td className="px-3 py-3 align-top text-slate-600">
+                    <td className="px-3 py-3 align-top text-slate-600 dark:text-slate-400">
                       {updatedAtLabel}
                     </td>
                     <td className="px-3 py-3 align-top">
@@ -492,7 +492,7 @@ export function SuppliersPanel() {
                               }));
                             }
                             }
-                            className="w-28 rounded-lg border border-slate-300 px-2 py-1"
+                            className="w-28 rounded-lg border border-slate-300 px-2 py-1 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                           />
                         </div>
 
@@ -509,20 +509,20 @@ export function SuppliersPanel() {
                               }));
                               void handleStatusUpdate(supplier.id, nextStatus);
                             }}
-                            className="rounded-lg border border-slate-300 px-2 py-1"
+                            className="rounded-lg border border-slate-300 px-2 py-1 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                           >
                             <option value="active">Activo</option>
                             <option value="suspended">Suspendido</option>
                           </select>
                           {savingStatusIds[supplier.id] && (
-                            <span className="text-xs text-slate-500">Actualizando...</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">Actualizando...</span>
                           )}
                         </div>
 
                         <button
                           type="button"
                           onClick={() => void handleDeleteSupplier(supplier.id)}
-                          className="rounded-lg border border-rose-200 px-2 py-1 text-rose-700 hover:bg-rose-50"
+                          className="rounded-lg border border-rose-200 px-2 py-1 text-rose-700 hover:bg-rose-50 dark:border-rose-900/60 dark:text-rose-400 dark:hover:bg-rose-950/50"
                         >
                           Eliminar
                         </button>
@@ -542,14 +542,14 @@ export function SuppliersPanel() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="supplier-create-title"
-            className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"
+            className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl dark:border dark:border-slate-800 dark:bg-slate-900"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 id="supplier-create-title" className="text-xl font-semibold text-slate-900">
+                <h2 id="supplier-create-title" className="text-xl font-semibold text-slate-900 dark:text-white">
                   Alta de proveedor
                 </h2>
-                <p className="mt-2 text-sm text-slate-600">
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
                   Registra un nuevo partner logístico con su cobertura, tarifa y categorías.
                 </p>
               </div>
@@ -560,7 +560,7 @@ export function SuppliersPanel() {
                   setIsCreateModalOpen(false);
                   setError(null);
                 }}
-                className="rounded-full border border-slate-200 px-3 py-1 text-sm text-slate-600 hover:bg-slate-100"
+                className="rounded-full border border-slate-200 px-3 py-1 text-sm text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               >
                 Cerrar
               </button>
@@ -569,19 +569,19 @@ export function SuppliersPanel() {
             <form onSubmit={handleCreateSupplier} className="mt-6 grid gap-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="space-y-2 text-sm">
-                  <span className="font-medium text-slate-700">Nombre</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">Nombre</span>
                   <input
                     required
                     value={form.name}
                     onChange={(event) =>
                       setForm((prevState) => ({ ...prevState, name: event.target.value }))
                     }
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   />
                 </label>
 
                 <label className="space-y-2 text-sm">
-                  <span className="font-medium text-slate-700">País</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">País</span>
                   <select
                     value={form.country}
                     onChange={(event) => {
@@ -592,7 +592,7 @@ export function SuppliersPanel() {
                         currency: getCurrencyByCountry(country),
                       }));
                     }}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   >
                     {COUNTRY_OPTIONS.map((country) => (
                       <option key={country} value={country}>
@@ -603,7 +603,7 @@ export function SuppliersPanel() {
                 </label>
 
                 <label className="space-y-2 text-sm">
-                  <span className="font-medium text-slate-700">Tarifa por envío</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">Tarifa por envío</span>
                   <input
                     required
                     min="0"
@@ -616,21 +616,21 @@ export function SuppliersPanel() {
                         rate_per_shipment: event.target.value,
                       }))
                     }
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   />
                 </label>
 
                 <label className="space-y-2 text-sm">
-                  <span className="font-medium text-slate-700">Moneda</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">Moneda</span>
                   <input
                     readOnly
                     value={form.currency}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-slate-600"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-slate-600 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-300"
                   />
                 </label>
 
                 <label className="space-y-2 text-sm">
-                  <span className="font-medium text-slate-700">Estado inicial</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">Estado inicial</span>
                   <select
                     value={form.status}
                     onChange={(event) =>
@@ -639,7 +639,7 @@ export function SuppliersPanel() {
                         status: event.target.value as SupplierStatus,
                       }))
                     }
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   >
                     <option value="active">Activo</option>
                     <option value="suspended">Suspendido</option>
@@ -647,18 +647,18 @@ export function SuppliersPanel() {
                 </label>
 
                 <label className="space-y-2 text-sm">
-                  <span className="font-medium text-slate-700">Zona de servicio</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">Zona de servicio</span>
                   <input
                     value={form.service_zone}
                     onChange={(event) =>
                       setForm((prevState) => ({ ...prevState, service_zone: event.target.value }))
                     }
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   />
                 </label>
 
                 <label className="space-y-2 text-sm">
-                  <span className="font-medium text-slate-700">Email de contacto</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">Email de contacto</span>
                   <input
                     type="email"
                     value={form.contact_email}
@@ -668,28 +668,28 @@ export function SuppliersPanel() {
                         contact_email: event.target.value,
                       }))
                     }
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   />
                 </label>
 
                 <label className="space-y-2 text-sm md:col-span-2">
-                  <span className="font-medium text-slate-700">Notas</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">Notas</span>
                   <textarea
                     rows={3}
                     value={form.notes}
                     onChange={(event) =>
                       setForm((prevState) => ({ ...prevState, notes: event.target.value }))
                     }
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   />
                 </label>
               </div>
 
-              <fieldset className="rounded-xl border border-slate-200 p-4">
-                <legend className="px-2 text-sm font-medium text-slate-700">Categorías</legend>
+              <fieldset className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+                <legend className="px-2 text-sm font-medium text-slate-700 dark:text-slate-300">Categorías</legend>
                 <div className="mt-2 grid gap-3 md:grid-cols-2">
                   {VALID_CATEGORIES.map((category) => (
-                    <label key={category} className="flex items-center gap-2 text-sm text-slate-700">
+                    <label key={category} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                       <input
                         type="checkbox"
                         checked={form.categories.includes(category)}
@@ -702,7 +702,7 @@ export function SuppliersPanel() {
               </fieldset>
 
               {error && (
-                <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400">
                   {error}
                 </p>
               )}
@@ -714,14 +714,14 @@ export function SuppliersPanel() {
                     setIsCreateModalOpen(false);
                     setError(null);
                   }}
-                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
                 >
                   {isSubmitting ? "Guardando..." : "Crear proveedor"}
                 </button>

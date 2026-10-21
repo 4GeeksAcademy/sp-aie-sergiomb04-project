@@ -78,9 +78,9 @@ export default function KnowledgeQueryPage() {
           <span className="rounded-md bg-indigo-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
             Base de Conocimiento RAG
           </span>
-          <span className="text-xs text-slate-500">Colección: trackflow_knowledge</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">Colección: trackflow_knowledge</span>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white lg:text-3xl">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
           Asistente Comercial y Operativo
         </h1>
         <p className="max-w-3xl text-sm text-slate-600 dark:text-slate-400">
@@ -154,7 +154,7 @@ export default function KnowledgeQueryPage() {
 
         {/* Suggested queries */}
         <div className="mt-6 border-t border-slate-100 pt-4 dark:border-slate-800">
-          <p className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <p className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Consultas frecuentes recomendadas:
           </p>
           <div className="flex flex-wrap gap-2">

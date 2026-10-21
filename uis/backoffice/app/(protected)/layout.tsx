@@ -1,5 +1,6 @@
 import { LogoutButton } from "@/app/features/auth/components/LogoutButton";
 import { ProtectedNavLinks } from "@/app/features/layout/components/ProtectedNavLinks";
+import { ThemeToggle } from "@/app/features/layout/components/ThemeToggle";
 import { requireAuthenticatedUser } from "@/app/features/auth/server/current-user";
 
 export default async function ProtectedLayout({
@@ -11,27 +12,32 @@ export default async function ProtectedLayout({
 
   return (
     <div className="flex min-h-full flex-col">
-      <header className="border-b border-slate-200 bg-white/95 px-6 py-4 backdrop-blur lg:px-10">
+      <header className="border-b border-slate-200 bg-white/95 px-6 py-4 backdrop-blur lg:px-10 dark:border-slate-800 dark:bg-slate-900/95">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center justify-between gap-6">
             <div>
-              <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500">
+              <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
                 TrackFlow
               </p>
-              <p className="text-lg font-semibold text-slate-950">Backoffice</p>
+              <p className="text-lg font-semibold text-slate-950 dark:text-white">Backoffice</p>
             </div>
 
             <ProtectedNavLinks />
           </div>
 
-          <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-800/80">
             <div>
-              <p className="text-sm font-semibold text-slate-900">{currentUser.profile.name || currentUser.email}</p>
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                {currentUser.profile.name || currentUser.email}
+              </p>
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
                 {currentUser.role}
               </p>
             </div>
-            <LogoutButton />
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <LogoutButton />
+            </div>
           </div>
         </div>
 
