@@ -1,5 +1,43 @@
-"""TrackFlow RFP Intake & Routing LangGraph Pipeline Package (Milestone 9 - Part 1 of 3)."""
+"""TrackFlow RFP Intake, Routing, Response Generation, and Approval Package (Milestone 9 - Complete Flow)."""
 
+from data.pipelines.rfp_intake.approval_models import (
+    ApprovalActionEnum,
+    ApprovalDecision,
+    ConflictResolution,
+    ConflictTriggerId,
+    FinalDocumentPayload,
+    TraceStep,
+)
+from data.pipelines.rfp_intake.approval_flow import (
+    build_department_approval_graph,
+    get_default_checkpointer,
+    initiate_ticket_approval_cycle,
+    resume_department_approval,
+    synthesize_final_proposal_document,
+)
+from data.pipelines.rfp_intake.arbitration import (
+    detect_and_resolve_conflicts,
+)
+from data.pipelines.rfp_intake.evaluation_models import (
+    ComplianceEvaluation,
+    EvaluationResult,
+    ReadabilityEvaluation,
+    RelevanceEvaluation,
+)
+from data.pipelines.rfp_intake.evaluators import (
+    evaluate_compliance,
+    evaluate_readability,
+    evaluate_relevance,
+    run_parallel_evaluation,
+)
+from data.pipelines.rfp_intake.generators import (
+    BaseDepartmentGenerator,
+    LastMileProposalGenerator,
+    ReverseLogisticsProposalGenerator,
+    WarehouseProposalGenerator,
+    generate_department_draft,
+    get_generator_for_department,
+)
 from data.pipelines.rfp_intake.graph import (
     build_rfp_intake_graph,
     compile_rfp_intake_graph,
@@ -23,13 +61,23 @@ from data.pipelines.rfp_intake.nodes import (
     synthesizer_node,
 )
 from data.pipelines.rfp_intake.persistence import (
+    check_all_sections_approved,
     create_rfp_ticket,
+    get_final_document,
     get_rfp_ticket_bundle,
     list_rfp_tickets,
     mark_ticket_analysis_complete,
     mark_ticket_discarded,
+    save_final_document,
+    update_department_approval,
+    update_department_section_draft,
+    update_rfp_ticket_status,
     upsert_department_section,
     upsert_rfp_metadata,
+)
+from data.pipelines.rfp_intake.response_flow import (
+    run_rfp_response_generation_async,
+    run_rfp_response_generation_pipeline,
 )
 from data.pipelines.rfp_intake.state import (
     ClassificationResult,
@@ -39,11 +87,27 @@ from data.pipelines.rfp_intake.state import (
 )
 
 __all__ = [
+    "ApprovalActionEnum",
+    "ApprovalDecision",
+    "BaseDepartmentGenerator",
     "ClassificationResult",
+    "ComplianceEvaluation",
+    "ConflictResolution",
+    "ConflictTriggerId",
     "DepartmentWorkerInput",
+    "EvaluationResult",
+    "FinalDocumentPayload",
+    "LastMileProposalGenerator",
     "RFPIntakeState",
+    "ReadabilityEvaluation",
+    "RelevanceEvaluation",
+    "ReverseLogisticsProposalGenerator",
+    "TraceStep",
+    "WarehouseProposalGenerator",
     "WorkerKeyAspects",
+    "build_department_approval_graph",
     "build_rfp_intake_graph",
+    "check_all_sections_approved",
     "classifier_node",
     "classify_rfp_document",
     "compile_rfp_intake_graph",
@@ -52,18 +116,36 @@ __all__ = [
     "create_rfp_ticket",
     "decompose_rfp_by_department",
     "department_worker_node",
+    "detect_and_resolve_conflicts",
     "detect_departments_and_services",
+    "evaluate_compliance",
+    "evaluate_readability",
+    "evaluate_relevance",
     "extract_base_metadata",
+    "generate_department_draft",
+    "get_default_checkpointer",
+    "get_final_document",
+    "get_generator_for_department",
     "get_rfp_ticket_bundle",
     "ingest_document_node",
+    "initiate_ticket_approval_cycle",
     "list_rfp_tickets",
     "mark_ticket_analysis_complete",
     "mark_ticket_discarded",
     "orchestrator_node",
+    "resume_department_approval",
     "run_department_worker",
+    "run_parallel_evaluation",
     "run_rfp_intake_pipeline",
+    "run_rfp_response_generation_async",
+    "run_rfp_response_generation_pipeline",
+    "save_final_document",
+    "synthesize_final_proposal_document",
     "synthesize_rfp_analysis",
     "synthesizer_node",
+    "update_department_approval",
+    "update_department_section_draft",
+    "update_rfp_ticket_status",
     "upsert_department_section",
     "upsert_rfp_metadata",
 ]

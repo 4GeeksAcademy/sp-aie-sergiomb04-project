@@ -39,6 +39,27 @@ type WorkerKeyAspects = {
   relevant_excerpt?: string;
 };
 
+type EvaluationResultPayload = {
+  department_id: string;
+  section_id?: string | null;
+  readability: {
+    pass: boolean;
+    score: number;
+    details: Record<string, unknown> | string;
+  };
+  relevance: {
+    pass: boolean;
+    missing_aspects: string[];
+  };
+  compliance: {
+    pass: boolean;
+    rule_ids: string[];
+    violations: string[];
+  };
+  overall_pass: boolean;
+  feedback_for_generator: string;
+};
+
 type DepartmentSectionRecord = {
   id: string;
   ticket_id: string;
@@ -47,13 +68,45 @@ type DepartmentSectionRecord = {
   contact_person: string;
   key_aspects: WorkerKeyAspects;
   handoff_payload?: Record<string, unknown> | null;
+  draft_content?: string | null;
+  evaluation_results?: EvaluationResultPayload | null;
+  approval_status?: "pending" | "approved" | "rejected" | "changes_requested" | string | null;
+  approver?: string | null;
+  approved_at?: string | null;
   updated_at?: string | null;
+};
+
+type FinalDocumentData = {
+  id: string;
+  ticket_id: string;
+  currency: string;
+  generated_at?: string | null;
+  sections?: {
+    consolidated_markdown?: string;
+    sections?: Record<string, unknown>;
+    approvals?: Record<string, unknown>;
+    arbitrations?: Array<{
+      trigger_id: string;
+      arbitrator: string;
+      conflict_detected: string;
+      applied_action: string;
+    }>;
+  };
 };
 
 type RFPTicketBundle = {
   ticket_id: string;
   rfp_id: string;
-  status: "analizando" | "descartado" | "analisis_completo" | string;
+  status:
+    | "analizando"
+    | "descartado"
+    | "analisis_completo"
+    | "generando_borrador"
+    | "en_evaluación"
+    | "needs_human_review"
+    | "esperando_aprobación"
+    | "terminado"
+    | string;
   pdf_path: string;
   original_filename?: string | null;
   rejection_reason?: string | null;
@@ -87,6 +140,26 @@ const STATUS_BADGE_STYLES: Record<string, { label: string; className: string }> 
     label: "Análisis Completo (Listo para Ventas)",
     className: "bg-emerald-100 text-emerald-800 border-emerald-300",
   },
+  generando_borrador: {
+    label: "Generando Borrador (Redacción en curso)",
+    className: "bg-blue-100 text-blue-800 border-blue-300",
+  },
+  en_evaluación: {
+    label: "En Evaluación (Evaluadores paralelos)",
+    className: "bg-purple-100 text-purple-800 border-purple-300",
+  },
+  needs_human_review: {
+    label: "Revisión Humana Requerida (Límite agotado)",
+    className: "bg-amber-100 text-amber-900 border-amber-400 font-bold",
+  },
+  esperando_aprobación: {
+    label: "Esperando Aprobación (HITL)",
+    className: "bg-orange-100 text-orange-900 border-orange-300 font-semibold",
+  },
+  terminado: {
+    label: "Terminado (Propuesta Completa)",
+    className: "bg-emerald-100 text-emerald-900 border-emerald-400 font-bold",
+  },
   descartado: {
     label: "Descartado (No es RFP válida)",
     className: "bg-rose-100 text-rose-800 border-rose-300",
@@ -97,9 +170,14 @@ export default function RFPIntakePage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
   const [ticketDetail, setTicketDetail] = useState<RFPTicketBundle | null>(null);
   const [recentTickets, setRecentTickets] = useState<RFPTicketSummary[]>([]);
+  const [finalDocument, setFinalDocument] = useState<FinalDocumentData | null>(null);
+  const [arbitrationResult, setArbitrationResult] = useState<any | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [polling, setPolling] = useState(false);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -115,6 +193,20 @@ export default function RFPIntakePage() {
     }
   }, []);
 
+  const fetchFinalDoc = useCallback(async (ticketId: string) => {
+    try {
+      const res = await fetch(`/api/rfp/${encodeURIComponent(ticketId)}/final-document`, {
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const doc = (await res.json()) as FinalDocumentData;
+        setFinalDocument(doc);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const fetchTicketDetail = useCallback(
     async (ticketId: string) => {
       try {
@@ -127,8 +219,18 @@ export default function RFPIntakePage() {
         const data = (await res.json()) as RFPTicketBundle;
         setTicketDetail(data);
 
-        if (data.status !== "analizando") {
+        if (data.status === "terminado") {
+          void fetchFinalDoc(ticketId);
+        }
+
+        // Keep polling during active async steps
+        const isStillRunning =
+          data.status === "analizando" ||
+          data.status === "generando_borrador";
+
+        if (!isStillRunning) {
           setPolling(false);
+          setGenerating(false);
           if (pollTimerRef.current) {
             clearInterval(pollTimerRef.current);
             pollTimerRef.current = null;
@@ -139,7 +241,7 @@ export default function RFPIntakePage() {
         // Keep polling if transient network glitch
       }
     },
-    [fetchRecentTickets]
+    [fetchRecentTickets, fetchFinalDoc]
   );
 
   useEffect(() => {
@@ -156,6 +258,9 @@ export default function RFPIntakePage() {
 
   useEffect(() => {
     if (!activeTicketId) return;
+
+    setFinalDocument(null);
+    setArbitrationResult(null);
 
     const initialFetchTimer = setTimeout(() => {
       void fetchTicketDetail(activeTicketId);
@@ -201,23 +306,109 @@ export default function RFPIntakePage() {
         );
       }
 
-      const data = await res.json();
+      const data = (await res.json()) as { ticket_id: string };
       setActiveTicketId(data.ticket_id);
+      setSelectedFile(null);
       setPolling(true);
-      setTicketDetail({
-        ticket_id: data.ticket_id,
-        rfp_id: data.rfp_id || "RFP-NEW",
-        status: data.status || "analizando",
-        pdf_path: data.pdf_path || `data/raw/${data.ticket_id}.pdf`,
-        original_filename: selectedFile.name,
-      });
-      fetchRecentTickets();
+      void fetchRecentTickets();
     } catch (err) {
       setUploadError(
-        err instanceof Error ? err.message : "Error inesperado al subir el PDF"
+        err instanceof Error ? err.message : "Error inesperado al subir archivo"
       );
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleTriggerGeneration = async () => {
+    if (!ticketDetail) return;
+    setGenerating(true);
+    setGenerateError(null);
+
+    try {
+      const res = await fetch(`/api/rfp/${encodeURIComponent(ticketDetail.ticket_id)}/generate`, {
+        method: "POST",
+      });
+
+      if (!res.ok) {
+        const errPayload = await res.json().catch(() => ({}));
+        throw new Error(
+          errPayload.detail || `Error al iniciar generación (HTTP ${res.status})`
+        );
+      }
+
+      setPolling(true);
+      void fetchTicketDetail(ticketDetail.ticket_id);
+      void fetchRecentTickets();
+    } catch (err) {
+      setGenerateError(
+        err instanceof Error ? err.message : "Error al iniciar la propuesta"
+      );
+      setGenerating(false);
+    }
+  };
+
+  const handleInitiateApprovals = async () => {
+    if (!ticketDetail) return;
+    setActionLoading("initiate");
+    try {
+      const res = await fetch(`/api/rfp/${encodeURIComponent(ticketDetail.ticket_id)}/approval/initiate`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        void fetchTicketDetail(ticketDetail.ticket_id);
+        void fetchRecentTickets();
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDepartmentDecision = async (
+    deptId: string,
+    action: "approve" | "reject" | "request_changes",
+    approver: string
+  ) => {
+    if (!ticketDetail) return;
+    setActionLoading(`${deptId}-${action}`);
+
+    let notes: string | null = null;
+    if (action === "request_changes") {
+      notes = prompt("Indica las correcciones o ajustes necesarios para este departamento:") || "Ajustes requeridos.";
+    }
+
+    try {
+      const res = await fetch(
+        `/api/rfp/${encodeURIComponent(ticketDetail.ticket_id)}/approval/${encodeURIComponent(deptId)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action, approver, notes }),
+        }
+      );
+
+      if (res.ok) {
+        void fetchTicketDetail(ticketDetail.ticket_id);
+        void fetchRecentTickets();
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRunArbitration = async () => {
+    if (!ticketDetail) return;
+    setActionLoading("arbitrate");
+    try {
+      const res = await fetch(`/api/rfp/${encodeURIComponent(ticketDetail.ticket_id)}/arbitrate`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const arb = await res.json();
+        setArbitrationResult(arb);
+      }
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -229,122 +420,169 @@ export default function RFPIntakePage() {
     : null;
 
   return (
-    <div className="flex flex-1 flex-col gap-8 p-6 lg:p-10">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 p-6">
       {/* Header */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-3">
-          <span className="rounded-md bg-indigo-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700">
-            Hito 9 — Parte 1: RFP Intake & Routing
-          </span>
-          <span className="text-xs text-slate-500">
-            Equipo Comercial: Miguel Torres
-          </span>
-        </div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 lg:text-3xl">
-          Recepción y Enrutamiento Agéntico de RFPs
+      <div>
+        <span className="rounded bg-indigo-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700">
+          TrackFlow Tech · Hito 9 (Partes 1, 2 y 3)
+        </span>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          Flujo Agéntico de RFPs: Aprobaciones Humanas (HITL), Arbitraje y Cierre
         </h1>
-        <p className="max-w-3xl text-sm text-slate-600">
-          Sube documentos PDF de solicitudes de propuesta (formales o informales). El grafo
-          LangGraph convierte el documento con MarkItDown, calcula métricas de legibilidad,
-          clasifica su validez y descompone el análisis únicamente hacia los departamentos
-          involucrados (Warehouse, Last Mile, Reverse Logistics).
+        <p className="mt-1 text-sm text-slate-500">
+          Recepción automatizada, triage con clasificador, generación por departamentos,
+          evaluación en paralelo, aprobación humana aislada (interrupt/resume) y síntesis del documento final (§7).
         </p>
       </div>
 
-      {/* Upload Form Card */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-base font-semibold text-slate-900">
-          1. Subir Documento PDF de RFP
-        </h2>
-        <p className="mt-1 text-xs text-slate-500">
-          Los archivos se almacenan en <code>data/raw/&lt;ticket_id&gt;.pdf</code> y disparan el
-          pipeline asíncrono retornando HTTP 202 Accepted.
-        </p>
-
-        <form
-          onSubmit={handleUploadSubmit}
-          className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center"
-        >
-          <input
-            id="rfp-pdf-input"
-            type="file"
-            accept=".pdf,application/pdf"
-            onChange={(e) => {
-              const f = e.target.files?.[0] ?? null;
-              setSelectedFile(f);
-              setUploadError(null);
-            }}
-            className="flex-1 rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-3.5 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-indigo-700"
-          />
-          <button
-            id="rfp-upload-submit-btn"
-            type="submit"
-            disabled={!selectedFile || uploading}
-            className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {uploading ? "Subiendo PDF..." : "Subir y Analizar RFP"}
-          </button>
-        </form>
-
-        {uploadError && (
-          <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-800">
-            <strong>Error:</strong> {uploadError}
+      {/* Main Grid: Upload + Recent Tickets */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Upload Form Card */}
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-xs font-bold text-white">
+              1
+            </span>
+            <h2 className="text-base font-bold text-slate-900">
+              Subida de RFP en PDF (Modo Ticket)
+            </h2>
           </div>
-        )}
+          <p className="mt-2 text-xs text-slate-500">
+            Sube la solicitud recibida. Se guardará en <code>data/raw/</code> y creará un ticket en PostgreSQL.
+          </p>
 
-        {/* Recent Tickets Selector */}
-        {recentTickets.length > 0 && (
-          <div className="mt-5 border-t border-slate-100 pt-4">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Tickets RFP Recientes (clic para inspeccionar):
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {recentTickets.slice(0, 8).map((item) => (
-                <button
-                  key={item.ticket_id}
-                  type="button"
-                  onClick={() => {
-                    setActiveTicketId(item.ticket_id);
-                    setPolling(item.status === "analizando");
-                  }}
-                  className={[
-                    "inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition",
-                    activeTicketId === item.ticket_id
-                      ? "border-indigo-500 bg-indigo-50 text-indigo-800"
-                      : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300",
-                  ].join(" ")}
-                >
-                  <span className="font-mono font-semibold">{item.rfp_id}</span>
-                  <span>
-                    {item.client_name || item.original_filename || item.ticket_id.slice(0, 8)}
-                  </span>
-                  <span
-                    className={[
-                      "rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase",
-                      item.status === "analisis_completo"
-                        ? "bg-emerald-100 text-emerald-700"
-                        : item.status === "descartado"
-                        ? "bg-rose-100 text-rose-700"
-                        : "bg-amber-100 text-amber-700",
-                    ].join(" ")}
-                  >
-                    {item.status}
-                  </span>
-                </button>
-              ))}
+          <form onSubmit={handleUploadSubmit} className="mt-4 flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="rfp-file-input"
+                className="text-xs font-medium text-slate-700"
+              >
+                Archivo RFP (.pdf)
+              </label>
+              <input
+                id="rfp-file-input"
+                type="file"
+                accept=".pdf,application/pdf"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  setSelectedFile(file);
+                  setUploadError(null);
+                }}
+                className="block w-full cursor-pointer rounded-xl border border-slate-300 bg-slate-50/50 px-3 py-2 text-xs text-slate-800 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100"
+              />
             </div>
-          </div>
-        )}
-      </section>
 
-      {/* Active Ticket Status & Results View */}
+            {selectedFile && (
+              <div className="rounded-lg bg-slate-50 p-2.5 text-xs text-slate-600">
+                <span className="font-semibold text-slate-800">Seleccionado:</span>{" "}
+                {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+              </div>
+            )}
+
+            {uploadError && (
+              <div
+                id="rfp-upload-error"
+                className="rounded-lg border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-700"
+              >
+                {uploadError}
+              </div>
+            )}
+
+            <button
+              id="rfp-upload-submit-btn"
+              type="submit"
+              disabled={!selectedFile || uploading}
+              className="flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              {uploading ? (
+                <>
+                  <span className="mr-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Subiendo y encolando...
+                </>
+              ) : (
+                "Subir RFP e Iniciar Análisis"
+              )}
+            </button>
+          </form>
+        </section>
+
+        {/* Recent Tickets List */}
+        <section className="col-span-1 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h2 className="text-base font-bold text-slate-900">
+              Historial de Tickets RFP en PostgreSQL
+            </h2>
+            <button
+              onClick={() => void fetchRecentTickets()}
+              className="rounded-lg px-2.5 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50"
+            >
+              Refrescar lista
+            </button>
+          </div>
+
+          <div className="mt-3 max-h-64 overflow-y-auto">
+            {recentTickets.length === 0 ? (
+              <p className="py-6 text-center text-xs text-slate-400">
+                No hay tickets registrados aún. Sube un PDF para comenzar.
+              </p>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {recentTickets.map((t) => {
+                  const badge = STATUS_BADGE_STYLES[t.status] || {
+                    label: t.status,
+                    className: "bg-slate-100 text-slate-700 border-slate-200",
+                  };
+                  const isSelected = activeTicketId === t.ticket_id;
+                  return (
+                    <div
+                      key={t.ticket_id}
+                      onClick={() => setActiveTicketId(t.ticket_id)}
+                      className={`flex cursor-pointer items-center justify-between p-3 text-xs transition hover:bg-slate-50 ${
+                        isSelected ? "bg-indigo-50/60 font-semibold" : ""
+                      }`}
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-indigo-900">
+                            {t.rfp_id}
+                          </span>
+                          <span className="text-slate-700">
+                            {t.client_name || t.original_filename || "Sin nombre"}
+                          </span>
+                          {t.client_country && (
+                            <span className="text-slate-400">
+                              ({t.client_country})
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-slate-400">
+                          {t.created_at ? new Date(t.created_at).toLocaleString() : ""}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${badge.className}`}
+                        >
+                          {badge.label}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+
+      {/* Ticket Details View */}
       {ticketDetail && (
-        <div className="flex flex-col gap-6">
-          {/* Status Header Banner */}
+        <div id="rfp-ticket-detail-view" className="flex flex-col gap-6">
+          {/* Ticket Header & Status Banner */}
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2">
                   <span className="font-mono text-sm font-bold text-indigo-700">
                     {ticketDetail.rfp_id}
                   </span>
@@ -362,256 +600,331 @@ export default function RFPIntakePage() {
                 </p>
               </div>
 
-              {statusMeta && (
-                <div className="flex items-center gap-2">
-                  {polling && ticketDetail.status === "analizando" && (
-                    <span className="h-3 w-3 animate-ping rounded-full bg-amber-500" />
-                  )}
+              <div className="flex flex-wrap items-center gap-3">
+                {polling && (
+                  <div className="flex items-center gap-1.5 text-xs text-indigo-600">
+                    <span className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+                    <span>Actualizando...</span>
+                  </div>
+                )}
+                {statusMeta && (
                   <span
                     id="rfp-ticket-status-badge"
                     className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold ${statusMeta.className}`}
                   >
                     {statusMeta.label}
                   </span>
-                </div>
-              )}
+                )}
+
+                {/* Part 2: Generation Trigger Button */}
+                {(ticketDetail.status === "analisis_completo" ||
+                  ticketDetail.status === "en_evaluación" ||
+                  ticketDetail.status === "needs_human_review") && (
+                  <button
+                    id="trigger-generate-btn"
+                    onClick={() => void handleTriggerGeneration()}
+                    disabled={generating || polling}
+                    className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  >
+                    {generating ? (
+                      <>
+                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Generando...
+                      </>
+                    ) : (
+                      <>⚡ Generar Propuesta Económica</>
+                    )}
+                  </button>
+                )}
+
+                {/* Part 3: Initiate Approval Cycle Button */}
+                {(ticketDetail.status === "en_evaluación" ||
+                  ticketDetail.status === "needs_human_review") && (
+                  <button
+                    id="trigger-init-approval-btn"
+                    onClick={() => void handleInitiateApprovals()}
+                    disabled={actionLoading === "initiate"}
+                    className="flex items-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  >
+                    {actionLoading === "initiate" ? "Iniciando..." : "🚀 Iniciar Aprobaciones (HITL)"}
+                  </button>
+                )}
+
+                {/* Arbitration Button */}
+                <button
+                  id="trigger-arbitrate-btn"
+                  onClick={() => void handleRunArbitration()}
+                  disabled={actionLoading === "arbitrate"}
+                  className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                >
+                  {actionLoading === "arbitrate" ? "Verificando..." : "⚖️ Arbitraje (§7)"}
+                </button>
+              </div>
             </div>
 
-            {/* Discarded Notice */}
-            {ticketDetail.status === "descartado" && (
+            {generateError && (
+              <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
+                {generateError}
+              </div>
+            )}
+
+            {/* Arbitration Result Panel */}
+            {arbitrationResult && (
+              <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/70 p-4 text-xs">
+                <div className="flex items-center justify-between border-b border-indigo-200 pb-2">
+                  <span className="font-bold text-indigo-950">
+                    Resultado de Arbitraje Fijo (§7 BRIEFING): {arbitrationResult.conflict_count} conflictos detectados
+                  </span>
+                  <button
+                    onClick={() => setArbitrationResult(null)}
+                    className="text-slate-400 hover:text-slate-600"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+                {arbitrationResult.conflict_count === 0 ? (
+                  <p className="mt-2 text-indigo-900">
+                    No se detectaron contradicciones estructurales entre departamentos ni de moneda.
+                  </p>
+                ) : (
+                  <div className="mt-2 space-y-2">
+                    {arbitrationResult.resolutions?.map((r: any, idx: number) => (
+                      <div key={idx} className="rounded-lg bg-white p-3 shadow-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono font-bold text-indigo-800">
+                            Trigger: {r.trigger_id}
+                          </span>
+                          <span className="font-semibold text-slate-700">
+                            Árbitro Fijo: {r.arbitrator}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-slate-600">{r.conflict_detected}</p>
+                        <p className="mt-1 font-medium text-emerald-800">
+                          Acción de Resolución: {r.applied_action}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Needs Human Review Warning Banner */}
+            {ticketDetail.status === "needs_human_review" && (
               <div
-                id="rfp-discarded-banner"
-                className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900"
+                id="rfp-needs-human-review-banner"
+                className="mt-4 rounded-xl border-2 border-amber-300 bg-amber-50 p-4 text-xs text-amber-900 shadow-sm"
               >
-                <p className="font-semibold">
-                  Documento rechazado por el Agente Clasificador (Triage Agent)
+                <div className="flex items-center gap-2">
+                  <span className="rounded bg-amber-200 px-2 py-0.5 font-bold text-amber-900">
+                    ⚠️ ACCIÓN REQUERIDA
+                  </span>
+                  <p className="font-bold text-amber-950">
+                    Revisión Humana Requerida — Límite de Iteraciones Agotado
+                  </p>
+                </div>
+                <p className="mt-1.5 leading-relaxed text-amber-900">
+                  Una o más secciones generadas han agotado el límite de reintentos del ciclo generador-evaluador sin superar la totalidad de los criterios automatizados.
+                  El último borrador generado se ha conservado como <strong>provisional</strong>. El ticket <strong>no ha sido descartado</strong>.
                 </p>
-                <p className="mt-1 text-xs text-rose-800">
-                  {ticketDetail.rejection_reason ||
-                    "El documento no corresponde a una solicitud de propuesta (RFP) de cliente para TrackFlow."}
+              </div>
+            )}
+
+            {/* Finished State Banner */}
+            {ticketDetail.status === "terminado" && (
+              <div
+                id="rfp-terminado-banner"
+                className="mt-4 rounded-xl border-2 border-emerald-400 bg-emerald-50 p-4 text-xs text-emerald-950 shadow-sm"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="rounded bg-emerald-200 px-2 py-0.5 font-bold text-emerald-900">
+                    🎉 PROPUESTA COMPLETADA
+                  </span>
+                  <p className="font-bold text-emerald-950">
+                    Todos los Departamentos Han Aprobado Formalmente la Propuesta
+                  </p>
+                </div>
+                <p className="mt-1.5 leading-relaxed text-emerald-900">
+                  El documento final consolidado ha sido sintetizado automáticamente y guardado en PostgreSQL (<code>RFPFinalDocument</code>). Listo para entrega formal al cliente.
                 </p>
               </div>
             )}
           </section>
 
-          {/* Metadata & Readability Grid */}
-          {ticketDetail.metadata && (
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              {/* Business Metadata */}
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
-                  Metadatos Extraídos de la RFP
-                </h3>
-                <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <dt className="text-xs text-slate-500">Cliente</dt>
-                    <dd className="font-semibold text-slate-900">
-                      {ticketDetail.metadata.client_name || "No especificado"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-slate-500">País / Moneda Oficial</dt>
-                    <dd className="font-semibold text-slate-900">
-                      {ticketDetail.metadata.client_country || "N/D"} (
-                      <span className="text-indigo-700">
-                        {ticketDetail.metadata.currency || "N/D"}
-                      </span>
-                      )
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-slate-500">Volumen Mensual</dt>
-                    <dd className="font-semibold text-slate-900">
-                      {ticketDetail.metadata.monthly_volume != null
-                        ? `${ticketDetail.metadata.monthly_volume.toLocaleString()} pedidos/mes`
-                        : "No indicado (Pregunta abierta)"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-slate-500">Fecha Límite (Deadline)</dt>
-                    <dd className="font-semibold text-slate-900">
-                      {ticketDetail.metadata.deadline || "No especificada"}
-                    </dd>
-                  </div>
-                  <div className="col-span-2">
-                    <dt className="text-xs text-slate-500">Presupuesto de Referencia</dt>
-                    <dd className="font-semibold text-slate-900">
-                      {ticketDetail.metadata.budget_range || "No especificado"}
-                    </dd>
-                  </div>
-                  <div className="col-span-2">
-                    <dt className="text-xs text-slate-500">
-                      Departamentos Activados por el Orquestador
-                    </dt>
-                    <dd className="mt-1 flex flex-wrap gap-2">
-                      {(ticketDetail.metadata.departments_needed ?? []).length > 0 ? (
-                        ticketDetail.metadata.departments_needed?.map((dept) => (
-                          <span
-                            key={dept}
-                            className="rounded-md bg-indigo-100 px-2.5 py-1 font-mono text-xs font-semibold text-indigo-800"
-                          >
-                            {dept}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-xs text-slate-400">Ninguno</span>
-                      )}
-                    </dd>
-                  </div>
-                </dl>
-              </section>
-
-              {/* Readability Metrics */}
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
-                  Métricas de Legibilidad (py-readability-metrics)
-                </h3>
-                <div className="mt-4 grid grid-cols-3 gap-3 text-center">
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-[11px] text-slate-500">Flesch-Kincaid Grade</p>
-                    <p className="mt-1 text-lg font-bold text-slate-900">
-                      {ticketDetail.readability_metrics?.flesch_kincaid_grade ?? "—"}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-[11px] text-slate-500">Gunning Fog</p>
-                    <p className="mt-1 text-lg font-bold text-slate-900">
-                      {ticketDetail.readability_metrics?.gunning_fog ?? "—"}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-[11px] text-slate-500">Flesch Reading Ease</p>
-                    <p className="mt-1 text-lg font-bold text-slate-900">
-                      {ticketDetail.readability_metrics?.flesch_reading_ease ?? "—"}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-[11px] text-slate-500">Coleman-Liau</p>
-                    <p className="mt-1 text-base font-semibold text-slate-800">
-                      {ticketDetail.readability_metrics?.coleman_liau ?? "—"}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-[11px] text-slate-500">Dale-Chall / SMOG</p>
-                    <p className="mt-1 text-base font-semibold text-slate-800">
-                      {ticketDetail.readability_metrics?.dale_chall ?? "—"} /{" "}
-                      {ticketDetail.readability_metrics?.smog ?? "—"}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-[11px] text-slate-500">Palabras / Oraciones</p>
-                    <p className="mt-1 text-base font-semibold text-slate-800">
-                      {ticketDetail.readability_metrics?.word_count ?? 0} /{" "}
-                      {ticketDetail.readability_metrics?.sentence_count ?? 0}
-                    </p>
-                  </div>
-                </div>
-              </section>
-            </div>
-          )}
-
-          {/* Synthesizer Executive Summary for Sales */}
-          {ticketDetail.executive_summary && (
-            <section className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-indigo-950">
-                  Síntesis para Ventas (Synthesizer Agent): ¿Qué pedirle a qué departamento?
-                </h3>
-                {Boolean(ticketDetail.handoff_payload?.ready_for_part_2) && (
-                  <span className="rounded-md bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">
-                    Handoff Contract Parte 2 Listo
+          {/* Final Document View (when status is terminado) */}
+          {finalDocument && ticketDetail.status === "terminado" && (
+            <section
+              id="rfp-final-document-section"
+              className="rounded-2xl border-2 border-emerald-300 bg-white p-6 shadow-md"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div>
+                  <span className="rounded bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">
+                    RFP Final Document (Consolidado Oficial)
                   </span>
-                )}
+                  <h3 className="mt-1 text-lg font-bold text-slate-900">
+                    Propuesta Económica Lista para Envío Comercial
+                  </h3>
+                </div>
+                <div className="text-right text-xs text-slate-500">
+                  <p>Moneda: <strong>{finalDocument.currency}</strong></p>
+                  <p>Generado: {finalDocument.generated_at ? new Date(finalDocument.generated_at).toLocaleString() : ""}</p>
+                </div>
               </div>
-              <pre className="mt-3 whitespace-pre-wrap font-sans text-sm leading-relaxed text-slate-800">
-                {ticketDetail.executive_summary}
-              </pre>
+
+              <div className="mt-4 rounded-xl bg-slate-50 p-5 font-mono text-xs leading-relaxed text-slate-800 whitespace-pre-wrap max-h-[500px] overflow-y-auto">
+                {finalDocument.sections?.consolidated_markdown || JSON.stringify(finalDocument.sections, null, 2)}
+              </div>
             </section>
           )}
 
-          {/* Breakdown of key_aspects per Department */}
+          {/* Department Breakdown & HITL Approval Gates (Milestone 9 - Part 3) */}
           {ticketDetail.department_sections &&
             ticketDetail.department_sections.length > 0 && (
-              <section className="flex flex-col gap-4">
-                <h3 className="text-lg font-bold text-slate-900">
-                  Desglose de Aspectos Clave por Departamento Activo (Workers Paralelos)
-                </h3>
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              <section className="flex flex-col gap-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-slate-900">
+                    Departamentos y Aprobaciones Humanas (HITL Gates)
+                  </h3>
+                  <span className="text-xs text-slate-500">
+                    Ana Whitfield · Carlos Vega · Sofía Ramos · Miguel Torres (Arbitraje)
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6">
                   {ticketDetail.department_sections.map((sec) => {
                     const ka = sec.key_aspects || {};
+                    const ev = sec.evaluation_results;
+                    const isDraftReady = Boolean(sec.draft_content);
+                    const isApproved = sec.approval_status === "approved";
+                    const isRejected = sec.approval_status === "rejected";
+                    const isChanges = sec.approval_status === "changes_requested";
+
                     return (
                       <div
                         key={sec.id}
-                        className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                        className={`flex flex-col rounded-2xl border bg-white p-6 shadow-sm ${
+                          isApproved
+                            ? "border-emerald-300 ring-2 ring-emerald-100"
+                            : isRejected
+                            ? "border-rose-300 ring-2 ring-rose-100"
+                            : "border-slate-200"
+                        }`}
                       >
-                        <div>
-                          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                        {/* Section Header */}
+                        <div className="flex flex-col justify-between gap-2 border-b border-slate-100 pb-4 sm:flex-row sm:items-center">
+                          <div className="flex items-center gap-3">
+                            <span className="rounded-lg bg-indigo-100 px-2.5 py-1 font-mono text-xs font-bold text-indigo-800">
+                              {sec.department_id}
+                            </span>
                             <div>
-                              <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-xs font-bold text-indigo-700">
-                                {sec.department_id}
-                              </span>
-                              <h4 className="mt-1 text-base font-bold text-slate-900">
+                              <h4 className="text-base font-bold text-slate-900">
                                 {sec.department}
                               </h4>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-[11px] text-slate-400">Responsable</span>
-                              <p className="text-xs font-semibold text-slate-800">
-                                {sec.contact_person}
+                              <p className="text-xs text-slate-500">
+                                Responsable Designado: <strong>{sec.contact_person}</strong>
                               </p>
                             </div>
                           </div>
 
-                          <p className="mt-3 text-xs leading-relaxed text-slate-700">
-                            {ka.summary}
-                          </p>
-
-                          {/* Scope Items */}
-                          {ka.scope_items && ka.scope_items.length > 0 && (
-                            <div className="mt-4">
-                              <p className="text-xs font-semibold text-slate-900">
-                                Alcance Operativo:
-                              </p>
-                              <ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-slate-600">
-                                {ka.scope_items.map((item, idx) => (
-                                  <li key={idx}>{item}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {/* Constraints */}
-                          {ka.constraints && ka.constraints.length > 0 && (
-                            <div className="mt-4">
-                              <p className="text-xs font-semibold text-slate-900">
-                                Restricciones de Cumplimiento (§5):
-                              </p>
-                              <ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-slate-600">
-                                {ka.constraints.map((c, idx) => (
-                                  <li key={idx}>{c}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {/* Open Questions */}
-                          {ka.open_questions && ka.open_questions.length > 0 && (
-                            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
-                              <p className="text-xs font-semibold text-amber-900">
-                                Preguntas Abiertas (Sin datos inventados):
-                              </p>
-                              <ul className="mt-1 list-disc space-y-1 pl-4 text-xs text-amber-800">
-                                {ka.open_questions.map((q, idx) => (
-                                  <li key={idx}>{q}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
+                          {/* Approval Status Badges */}
+                          <div className="flex items-center gap-2">
+                            {isApproved && (
+                              <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 border border-emerald-300">
+                                ✅ Aprobado formalmente
+                              </span>
+                            )}
+                            {isRejected && (
+                              <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-800 border border-rose-300">
+                                ❌ Rechazado
+                              </span>
+                            )}
+                            {isChanges && (
+                              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 border border-amber-300">
+                                ⚠️ Cambios Solicitados
+                              </span>
+                            )}
+                            {!isApproved && !isRejected && !isChanges && (
+                              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                                Pendiente de Aprobación
+                              </span>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="mt-4 border-t border-slate-100 pt-3 text-[11px] text-slate-500">
-                          <strong>Entregable esperado:</strong> {ka.what_to_contribute}
-                        </div>
+                        {/* HITL Approval Decision Action Controls */}
+                        {isDraftReady && (
+                          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-3.5 border border-slate-200">
+                            <div>
+                              <span className="text-xs font-bold text-slate-900">
+                                Sign-off de {sec.contact_person}:
+                              </span>
+                              <p className="text-[11px] text-slate-500">
+                                Interrupción LangGraph (interrupt/resume). Revisión independiente por departamento.
+                              </p>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                onClick={() =>
+                                  void handleDepartmentDecision(
+                                    sec.department_id,
+                                    "approve",
+                                    sec.contact_person
+                                  )
+                                }
+                                disabled={actionLoading != null}
+                                className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-500 disabled:bg-slate-300"
+                              >
+                                {actionLoading === `${sec.department_id}-approve`
+                                  ? "Aprobando..."
+                                  : "✅ Aprobar"}
+                              </button>
+                              <button
+                                onClick={() =>
+                                  void handleDepartmentDecision(
+                                    sec.department_id,
+                                    "request_changes",
+                                    sec.contact_person
+                                  )
+                                }
+                                disabled={actionLoading != null}
+                                className="rounded-lg border border-amber-400 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-100 disabled:bg-slate-300"
+                              >
+                                {actionLoading === `${sec.department_id}-request_changes`
+                                  ? "Enviando..."
+                                  : "⚠️ Solicitar Cambios"}
+                              </button>
+                              <button
+                                onClick={() =>
+                                  void handleDepartmentDecision(
+                                    sec.department_id,
+                                    "reject",
+                                    sec.contact_person
+                                  )
+                                }
+                                disabled={actionLoading != null}
+                                className="rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-50 disabled:bg-slate-300"
+                              >
+                                {actionLoading === `${sec.department_id}-reject`
+                                  ? "Rechazando..."
+                                  : "❌ Rechazar"}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Generated Draft Section */}
+                        {isDraftReady && (
+                          <div className="mt-4 flex flex-col gap-2">
+                            <h5 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                              Borrador Económico Propuesto
+                            </h5>
+                            <div className="rounded-xl border border-slate-200 bg-slate-900/5 p-4 font-mono text-xs text-slate-800 whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto">
+                              {sec.draft_content}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}

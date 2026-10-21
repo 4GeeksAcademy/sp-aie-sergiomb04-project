@@ -32,3 +32,7 @@ env/
 .tasks/
 PullRequest.md
 **/PullRequest.md
+# Checkpoints y bases de datos locales
+data/checkpoints/
+*.db
+*.sqlite3

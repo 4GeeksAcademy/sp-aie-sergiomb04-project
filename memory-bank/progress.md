@@ -254,9 +254,71 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
   - Script CLI standalone en `scripts/rfp_smoke_test.py`.
   - Suite de pruebas en `tests/pipelines/test_rfp_intake.py` (8 tests) y `services/api/tests/test_rfp_routes.py` (2 tests) pasando al 100%.
 
+### Hito 9 — Flujos de Trabajo Agénticos: Generación de Respuestas a RFPs (Parte 2 de 3 - Completado)
+- **Consumo de Handoff sin Re-ingesta de PDF:**
+  - Consumo directo del contrato de handoff de la Parte 1 desde PostgreSQL (	icket_id + key_aspects + metadatos compartidos) vía get_rfp_ticket_bundle(ticket_id) sin volver a parsear el archivo PDF original.
+- **Generadores por Departamento Activo (data/pipelines/rfp_intake/generators.py):**
+  - Generador especializado para warehouse (Ana Whitfield): capacidad de almacenamiento, costos por pallet/SKU, plazo de onboarding de 10 días, SLA de entrega 98.5% y tabla de descuentos por volumen en moneda correspondiente al país.
+  - Generador especializado para lastmile (Carlos Vega): opciones de transportistas multicarrier según destino, SLA de entrega del 99.0%, tabla de descuentos por volumen y confidencialidad comercial estricta sin divulgar tarifas internas negociadas con transportistas.
+  - Generador especializado para 
+everse (Sofía Ramos): operativa integral de retornos, coste por devolución, inspección de calidad, plazo reglamentario de 48 a 72 horas (nunca en menos de 48 horas conforme a §5), SLA del 98.0% y tabla de descuentos por volumen.
+- **Evaluadores Concurrentes en Paralelo (data/pipelines/rfp_intake/evaluators.py):**
+  - evaluate_readability: validación objetiva con py-readability-metrics (Reading Ease, Flesch-Kincaid, longitud mínima de 50 palabras y oraciones).
+  - evaluate_relevance: validación de cobertura de alcance de propuesta y conceptos departamentales.
+  - evaluate_compliance: validación algorítmica estricta de las 5 reglas de negocio de §5 (currency_match, delivery_sla_percentage, 
+o_returns_under_48h, olume_discount_table, 
+o_carrier_negotiated_rates).
+  - 
+un_parallel_evaluation: orquestación asíncrona concurrente mediante syncio.gather emitiendo el objeto estructurado EvaluationResult.
+- **Ciclo Generador-Evaluador y Control de Límite de Iteraciones (data/pipelines/rfp_intake/response_flow.py):**
+  - Límite de iteraciones fijado en max_iterations = 3.
+  - Ante fallo de evaluación, inyección de feedback concreto y accionable para reintento automático.
+  - Si una sección agota el límite sin pasar, se conserva el último borrador generado junto con su EvaluationResult, se marca la sección y el ticket con estado 
+eeds_human_review, pasando directamente al handoff de la Parte 3 sin descartar jamás el ticket.
+  - Transición de estados en PostgreSQL: nalisis_completo -> generando_borrador -> en_evaluación -> 
+eeds_human_review (si agota reintentos) o listo con evaluaciones aprobadas.
+- **Integración Backend y Frontend Backoffice:**
+  - Endpoint POST /api/rfp/{ticket_id}/generate con soporte asíncrono y síncrono (?sync=true).
+  - Proxy Next.js en uis/backoffice/app/api/rfp/[ticketId]/generate/route.ts.
+  - Interfaz de Backoffice actualizada (uis/backoffice/app/(protected)/rfp/page.tsx) con botón de disparo, polling en vivo durante generación/evaluación, banner de aviso ante 
+eeds_human_review, visor de borradores y tarjetas de auditoría visual para los evaluadores paralelos.
+- **Pruebas Automatizadas y Documentación:**
+  - 12 pruebas unitarias en 	ests/pipelines/test_rfp_generation.py cubriendo generadores, evaluadores paralelos, fallos genéricos, infracciones de compliance (§5: moneda, devoluciones < 48h, tabla de volumen y tarifas de transportistas) y agotamiento de iteraciones a 
+eeds_human_review.
+  - 3 pruebas de endpoints en services/api/tests/test_rfp_routes.py (23 pruebas pasando al 100% en la suite de RFP).
+  - Documentación completa y respuestas a las 4 Preguntas de Diseño con checklist 23/23 en docs/milestone-9/README_part2.md.
+
+### Hito 9 — Flujos de Trabajo Agénticos: Aprobación y Cierre de RFPs (Parte 3 de 3 - Completado)
+- **Aprobación Humana Aislada (HITL) con interrupt():**
+  - Implementación de compuertas de interrupción explícitas (interrupt()) antes del sign-off de cada departamento activo en data/pipelines/rfp_intake/approval_flow.py.
+  - Aislamiento total de ramas por namespace de hilo (
+fp-{ticket_id}:{department_id}) permitiendo que departamentos avancen y aprueben en paralelo sin bloquear a los demás.
+  - Checkpointer persistente SqliteSaver (data/checkpoints/rfp_approval.db) para checkpointing de estado e historial.
+  - Reanudación validada mediante Command(resume=...) aceptando pprove, 
+eject y 
+equest_changes.
+- **Arbitraje de Conflictos y Trazabilidad (§7 BRIEFING):**
+  - Nodo de arbitraje determinista en data/pipelines/rfp_intake/arbitration.py respondiendo a los 3 triggers del BRIEFING: olume-vs-capacity, 
+eturns-sla-breach y currency-mismatch.
+  - Asignación estricta de árbitros fijos humanos (Miguel Torres para capacidad y divisas; Sofía Ramos para devoluciones) sin consenso estocástico de LLMs.
+  - Registro de trazas de auditoría (TraceStep) con agente, input, output y timestamp ISO UTC.
+  - Límite de iteraciones fijado en 3 para evitar bucles indefinidos de cambios.
+- **Síntesis del Documento Final y Estados del Ciclo de Vida:**
+  - Consolidación automática de extractos aprobados, resumen comercial y sign-off formal en RFPFinalDocument (tabla 
+fp_final_documents).
+  - Ciclo de estados: esperando_aprobación durante la revisión humana -> 	erminado con documento persistido.
+- **Backoffice UI y Endpoints API:**
+  - Endpoints REST en FastAPI: POST /api/rfp/{ticket_id}/approval/initiate, POST /api/rfp/{ticket_id}/approval/{department_id}, GET /api/rfp/{ticket_id}/final-document, POST /api/rfp/{ticket_id}/arbitrate.
+  - Proxies Next.js en uis/backoffice/app/api/rfp/.
+  - UI interactiva en Backoffice con paneles de sign-off departamental (Aprobar, Solicitar Cambios, Rechazar), panel de verificación de arbitraje y visor oficial del documento final consolidado.
+- **Suite de Pruebas Completa (30 tests pasando al 100%):**
+  - 7 pruebas en 	ests/pipelines/test_rfp_approval.py (interrupción, reanudación, paralelismo entre departamentos, 3 triggers de arbitraje y prueba E2E de punta a punta desde Parte 1 hasta Parte 3).
+  - 3 pruebas de integración de endpoints en services/api/tests/test_rfp_routes.py.
+  - Documentación completa en docs/milestone-9/README_part3.md.
+
 ## Proximos pasos
-1. Implementar la Parte 2 del Hito 9: generadores por departamento activo y ciclo generador-evaluador de legibilidad, pertinencia y cumplimiento (§5).
-2. Implementar la Parte 3 del Hito 9: flujo de aprobación independiente por responsable de departamento y nodo de arbitraje fijo (`volume-vs-capacity`, `returns-sla-breach`, `currency-mismatch`).
+1. Pasar a producción el flujo agéntico completo de RFPs en TrackFlow Tech tras revisión con los directores de departamento (Miguel Torres, Ana Whitfield, Carlos Vega, Sofía Ramos).
+2. Integrar el pipeline con el sistema de mensajería/email saliente para el envío automatizado de la propuesta económica final a los clientes potenciales.
 
 ## Riesgos y foco inmediato
 - Riesgo de desalineacion entre contexto TrackFlow y nombre/dominio de la app actual; conviene converger nomenclatura y casos de uso.
