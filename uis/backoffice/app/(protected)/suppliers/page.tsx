@@ -4,8 +4,8 @@ const SuppliersPanel = dynamic(
   () => import("@/app/features/suppliers/components/SuppliersPanel").then((mod) => mod.SuppliersPanel),
   {
     loading: () => (
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-slate-500">Cargando módulo de proveedores...</p>
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <p className="text-sm text-slate-500 dark:text-slate-400">Cargando módulo de proveedores...</p>
       </section>
     ),
   }

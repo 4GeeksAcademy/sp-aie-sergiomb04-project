@@ -189,21 +189,21 @@ export default function BusinessReportingDashboardPage() {
   return (
     <main className="flex flex-1 flex-col gap-8 px-6 py-10 lg:px-10">
       {/* Header & Pipeline Control Section */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+      <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-3">
-              <span className="w-fit rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700">
+              <span className="w-fit rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
                 Operaciones & Negocio
               </span>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
                 Prefect 3 Subflows · Idempotente
               </span>
             </div>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-white">
               Desempeño Semanal por Almacén y Cliente
             </h1>
-            <p className="max-w-2xl text-slate-600">
+            <p className="max-w-2xl text-slate-600 dark:text-slate-400">
               Consolidado operacional y ejecutivo para Thomas Harry (CEO) y Ana Whitfield (Head of
               Operations). Métricas de throughput, quiebres de stock y auditoría de inventario.
             </p>
@@ -214,7 +214,7 @@ export default function BusinessReportingDashboardPage() {
             <button
               onClick={() => fetchReport(targetWeek, selectedWarehouse)}
               disabled={loading || isPending}
-              className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+              className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             >
               {loading || isPending ? "Cargando..." : "↻ Refrescar"}
             </button>
@@ -230,9 +230,9 @@ export default function BusinessReportingDashboardPage() {
 
         {/* Pipeline Run Status Banner */}
         {pipelineRun && (
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-4 text-xs text-slate-500">
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-4 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-slate-700">Última ejecución:</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Última ejecución:</span>
               <span
                 className={`rounded px-2 py-0.5 font-semibold uppercase ${
                   pipelineRun.execution_status === "COMPLETED"
@@ -242,7 +242,7 @@ export default function BusinessReportingDashboardPage() {
               >
                 {pipelineRun.execution_status}
               </span>
-              <span>· Semana: <strong className="font-mono text-slate-900">{pipelineRun.target_week_start}</strong></span>
+              <span>· Semana: <strong className="font-mono text-slate-900 dark:text-slate-200">{pipelineRun.target_week_start}</strong></span>
               <span>· Duración: <strong>{pipelineRun.duration_seconds ?? 0}s</strong></span>
               <span>· Extraídos: <strong>{pipelineRun.records_extracted}</strong></span>
               <span>· Cargados: <strong>{pipelineRun.records_loaded}</strong></span>
@@ -256,7 +256,7 @@ export default function BusinessReportingDashboardPage() {
 
       {/* Error state */}
       {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300">
           <div className="flex items-center justify-between">
             <div>
               <p className="font-semibold">Error al cargar reporte de negocio</p>
@@ -273,7 +273,7 @@ export default function BusinessReportingDashboardPage() {
       )}
 
       {/* Filters Bar */}
-      <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         {/* Warehouse Tabs */}
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 mr-2">
@@ -283,8 +283,8 @@ export default function BusinessReportingDashboardPage() {
             onClick={() => handleWarehouseFilterChange("all")}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
               selectedWarehouse === "all"
-                ? "bg-slate-900 text-white"
-                : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                ? "bg-slate-900 text-white dark:bg-white dark:text-slate-950"
+                : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             }`}
           >
             Todos
@@ -293,8 +293,8 @@ export default function BusinessReportingDashboardPage() {
             onClick={() => handleWarehouseFilterChange("los_angeles")}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
               selectedWarehouse === "los_angeles"
-                ? "bg-slate-900 text-white"
-                : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                ? "bg-slate-900 text-white dark:bg-white dark:text-slate-950"
+                : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             }`}
           >
             🇺🇸 Los Ángeles
@@ -303,8 +303,8 @@ export default function BusinessReportingDashboardPage() {
             onClick={() => handleWarehouseFilterChange("zaragoza")}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
               selectedWarehouse === "zaragoza"
-                ? "bg-slate-900 text-white"
-                : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                ? "bg-slate-900 text-white dark:bg-white dark:text-slate-950"
+                : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             }`}
           >
             🇪🇸 Zaragoza
@@ -319,7 +319,7 @@ export default function BusinessReportingDashboardPage() {
               placeholder="Buscar marca cliente..."
               value={clientSearch}
               onChange={(e) => setClientSearch(e.target.value)}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none"
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
           </div>
 
@@ -328,12 +328,12 @@ export default function BusinessReportingDashboardPage() {
               type="date"
               value={targetWeek}
               onChange={(e) => setTargetWeek(e.target.value)}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none"
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
             <button
               type="submit"
               disabled={loading || isPending}
-              className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-900 disabled:opacity-50"
+              className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-900 disabled:opacity-50 dark:bg-slate-700 dark:hover:bg-slate-600"
             >
               Filtrar Semana
             </button>
@@ -343,61 +343,61 @@ export default function BusinessReportingDashboardPage() {
 
       {/* Summary KPI Cards */}
       <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
-        <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xs font-medium uppercase tracking-wider text-slate-500">
+        <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <h2 className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Unidades Entrantes
           </h2>
-          <p className="mt-2 text-2xl font-bold text-slate-950">{totalInboundUnits.toLocaleString()}</p>
-          <p className="mt-1 text-xs text-slate-500">Métrica: inbound_units_count</p>
+          <p className="mt-2 text-2xl font-bold text-slate-950 dark:text-white">{totalInboundUnits.toLocaleString()}</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Métrica: inbound_units_count</p>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xs font-medium uppercase tracking-wider text-slate-500">
+        <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <h2 className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Órdenes Despachadas
           </h2>
-          <p className="mt-2 text-2xl font-bold text-slate-950">{totalOutboundOrders.toLocaleString()}</p>
-          <p className="mt-1 text-xs text-slate-500">Métrica: outbound_orders_count</p>
+          <p className="mt-2 text-2xl font-bold text-slate-950 dark:text-white">{totalOutboundOrders.toLocaleString()}</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Métrica: outbound_orders_count</p>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xs font-medium uppercase tracking-wider text-slate-500">
+        <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <h2 className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Alertas Stock Bajo
           </h2>
-          <p className="mt-2 text-2xl font-bold text-amber-600">{totalStockouts}</p>
-          <p className="mt-1 text-xs text-slate-500">Métrica: stockout_events_count</p>
+          <p className="mt-2 text-2xl font-bold text-amber-600 dark:text-amber-400">{totalStockouts}</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Métrica: stockout_events_count</p>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xs font-medium uppercase tracking-wider text-slate-500">
+        <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <h2 className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Discrepancias Físicas
           </h2>
-          <p className="mt-2 text-2xl font-bold text-rose-600">{totalDiscrepancies}</p>
-          <p className="mt-1 text-xs text-slate-500">Métrica: discrepancy_events_count</p>
+          <p className="mt-2 text-2xl font-bold text-rose-600 dark:text-rose-400">{totalDiscrepancies}</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Métrica: discrepancy_events_count</p>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xs font-medium uppercase tracking-wider text-slate-500">
+        <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <h2 className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
             Tasa Discrepancia
           </h2>
           <div className="mt-2 flex items-baseline gap-2">
-            <p className="text-2xl font-bold text-slate-950">{aggregateDiscrepancyRate}%</p>
+            <p className="text-2xl font-bold text-slate-950 dark:text-white">{aggregateDiscrepancyRate}%</p>
           </div>
-          <p className="mt-1 text-xs text-slate-500">Métrica: discrepancy_rate</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Métrica: discrepancy_rate</p>
         </article>
       </section>
 
       {/* Detailed KPI Table */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
           <div>
-            <h3 className="text-lg font-semibold text-slate-950">
+            <h3 className="text-lg font-semibold text-slate-950 dark:text-white">
               Desglose Operacional por Almacén y Cliente
             </h3>
-            <p className="text-xs text-slate-500">
-              Período: Semana del <strong className="font-mono text-slate-900">{data?.week_start || targetWeek}</strong> (Lunes a Domingo)
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Período: Semana del <strong className="font-mono text-slate-900 dark:text-slate-200">{data?.week_start || targetWeek}</strong> (Lunes a Domingo)
             </p>
           </div>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
             {filteredEntries.length} marcas clientes registradas
           </span>
         </div>
@@ -405,7 +405,7 @@ export default function BusinessReportingDashboardPage() {
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-slate-100 text-xs uppercase tracking-wider text-slate-500">
+              <tr className="border-b border-slate-100 text-xs uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:text-slate-400">
                 <th className="pb-3 font-semibold">Almacén</th>
                 <th className="pb-3 font-semibold">Marca Cliente</th>
                 <th className="pb-3 text-right font-semibold">Entradas (Uds)</th>
@@ -415,10 +415,10 @@ export default function BusinessReportingDashboardPage() {
                 <th className="pb-3 text-right font-semibold">Tasa Discrepancia</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredEntries.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-sm text-slate-500">
+                  <td colSpan={7} className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
                     No se encontraron registros para los filtros seleccionados.
                   </td>
                 </tr>
@@ -430,20 +430,20 @@ export default function BusinessReportingDashboardPage() {
                     item.warehouse === "los_angeles" ? "🇺🇸 Los Ángeles" : "🇪🇸 Zaragoza";
 
                   return (
-                    <tr key={`${item.warehouse}-${item.client_id}`} className="hover:bg-slate-50/50">
-                      <td className="py-3.5 font-medium text-slate-800">{warehouseLabel}</td>
-                      <td className="py-3.5 font-mono text-xs font-semibold text-indigo-700">
+                    <tr key={`${item.warehouse}-${item.client_id}`} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                      <td className="py-3.5 font-medium text-slate-800 dark:text-slate-200">{warehouseLabel}</td>
+                      <td className="py-3.5 font-mono text-xs font-semibold text-indigo-700 dark:text-indigo-400">
                         {item.client_id}
                       </td>
-                      <td className="py-3.5 text-right font-medium text-slate-900">
+                      <td className="py-3.5 text-right font-medium text-slate-900 dark:text-slate-200">
                         {item.inbound_units_count.toLocaleString()}
                       </td>
-                      <td className="py-3.5 text-right font-medium text-slate-900">
+                      <td className="py-3.5 text-right font-medium text-slate-900 dark:text-slate-200">
                         {item.outbound_orders_count.toLocaleString()}
                       </td>
                       <td className="py-3.5 text-center">
                         {item.stockout_events_count > 0 ? (
-                          <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                          <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
                             {item.stockout_events_count}
                           </span>
                         ) : (
@@ -452,7 +452,7 @@ export default function BusinessReportingDashboardPage() {
                       </td>
                       <td className="py-3.5 text-center">
                         {item.discrepancy_events_count > 0 ? (
-                          <span className="rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-700">
+                          <span className="rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">
                             {item.discrepancy_events_count}
                           </span>
                         ) : (
@@ -463,10 +463,10 @@ export default function BusinessReportingDashboardPage() {
                         <span
                           className={`rounded-md px-2.5 py-1 text-xs font-bold font-mono ${
                             isHighRate
-                              ? "bg-red-100 text-red-800"
+                              ? "bg-red-100 text-red-800 dark:bg-rose-950/60 dark:text-rose-300"
                               : item.discrepancy_events_count > 0
-                              ? "bg-amber-100 text-amber-800"
-                              : "bg-emerald-100 text-emerald-800"
+                              ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                              : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
                           }`}
                         >
                           {ratePct}%

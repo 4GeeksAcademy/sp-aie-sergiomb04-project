@@ -97,8 +97,8 @@ export function IncidentList() {
 
   return (
     <section className="space-y-6">
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-slate-950">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="text-xl font-semibold text-slate-950 dark:text-white">
           Listado de incidencias
         </h2>
 
@@ -107,7 +107,7 @@ export function IncidentList() {
           <div>
             <label
               htmlFor="filter-status"
-              className="block text-xs font-medium uppercase tracking-wide text-slate-500"
+              className="block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
             >
               Estado
             </label>
@@ -115,7 +115,7 @@ export function IncidentList() {
               id="filter-status"
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="mt-1 block w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className="mt-1 block w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-400 dark:focus:ring-slate-400"
             >
               <option value="">Todos</option>
               {INCIDENT_STATUSES.map((s) => (
@@ -129,7 +129,7 @@ export function IncidentList() {
           <div>
             <label
               htmlFor="filter-origin"
-              className="block text-xs font-medium uppercase tracking-wide text-slate-500"
+              className="block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
             >
               Origen
             </label>
@@ -137,7 +137,7 @@ export function IncidentList() {
               id="filter-origin"
               value={filterOrigin}
               onChange={(e) => setFilterOrigin(e.target.value)}
-              className="mt-1 block w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className="mt-1 block w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-400 dark:focus:ring-slate-400"
             >
               <option value="">Todos</option>
               {INCIDENT_ORIGINS.map((o) => (
@@ -151,7 +151,7 @@ export function IncidentList() {
           <div>
             <label
               htmlFor="filter-branch"
-              className="block text-xs font-medium uppercase tracking-wide text-slate-500"
+              className="block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
             >
               Sede
             </label>
@@ -159,7 +159,7 @@ export function IncidentList() {
               id="filter-branch"
               value={filterBranch}
               onChange={(e) => setFilterBranch(e.target.value)}
-              className="mt-1 block w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              className="mt-1 block w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-400 dark:focus:ring-slate-400"
             >
               <option value="">Todas</option>
               {INCIDENT_BRANCHES.map((b) => (
@@ -172,13 +172,13 @@ export function IncidentList() {
         </div>
 
         {activeFiltersCount > 0 && (
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
             Filtros activos: {activeFiltersCount}
           </p>
         )}
 
         {updateError && (
-          <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400">
             {updateError}
           </div>
         )}
@@ -186,8 +186,8 @@ export function IncidentList() {
         {/* Loading state */}
         {isLoading && (
           <div className="mt-6 flex items-center justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-600" />
-            <span className="ml-3 text-sm text-slate-500">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-600 dark:border-slate-700 dark:border-t-slate-400" />
+            <span className="ml-3 text-sm text-slate-500 dark:text-slate-400">
               Cargando incidencias...
             </span>
           </div>
@@ -199,7 +199,7 @@ export function IncidentList() {
             <p className="text-sm text-rose-600">{error}</p>
             <button
               onClick={fetchIncidents}
-              className="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+              className="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
             >
               Reintentar
             </button>
@@ -208,8 +208,8 @@ export function IncidentList() {
 
         {/* Empty state */}
         {isEmpty && (
-          <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 py-12 text-center">
-            <p className="text-sm text-slate-500">
+          <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 py-12 text-center dark:border-slate-800 dark:bg-slate-900/40">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               No hay incidencias que coincidan con los filtros.
             </p>
           </div>
@@ -223,38 +223,38 @@ export function IncidentList() {
               return (
                 <div
                   key={incident.id}
-                  className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                  className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/60"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-slate-900">
+                      <h3 className="font-semibold text-slate-900 dark:text-white">
                         {incident.title}
                       </h3>
-                      <p className="mt-1 text-sm text-slate-600 line-clamp-2">
+                      <p className="mt-1 text-sm text-slate-600 line-clamp-2 dark:text-slate-300">
                         {incident.description}
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                        <span className="rounded-lg bg-slate-200 px-2 py-1 text-slate-700">
+                        <span className="rounded-lg bg-slate-200 px-2 py-1 text-slate-700 dark:bg-slate-700 dark:text-slate-200">
                           {CATEGORY_LABELS[incident.category] ??
                             incident.category}
                         </span>
                         <span
                           className={`rounded-lg px-2 py-1 font-medium ${
                             incident.status === "open"
-                              ? "bg-blue-100 text-blue-700"
+                              ? "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300"
                               : incident.status === "in_progress"
-                                ? "bg-amber-100 text-amber-700"
+                                ? "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
                                 : incident.status === "resolved"
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : "bg-slate-200 text-slate-500"
+                                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
+                                  : "bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
                           }`}
                         >
                           {STATUS_LABELS[incident.status]}
                         </span>
-                        <span className="rounded-lg bg-slate-200 px-2 py-1 text-slate-700">
+                        <span className="rounded-lg bg-slate-200 px-2 py-1 text-slate-700 dark:bg-slate-700 dark:text-slate-200">
                           {ORIGIN_LABELS[incident.origin]}
                         </span>
-                        <span className="rounded-lg bg-slate-200 px-2 py-1 text-slate-700">
+                        <span className="rounded-lg bg-slate-200 px-2 py-1 text-slate-700 dark:bg-slate-700 dark:text-slate-200">
                           {BRANCH_LABELS[incident.branch]}
                         </span>
                       </div>
@@ -270,7 +270,7 @@ export function IncidentList() {
                               handleStatusChange(incident.id, nextStatus)
                             }
                             disabled={updatingId === incident.id}
-                            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                           >
                             {updatingId === incident.id
                               ? "Actualizando..."

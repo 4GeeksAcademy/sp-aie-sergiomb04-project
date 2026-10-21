@@ -42,13 +42,13 @@ export function IncidentSummaryPanel() {
 
   if (isLoading) {
     return (
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-slate-950">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="text-xl font-semibold text-slate-950 dark:text-white">
           Resumen de incidencias
         </h2>
         <div className="mt-6 flex items-center justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-600" />
-          <span className="ml-3 text-sm text-slate-500">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-600 dark:border-slate-700 dark:border-t-slate-400" />
+          <span className="ml-3 text-sm text-slate-500 dark:text-slate-400">
             Cargando resumen...
           </span>
         </div>
@@ -58,15 +58,15 @@ export function IncidentSummaryPanel() {
 
   if (error) {
     return (
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-slate-950">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="text-xl font-semibold text-slate-950 dark:text-white">
           Resumen de incidencias
         </h2>
         <div className="mt-6 text-center py-8">
           <p className="text-sm text-rose-600">{error}</p>
           <button
             onClick={fetchSummary}
-            className="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+            className="mt-3 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
           >
             Reintentar
           </button>
@@ -80,42 +80,42 @@ export function IncidentSummaryPanel() {
   }
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="text-xl font-semibold text-slate-950">
+    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <h2 className="text-xl font-semibold text-slate-950 dark:text-white">
         Resumen de incidencias
       </h2>
 
       {/* Total card */}
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/60">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             Total
           </p>
-          <p className="mt-1 text-2xl font-semibold text-slate-950">
+          <p className="mt-1 text-2xl font-semibold text-slate-950 dark:text-white">
             {summary.total}
           </p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/60">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             Abiertas
           </p>
-          <p className="mt-1 text-2xl font-semibold text-blue-700">
+          <p className="mt-1 text-2xl font-semibold text-blue-700 dark:text-blue-400">
             {summary.by_status.open ?? 0}
           </p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/60">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             En progreso
           </p>
-          <p className="mt-1 text-2xl font-semibold text-amber-700">
+          <p className="mt-1 text-2xl font-semibold text-amber-700 dark:text-amber-400">
             {summary.by_status.in_progress ?? 0}
           </p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/60">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             Resueltas
           </p>
-          <p className="mt-1 text-2xl font-semibold text-emerald-700">
+          <p className="mt-1 text-2xl font-semibold text-emerald-700 dark:text-emerald-400">
             {summary.by_status.resolved ?? 0}
           </p>
         </div>
@@ -124,18 +124,18 @@ export function IncidentSummaryPanel() {
       {/* Breakdown sections */}
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         {/* By status */}
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <h3 className="text-sm font-semibold text-slate-900">Por estado</h3>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/60">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Por estado</h3>
           <ul className="mt-3 space-y-1.5">
             {INCIDENT_STATUSES.map((status) => (
               <li
                 key={status}
-                className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm"
+                className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm dark:bg-slate-800"
               >
-                <span className="text-slate-700">
+                <span className="text-slate-700 dark:text-slate-300">
                   {STATUS_LABELS[status]}
                 </span>
-                <span className="font-semibold text-slate-900">
+                <span className="font-semibold text-slate-900 dark:text-white">
                   {summary.by_status[status] ?? 0}
                 </span>
               </li>
@@ -144,8 +144,8 @@ export function IncidentSummaryPanel() {
         </div>
 
         {/* By category */}
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <h3 className="text-sm font-semibold text-slate-900">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/60">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
             Por categoría
           </h3>
           <ul className="mt-3 space-y-1.5">
@@ -154,12 +154,12 @@ export function IncidentSummaryPanel() {
               return (
                 <li
                   key={cat}
-                  className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm"
+                  className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm dark:bg-slate-800"
                 >
-                  <span className="text-slate-700">
+                  <span className="text-slate-700 dark:text-slate-300">
                     {CATEGORY_LABELS[cat]}
                   </span>
-                  <span className="font-semibold text-slate-900">
+                  <span className="font-semibold text-slate-900 dark:text-white">
                     {count}
                   </span>
                 </li>
@@ -169,18 +169,18 @@ export function IncidentSummaryPanel() {
         </div>
 
         {/* By origin */}
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <h3 className="text-sm font-semibold text-slate-900">Por origen</h3>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/60">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Por origen</h3>
           <ul className="mt-3 space-y-1.5">
             {INCIDENT_ORIGINS.map((origin) => (
               <li
                 key={origin}
-                className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm"
+                className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm dark:bg-slate-800"
               >
-                <span className="text-slate-700">
+                <span className="text-slate-700 dark:text-slate-300">
                   {ORIGIN_LABELS[origin]}
                 </span>
-                <span className="font-semibold text-slate-900">
+                <span className="font-semibold text-slate-900 dark:text-white">
                   {summary.by_origin[origin] ?? 0}
                 </span>
               </li>
@@ -189,18 +189,18 @@ export function IncidentSummaryPanel() {
         </div>
 
         {/* By branch */}
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <h3 className="text-sm font-semibold text-slate-900">Por sede</h3>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/60">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Por sede</h3>
           <ul className="mt-3 space-y-1.5">
             {INCIDENT_BRANCHES.map((branch) => (
               <li
                 key={branch}
-                className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm"
+                className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm dark:bg-slate-800"
               >
-                <span className="text-slate-700">
+                <span className="text-slate-700 dark:text-slate-300">
                   {BRANCH_LABELS[branch]}
                 </span>
-                <span className="font-semibold text-slate-900">
+                <span className="font-semibold text-slate-900 dark:text-white">
                   {summary.by_branch[branch] ?? 0}
                 </span>
               </li>

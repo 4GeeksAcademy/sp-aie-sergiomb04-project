@@ -25,6 +25,19 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
 
 ## Trabajo en curso y recientes entregables
 
+### Implementación Completa de Modo Oscuro en UIs (Backoffice & Website - Completado)
+- Configuración de selector manual en Tailwind v4 mediante `@variant dark (&:where(.dark, .dark *));` en `uis/backoffice/app/globals.css` y `uis/website/app/globals.css`, evitando que `prefers-color-scheme` sobreescriba la preferencia del usuario.
+- Script anti-FOUC en `<head>` para cargar la preferencia `theme` desde `localStorage` sin saltos visuales ni parpadeos.
+- Componente `ThemeToggle` reactivo basado en `useSyncExternalStore` para sincronizar `light` / `dark` en toda la aplicación sin advertencias de renderizado en cascada de React 19 / ESLint.
+- Cobertura completa de modo oscuro en Website (`uis/website`) y Backoffice (`uis/backoffice`), incluyendo vistas protegidas y componentes internos de:
+  - `rfp` (`uis/backoffice/app/(protected)/rfp/page.tsx`): cabeceras, tarjetas de tickets, panel de arbitraje HITL, decisiones departamentales y visor de borradores.
+  - `incidents`: paneles de carga y resumen CSV, formulario de registro, filtros y listado de incidencias con badges de estado y sedes.
+  - `suppliers`: directorio de proveedores, modal de creación, tabla interactiva, edición rápida de tarifas y estados.
+  - `telemetry`: tarjetas KPI de eventos, selectores de rango temporal (24h/7d/30d/personalizado) y tablas métricas de fallos de auth, errores por tipo y latencia por ruta.
+  - `reporting`: cuadro ejecutivo de desempeño semanal, filtros por almacén (Los Ángeles / Zaragoza), búsqueda de marcas clientes y tabla detallada con tasas de discrepancia.
+  - `knowledge`: corregido título en blanco en modo claro/oscuro alineado al diseño global.
+- Verificación exhaustiva: 27/27 tests Jest pasando y compilación de producción Next.js (`npm run build`) exitosa.
+
 ### Telemetría TrackFlow — Pipeline de Análisis y Endpoint de Reporte (Completado)
 - Módulo analítico en `services/telemetry/analysis.py` (y `trackflow_api/telemetry/analysis.py`) con 4 funciones operacionales vectorizadas en Pandas: `events_per_day`, `error_rate_by_type`, `auth_failure_rate` y `latency_by_route`.
 - Filtrado temporal SQL estricto en UTC (`timestamp >= :start AND timestamp < :end`) y extracción de dimensiones desde tags.
