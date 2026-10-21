@@ -507,7 +507,7 @@ export default function RFPIntakePage() {
         </section>
 
         {/* Recent Tickets List */}
-        <section className="col-span-1 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
+        <section className="col-span-1 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:col-span-2">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
             <h2 className="text-base font-bold text-slate-900 dark:text-white">
               Historial de Tickets RFP en PostgreSQL
@@ -522,7 +522,7 @@ export default function RFPIntakePage() {
 
           <div className="mt-3 max-h-64 overflow-y-auto">
             {recentTickets.length === 0 ? (
-              <p className="py-6 text-center text-xs text-slate-400">
+              <p className="py-6 text-center text-xs text-slate-400 dark:text-slate-500">
                 No hay tickets registrados aún. Sube un PDF para comenzar.
               </p>
             ) : (
@@ -555,7 +555,7 @@ export default function RFPIntakePage() {
                             </span>
                           )}
                         </div>
-                        <span className="text-[11px] text-slate-400">
+                        <span className="text-[11px] text-slate-400 dark:text-slate-500">
                           {t.created_at ? new Date(t.created_at).toLocaleString() : ""}
                         </span>
                       </div>
