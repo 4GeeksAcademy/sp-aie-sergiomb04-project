@@ -19,7 +19,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated, Any, TypedDict
 
+import os
 from langgraph.checkpoint.base import BaseCheckpointSaver
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
@@ -51,14 +53,41 @@ logger = logging.getLogger("trackflow.rfp_intake.approval_flow")
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
-def get_default_checkpointer() -> SqliteSaver:
-    """Return default persistent SqliteSaver checkpointer for RFP approvals."""
-    db_path = PROJECT_ROOT / "data" / "checkpoints" / "rfp_approval.db"
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(db_path), check_same_thread=False)
-    saver = SqliteSaver(conn)
-    saver.setup()
-    return saver
+_default_checkpointer: BaseCheckpointSaver | None = None
+
+
+def get_default_checkpointer() -> BaseCheckpointSaver:
+    """Return default persistent SqliteSaver checkpointer for RFP approvals with resilient fallback to MemorySaver."""
+    global _default_checkpointer
+    if _default_checkpointer is not None:
+        return _default_checkpointer
+
+    configured = os.getenv("RFP_APPROVAL_DB_PATH")
+    candidate_paths = (
+        [Path(configured)]
+        if configured
+        else [
+            PROJECT_ROOT / "data" / "checkpoints" / "rfp_checkpoints.sqlite",
+            PROJECT_ROOT / "data" / "checkpoints" / "rfp_approval.db",
+            Path("/tmp/rfp_checkpoints.sqlite"),
+        ]
+    )
+
+    for cand in candidate_paths:
+        try:
+            cand.parent.mkdir(parents=True, exist_ok=True)
+            conn = sqlite3.connect(str(cand), check_same_thread=False)
+            saver = SqliteSaver(conn)
+            saver.setup()
+            _default_checkpointer = saver
+            logger.info("RFP approval SqliteSaver initialized successfully at %s", cand)
+            return _default_checkpointer
+        except Exception as exc:
+            logger.warning("Failed to initialize SqliteSaver at %s: %s", cand, exc)
+
+    logger.warning("Falling back to MemorySaver for RFP approvals due to SQLite storage errors.")
+    _default_checkpointer = MemorySaver()
+    return _default_checkpointer
 
 
 def merge_audit_traces(

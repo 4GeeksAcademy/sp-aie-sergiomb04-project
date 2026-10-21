@@ -340,6 +340,22 @@ fp_final_documents).
   - Integración en cabeceras de navegación (`ProtectedNavLinks`, `layout.tsx` en Backoffice y `Navbar.tsx` en Website), páginas públicas (`/login`, `/register`, `/forgot-password`, `/reset-password`) y secciones clave (`/products`, `/knowledge`, `/application`, etc.).
   - Verificación exitosa de compilación (`next build`) y pruebas (`jest`) en ambas aplicaciones.
 
+### Corrección de Aprobaciones Departamentales (HITL) en Propuestas Económicas de RFPs (Completado)
+- **Diagnóstico de causa raíz del error HTTP 500**:
+  - En entornos Dockerizados con bind mounts de host, `sqlite3.connect` y `SqliteSaver.setup()` lanzaban `sqlite3.OperationalError: unable to open database file` al intentar abrir de forma bloqueada el archivo `rfp_approval.db`.
+  - La restricción de versión `langgraph-checkpoint-sqlite<3` en `services/requirements.txt` (2.0.10) presentaba incompatibilidad de serialización (`AttributeError: 'JsonPlusSerializer' object has no attribute 'dumps'`) con `langgraph-checkpoint>=4.3.0`.
+- **Implementación resiliente del Checkpointer en `data/pipelines/rfp_intake/approval_flow.py`**:
+  - Mecanismo multiruta en `get_default_checkpointer()`: evalúa variable de entorno `RFP_APPROVAL_DB_PATH`, candidatos en `data/checkpoints/rfp_checkpoints.sqlite`, `data/checkpoints/rfp_approval.db`, `/tmp/rfp_checkpoints.sqlite` y fallback automático y seguro a `MemorySaver` en memoria ante cualquier fallo de sistema de archivos o lock.
+  - Implementación singleton de `_default_checkpointer` evitando reapertura continua de conexiones SQLite y reejecución redundante de scripts DDL.
+  - Actualización de dependencia en `services/requirements.txt` a `langgraph-checkpoint-sqlite>=3.1.2`, alineada con `services/api/pyproject.toml`.
+- **Mejora en UX y Manejo de Errores en Backoffice UI (`uis/backoffice/app/(protected)/rfp/page.tsx`)**:
+  - Incorporación de estado `approvalError` con banner de error visible y descartable en la interfaz para acciones de "Aprobar", "Solicitar Cambios" y "Rechazar", evitando fallos silenciosos ante problemas de red o backend.
+  - Tipado estricto en interfaces de arbitraje (`ArbitrationResponse`, `ArbitrationResolution`) eliminando tipos `any` y warnings de React 19 / ESLint.
+- **Verificación Exhaustiva**:
+  - Validación E2E mediante invocaciones reales HTTP POST vía port 5001 y port 8000 para "approve", "request_changes" y "reject" confirmando respuestas HTTP 200 OK y transición de tickets a `esperando_aprobación` y `terminado` con `RFPFinalDocument` sintetizado.
+  - 30/30 tests automatizados de backend pasando al 100% (`pytest`).
+  - 27/27 tests de frontend pasando (`jest`), ESLint sin errores ni warnings y compilación de producción Next.js (`npm run build`) exitosa.
+
 ## Proximos pasos
 1. Pasar a producción el flujo agéntico completo de RFPs en TrackFlow Tech tras revisión con los directores de departamento (Miguel Torres, Ana Whitfield, Carlos Vega, Sofía Ramos).
 2. Integrar el pipeline con el sistema de mensajería/email saliente para el envío automatizado de la propuesta económica final a los clientes potenciales.

@@ -131,6 +131,25 @@ type RFPTicketSummary = {
   created_at?: string | null;
 };
 
+interface ArbitrationResolution {
+  trigger_id: string;
+  arbitrator: string;
+  conflict_detected: string;
+  applied_action: string;
+}
+
+interface ArbitrationResponse {
+  ticket_id: string;
+  conflict_count: number;
+  resolutions?: ArbitrationResolution[];
+  traces?: Array<{
+    agent: string;
+    input: unknown;
+    output: unknown;
+    timestamp: string;
+  }>;
+}
+
 const STATUS_BADGE_STYLES: Record<string, { label: string; className: string }> = {
   analizando: {
     label: "Analizando (Pipeline en curso)",
@@ -172,11 +191,12 @@ export default function RFPIntakePage() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
   const [ticketDetail, setTicketDetail] = useState<RFPTicketBundle | null>(null);
   const [recentTickets, setRecentTickets] = useState<RFPTicketSummary[]>([]);
   const [finalDocument, setFinalDocument] = useState<FinalDocumentData | null>(null);
-  const [arbitrationResult, setArbitrationResult] = useState<any | null>(null);
+  const [arbitrationResult, setArbitrationResult] = useState<ArbitrationResponse | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [polling, setPolling] = useState(false);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -259,10 +279,9 @@ export default function RFPIntakePage() {
   useEffect(() => {
     if (!activeTicketId) return;
 
-    setFinalDocument(null);
-    setArbitrationResult(null);
-
     const initialFetchTimer = setTimeout(() => {
+      setFinalDocument(null);
+      setArbitrationResult(null);
       void fetchTicketDetail(activeTicketId);
     }, 0);
 
@@ -351,6 +370,7 @@ export default function RFPIntakePage() {
   const handleInitiateApprovals = async () => {
     if (!ticketDetail) return;
     setActionLoading("initiate");
+    setApprovalError(null);
     try {
       const res = await fetch(`/api/rfp/${encodeURIComponent(ticketDetail.ticket_id)}/approval/initiate`, {
         method: "POST",
@@ -358,7 +378,12 @@ export default function RFPIntakePage() {
       if (res.ok) {
         void fetchTicketDetail(ticketDetail.ticket_id);
         void fetchRecentTickets();
+      } else {
+        const errData = await res.json().catch(() => null);
+        setApprovalError(errData?.detail || `Error (${res.status}): no se pudo iniciar el ciclo de aprobaciones`);
       }
+    } catch (err) {
+      setApprovalError(err instanceof Error ? err.message : "Error de red al iniciar aprobaciones");
     } finally {
       setActionLoading(null);
     }
@@ -371,6 +396,7 @@ export default function RFPIntakePage() {
   ) => {
     if (!ticketDetail) return;
     setActionLoading(`${deptId}-${action}`);
+    setApprovalError(null);
 
     let notes: string | null = null;
     if (action === "request_changes") {
@@ -388,9 +414,19 @@ export default function RFPIntakePage() {
       );
 
       if (res.ok) {
+        setApprovalError(null);
         void fetchTicketDetail(ticketDetail.ticket_id);
         void fetchRecentTickets();
+      } else {
+        const errData = await res.json().catch(() => null);
+        setApprovalError(
+          errData?.detail || `Error (${res.status}): no se pudo registrar la decisión para ${deptId}`
+        );
       }
+    } catch (err) {
+      setApprovalError(
+        err instanceof Error ? err.message : "Error de conexión al registrar la decisión de aprobación"
+      );
     } finally {
       setActionLoading(null);
     }
@@ -688,7 +724,7 @@ export default function RFPIntakePage() {
                   </p>
                 ) : (
                   <div className="mt-2 space-y-2">
-                    {arbitrationResult.resolutions?.map((r: any, idx: number) => (
+                    {arbitrationResult.resolutions?.map((r: ArbitrationResolution, idx: number) => (
                       <div key={idx} className="rounded-lg bg-white p-3 shadow-xs dark:bg-slate-800 dark:border dark:border-slate-700">
                         <div className="flex items-center justify-between">
                           <span className="font-mono font-bold text-indigo-800 dark:text-indigo-300">
@@ -791,10 +827,20 @@ export default function RFPIntakePage() {
                   </span>
                 </div>
 
+                {approvalError && (
+                  <div className="flex items-center justify-between rounded-xl border border-rose-300 bg-rose-50 p-4 text-xs font-semibold text-rose-800 dark:border-rose-800/60 dark:bg-rose-950/40 dark:text-rose-300">
+                    <span>❌ {approvalError}</span>
+                    <button
+                      onClick={() => setApprovalError(null)}
+                      className="ml-4 font-bold underline hover:text-rose-900 dark:hover:text-rose-100"
+                    >
+                      Cerrar
+                    </button>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 gap-6">
                   {ticketDetail.department_sections.map((sec) => {
-                    const ka = sec.key_aspects || {};
-                    const ev = sec.evaluation_results;
                     const isDraftReady = Boolean(sec.draft_content);
                     const isApproved = sec.approval_status === "approved";
                     const isRejected = sec.approval_status === "rejected";
