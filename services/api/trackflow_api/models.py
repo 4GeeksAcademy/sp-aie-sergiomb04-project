@@ -582,4 +582,148 @@ class DeadLetterQueue(SQLModel, table=True):
     created_at: datetime = SQLField(default_factory=now_utc, index=True)
 
 
+# ─── RFP Intake & Routing ORM Models (SQLModel - Milestone 9) ─────────────────
 
+class RFPTicketStatusEnum(StrEnum):
+    ANALIZANDO = "analizando"
+    DESCARTADO = "descartado"
+    ANALISIS_COMPLETO = "analisis_completo"
+    # Reserved for Parts 2 and 3
+    GENERANDO_BORRADOR = "generando_borrador"
+    EN_EVALUACION = "en_evaluación"
+    NEEDS_HUMAN_REVIEW = "needs_human_review"
+    ESPERANDO_APROBACION = "esperando_aprobación"
+    TERMINADO = "terminado"
+
+
+class RFPDepartmentEnum(StrEnum):
+    WAREHOUSE = "warehouse"
+    LASTMILE = "lastmile"
+    REVERSE = "reverse"
+
+
+RFP_OFFICIAL_DEPARTMENTS: dict[str, dict[str, str]] = {
+    "warehouse": {
+        "department_id": "warehouse",
+        "department": "Warehouse Operations",
+        "contact_person": "Ana Whitfield",
+        "contribution": "Capacidad de almacenamiento, costo por pallet/SKU, tiempo de onboarding",
+    },
+    "lastmile": {
+        "department_id": "lastmile",
+        "department": "Last Mile and Carrier Management",
+        "contact_person": "Carlos Vega",
+        "contribution": "Costo por envío, transportistas disponibles según destino, SLA de entrega",
+    },
+    "reverse": {
+        "department_id": "reverse",
+        "department": "Reverse Logistics",
+        "contact_person": "Sofía Ramos",
+        "contribution": "Costo y tiempo de procesamiento de devoluciones (si el cliente lo solicita)",
+    },
+}
+
+
+class RFPTicket(SQLModel, table=True):
+    __tablename__ = "rfp_tickets"
+
+    id: str = SQLField(default_factory=lambda: str(uuid4()), primary_key=True, index=True)
+    rfp_id: str = SQLField(
+        default_factory=lambda: f"RFP-{uuid4().hex[:6].upper()}",
+        index=True,
+    )
+    status: str = SQLField(default=RFPTicketStatusEnum.ANALIZANDO.value, index=True)
+    pdf_path: str = SQLField(index=True)
+    original_filename: str | None = SQLField(default=None, nullable=True)
+    rejection_reason: str | None = SQLField(default=None, nullable=True)
+    executive_summary: str | None = SQLField(default=None, nullable=True)
+    handoff_payload: dict[str, Any] | None = SQLField(
+        default=None,
+        sa_column=Column(JSON().with_variant(JSONB, "postgresql"), nullable=True),
+    )
+    created_at: datetime = SQLField(default_factory=now_utc, index=True)
+    updated_at: datetime = SQLField(default_factory=now_utc, index=True)
+
+    @property
+    def ticket_id(self) -> str:
+        return self.id
+
+    @property
+    def raw_pdf_path(self) -> str:
+        return self.pdf_path
+
+
+# Alias for compatibility with specs referencing Ticket directly
+Ticket = RFPTicket
+
+
+class RFPMetadata(SQLModel, table=True):
+    __tablename__ = "rfp_metadata"
+
+    id: str = SQLField(default_factory=lambda: str(uuid4()), primary_key=True, index=True)
+    ticket_id: str = SQLField(foreign_key="rfp_tickets.id", index=True, unique=True)
+    raw_markdown: str = SQLField(default="")
+    client_name: str | None = SQLField(default=None, nullable=True, index=True)
+    client_country: str | None = SQLField(default=None, nullable=True, index=True)
+    currency: str | None = SQLField(default=None, nullable=True)
+    services_requested: list[str] = SQLField(
+        default_factory=list,
+        sa_column=Column(JSON().with_variant(JSONB, "postgresql"), nullable=False),
+    )
+    monthly_volume: int | None = SQLField(default=None, nullable=True)
+    deadline: str | None = SQLField(default=None, nullable=True)
+    budget_range: str | None = SQLField(default=None, nullable=True)
+    departments_needed: list[str] = SQLField(
+        default_factory=list,
+        sa_column=Column(JSON().with_variant(JSONB, "postgresql"), nullable=False),
+    )
+    metadata_json: dict[str, Any] = SQLField(
+        default_factory=dict,
+        sa_column=Column("metadata", JSON().with_variant(JSONB, "postgresql"), nullable=False),
+    )
+    readability_metrics: dict[str, Any] = SQLField(
+        default_factory=dict,
+        sa_column=Column(JSON().with_variant(JSONB, "postgresql"), nullable=False),
+    )
+    created_at: datetime = SQLField(default_factory=now_utc, index=True)
+
+
+class DepartmentSection(SQLModel, table=True):
+    __tablename__ = "rfp_department_sections"
+
+    id: str = SQLField(default_factory=lambda: str(uuid4()), primary_key=True, index=True)
+    ticket_id: str = SQLField(foreign_key="rfp_tickets.id", index=True)
+    department_id: str = SQLField(index=True)
+    department: str = SQLField(index=True)
+    contact_person: str = SQLField(default="")
+    key_aspects: dict[str, Any] = SQLField(
+        default_factory=dict,
+        sa_column=Column(JSON().with_variant(JSONB, "postgresql"), nullable=False),
+    )
+    handoff_payload: dict[str, Any] | None = SQLField(
+        default=None,
+        sa_column=Column(JSON().with_variant(JSONB, "postgresql"), nullable=True),
+    )
+    draft_content: str | None = SQLField(default=None, nullable=True)
+    evaluation_results: dict[str, Any] | None = SQLField(
+        default=None,
+        sa_column=Column(JSON().with_variant(JSONB, "postgresql"), nullable=True),
+    )
+    approval_status: str | None = SQLField(default=None, nullable=True)
+    approver: str | None = SQLField(default=None, nullable=True)
+    approved_at: datetime | None = SQLField(default=None, nullable=True)
+    created_at: datetime = SQLField(default_factory=now_utc, index=True)
+    updated_at: datetime = SQLField(default_factory=now_utc, index=True)
+
+
+class RFPFinalDocument(SQLModel, table=True):
+    __tablename__ = "rfp_final_documents"
+
+    id: str = SQLField(default_factory=lambda: str(uuid4()), primary_key=True, index=True)
+    ticket_id: str = SQLField(foreign_key="rfp_tickets.id", index=True, unique=True)
+    sections: dict[str, Any] = SQLField(
+        default_factory=dict,
+        sa_column=Column(JSON().with_variant(JSONB, "postgresql"), nullable=False),
+    )
+    currency: str = SQLField(default="USD")
+    generated_at: datetime = SQLField(default_factory=now_utc, index=True)

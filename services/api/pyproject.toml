@@ -33,6 +33,9 @@ dependencies = [
   "fastmcp<1",
   "mcpauth>=0.1.1",
   "langchain-mcp-adapters>=0.3.1",
+  "markitdown[pdf]>=0.1.8",
+  "py-readability-metrics>=1.4.5",
+  "reportlab>=5.0.1",
 ]
 
 [dependency-groups]

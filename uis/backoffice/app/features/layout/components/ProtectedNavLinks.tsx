@@ -12,6 +12,7 @@ const navItems = [
   { href: "/telemetry", label: "Telemetría" },
   { href: "/reporting", label: "Reportes" },
   { href: "/knowledge", label: "Base de Conocimiento" },
+  { href: "/rfp", label: "RFP Intake" },
 ];
 
 export function ProtectedNavLinks({ mobile = false }: ProtectedNavLinksProps) {
