@@ -352,3 +352,49 @@ def list_rfp_tickets(limit: int = 50) -> list[dict[str, Any]]:
                 }
             )
         return results
+
+
+def update_rfp_ticket_status(ticket_id: str, status: str) -> RFPTicket | None:
+    """Update Ticket.status for lifecycle progression in Parts 2 and 3."""
+    ensure_rfp_tables()
+    with Session(get_inventory_engine()) as session:
+        ticket = session.get(RFPTicket, ticket_id)
+        if ticket is None:
+            return None
+        ticket.status = status
+        ticket.updated_at = now_utc()
+        session.add(ticket)
+        session.commit()
+        session.refresh(ticket)
+        return ticket
+
+
+def update_department_section_draft(
+    *,
+    ticket_id: str,
+    department_id: str,
+    draft_content: str,
+    evaluation_results: dict[str, Any] | None = None,
+    approval_status: str | None = None,
+) -> DepartmentSection | None:
+    """Persist generated draft and evaluation results in DepartmentSection."""
+    ensure_rfp_tables()
+    with Session(get_inventory_engine()) as session:
+        stmt = select(DepartmentSection).where(
+            DepartmentSection.ticket_id == ticket_id,
+            DepartmentSection.department_id == department_id,
+        )
+        section = session.exec(stmt).first()
+        if section is None:
+            return None
+        section.draft_content = draft_content
+        if evaluation_results is not None:
+            section.evaluation_results = evaluation_results
+        if approval_status is not None:
+            section.approval_status = approval_status
+        section.updated_at = now_utc()
+        session.add(section)
+        session.commit()
+        session.refresh(section)
+        return section
+

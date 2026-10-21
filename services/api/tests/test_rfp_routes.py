@@ -74,3 +74,48 @@ def test_post_rfp_upload_invalid_document_transitions_to_descartado(
         assert detail["department_sections"] == []
     finally:
         saved_pdf.unlink(missing_ok=True)
+
+
+def test_post_rfp_generate_sync_and_async(
+    monkeypatch_env: None,
+    client: TestClient,
+) -> None:
+    """Test POST /api/rfp/{ticket_id}/generate runs response generation and evaluation loop."""
+    generate_all_seed_pdfs()
+    pdf_path = PROJECT_ROOT / "rfp-requests" / "trackflow" / "trackflow-request-1.pdf"
+
+    with pdf_path.open("rb") as f:
+        resp = client.post(
+            "/api/rfp/upload",
+            files={"file": ("trackflow-request-1.pdf", f, "application/pdf")},
+        )
+
+    assert resp.status_code == 202
+    ticket_id = resp.json()["ticket_id"]
+    saved_pdf = PROJECT_ROOT / "data" / "raw" / f"{ticket_id}.pdf"
+
+    try:
+        # Part 1 completed
+        detail_resp = client.get(f"/api/rfp/{ticket_id}")
+        assert detail_resp.status_code == 200
+        assert detail_resp.json()["status"] == "analisis_completo"
+
+        # Now test POST /api/rfp/{ticket_id}/generate with sync=True
+        gen_resp = client.post(f"/api/rfp/{ticket_id}/generate?sync=true")
+        assert gen_resp.status_code == 200
+        gen_data = gen_resp.json()
+        assert gen_data["status"] == "en_evaluación"
+        assert "warehouse" in gen_data["results"]
+        assert "reverse" in gen_data["results"]
+
+        # Check bundle via GET
+        bundle_resp = client.get(f"/api/rfp/{ticket_id}")
+        assert bundle_resp.status_code == 200
+        bundle = bundle_resp.json()
+        assert bundle["status"] == "en_evaluación"
+        for sec in bundle["department_sections"]:
+            assert sec["draft_content"] is not None
+            assert sec["evaluation_results"]["overall_pass"] is True
+    finally:
+        saved_pdf.unlink(missing_ok=True)
+
