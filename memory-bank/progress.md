@@ -288,9 +288,37 @@ eeds_human_review.
   - 3 pruebas de endpoints en services/api/tests/test_rfp_routes.py (23 pruebas pasando al 100% en la suite de RFP).
   - Documentación completa y respuestas a las 4 Preguntas de Diseño con checklist 23/23 en docs/milestone-9/README_part2.md.
 
+### Hito 9 — Flujos de Trabajo Agénticos: Aprobación y Cierre de RFPs (Parte 3 de 3 - Completado)
+- **Aprobación Humana Aislada (HITL) con interrupt():**
+  - Implementación de compuertas de interrupción explícitas (interrupt()) antes del sign-off de cada departamento activo en data/pipelines/rfp_intake/approval_flow.py.
+  - Aislamiento total de ramas por namespace de hilo (
+fp-{ticket_id}:{department_id}) permitiendo que departamentos avancen y aprueben en paralelo sin bloquear a los demás.
+  - Checkpointer persistente SqliteSaver (data/checkpoints/rfp_approval.db) para checkpointing de estado e historial.
+  - Reanudación validada mediante Command(resume=...) aceptando pprove, 
+eject y 
+equest_changes.
+- **Arbitraje de Conflictos y Trazabilidad (§7 BRIEFING):**
+  - Nodo de arbitraje determinista en data/pipelines/rfp_intake/arbitration.py respondiendo a los 3 triggers del BRIEFING: olume-vs-capacity, 
+eturns-sla-breach y currency-mismatch.
+  - Asignación estricta de árbitros fijos humanos (Miguel Torres para capacidad y divisas; Sofía Ramos para devoluciones) sin consenso estocástico de LLMs.
+  - Registro de trazas de auditoría (TraceStep) con agente, input, output y timestamp ISO UTC.
+  - Límite de iteraciones fijado en 3 para evitar bucles indefinidos de cambios.
+- **Síntesis del Documento Final y Estados del Ciclo de Vida:**
+  - Consolidación automática de extractos aprobados, resumen comercial y sign-off formal en RFPFinalDocument (tabla 
+fp_final_documents).
+  - Ciclo de estados: esperando_aprobación durante la revisión humana -> 	erminado con documento persistido.
+- **Backoffice UI y Endpoints API:**
+  - Endpoints REST en FastAPI: POST /api/rfp/{ticket_id}/approval/initiate, POST /api/rfp/{ticket_id}/approval/{department_id}, GET /api/rfp/{ticket_id}/final-document, POST /api/rfp/{ticket_id}/arbitrate.
+  - Proxies Next.js en uis/backoffice/app/api/rfp/.
+  - UI interactiva en Backoffice con paneles de sign-off departamental (Aprobar, Solicitar Cambios, Rechazar), panel de verificación de arbitraje y visor oficial del documento final consolidado.
+- **Suite de Pruebas Completa (30 tests pasando al 100%):**
+  - 7 pruebas en 	ests/pipelines/test_rfp_approval.py (interrupción, reanudación, paralelismo entre departamentos, 3 triggers de arbitraje y prueba E2E de punta a punta desde Parte 1 hasta Parte 3).
+  - 3 pruebas de integración de endpoints en services/api/tests/test_rfp_routes.py.
+  - Documentación completa en docs/milestone-9/README_part3.md.
+
 ## Proximos pasos
-1. Implementar la Parte 3 del Hito 9: flujo de aprobación independiente por responsable de departamento (esperando_aprobación), nodo de arbitraje fijo para triggers de conflicto (olume-vs-capacity, 
-eturns-sla-breach, currency-mismatch) y generación de documento final (	erminado).
+1. Pasar a producción el flujo agéntico completo de RFPs en TrackFlow Tech tras revisión con los directores de departamento (Miguel Torres, Ana Whitfield, Carlos Vega, Sofía Ramos).
+2. Integrar el pipeline con el sistema de mensajería/email saliente para el envío automatizado de la propuesta económica final a los clientes potenciales.
 
 ## Riesgos y foco inmediato
 - Riesgo de desalineacion entre contexto TrackFlow y nombre/dominio de la app actual; conviene converger nomenclatura y casos de uso.

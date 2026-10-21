@@ -20,6 +20,7 @@ from trackflow_api.database import get_inventory_engine, init_inventory_db  # no
 from trackflow_api.models import (  # noqa: E402
     DepartmentSection,
     RFP_OFFICIAL_DEPARTMENTS,
+    RFPFinalDocument,
     RFPMetadata,
     RFPTicket,
     RFPTicketStatusEnum,
@@ -397,4 +398,120 @@ def update_department_section_draft(
         session.commit()
         session.refresh(section)
         return section
+
+
+def update_department_approval(
+    *,
+    ticket_id: str,
+    department_id: str,
+    action: str,  # approve, reject, request_changes
+    approver: str,
+    notes: str | None = None,
+) -> DepartmentSection | None:
+    """Record human approval decision (HITL) for a department section."""
+    ensure_rfp_tables()
+    status_map = {
+        "approve": "approved",
+        "reject": "rejected",
+        "request_changes": "changes_requested",
+    }
+    approval_status = status_map.get(action.lower(), action)
+    now = now_utc()
+
+    with Session(get_inventory_engine()) as session:
+        stmt = select(DepartmentSection).where(
+            DepartmentSection.ticket_id == ticket_id,
+            DepartmentSection.department_id == department_id,
+        )
+        section = session.exec(stmt).first()
+        if section is None:
+            return None
+
+        section.approval_status = approval_status
+        section.approver = approver
+        if approval_status == "approved":
+            section.approved_at = now
+        section.updated_at = now
+
+        # If notes were provided, record them in key_aspects or handoff_payload
+        if notes:
+            hp = dict(section.handoff_payload or {})
+            hp["approval_notes"] = notes
+            section.handoff_payload = hp
+
+        session.add(section)
+        session.commit()
+        session.refresh(section)
+        return section
+
+
+def check_all_sections_approved(ticket_id: str) -> bool:
+    """Check whether all active department sections for this ticket have been approved."""
+    ensure_rfp_tables()
+    with Session(get_inventory_engine()) as session:
+        stmt = select(DepartmentSection).where(DepartmentSection.ticket_id == ticket_id)
+        sections = session.exec(stmt).all()
+        if not sections:
+            return False
+        return all(s.approval_status == "approved" for s in sections)
+
+
+def save_final_document(
+    *,
+    ticket_id: str,
+    sections: dict[str, Any],
+    currency: str = "USD",
+) -> RFPFinalDocument:
+    """Persist the consolidated proposal document in the database and update ticket status to 'terminado'."""
+    ensure_rfp_tables()
+    now = now_utc()
+    with Session(get_inventory_engine()) as session:
+        stmt = select(RFPFinalDocument).where(RFPFinalDocument.ticket_id == ticket_id)
+        existing = session.exec(stmt).first()
+        if existing is not None:
+            existing.sections = sections
+            existing.currency = currency
+            existing.generated_at = now
+            session.add(existing)
+            session.commit()
+            session.refresh(existing)
+            final_doc = existing
+        else:
+            final_doc = RFPFinalDocument(
+                ticket_id=ticket_id,
+                sections=sections,
+                currency=currency,
+                generated_at=now,
+            )
+            session.add(final_doc)
+            session.commit()
+            session.refresh(final_doc)
+
+        # Mark ticket as terminado
+        ticket = session.get(RFPTicket, ticket_id)
+        if ticket is not None:
+            ticket.status = RFPTicketStatusEnum.TERMINADO.value
+            ticket.updated_at = now
+            session.add(ticket)
+            session.commit()
+
+        return final_doc
+
+
+def get_final_document(ticket_id: str) -> dict[str, Any] | None:
+    """Retrieve the generated final document for a ticket, if it exists."""
+    ensure_rfp_tables()
+    with Session(get_inventory_engine()) as session:
+        stmt = select(RFPFinalDocument).where(RFPFinalDocument.ticket_id == ticket_id)
+        record = session.exec(stmt).first()
+        if record is None:
+            return None
+        return {
+            "id": record.id,
+            "ticket_id": record.ticket_id,
+            "sections": record.sections,
+            "currency": record.currency,
+            "generated_at": record.generated_at.isoformat() if record.generated_at else None,
+        }
+
 

@@ -116,6 +116,41 @@ def test_post_rfp_generate_sync_and_async(
         for sec in bundle["department_sections"]:
             assert sec["draft_content"] is not None
             assert sec["evaluation_results"]["overall_pass"] is True
+
+        # Part 3: Test approval endpoints
+        init_resp = client.post(f"/api/rfp/{ticket_id}/approval/initiate")
+        assert init_resp.status_code == 200
+        assert init_resp.json()["status"] == "esperando_aprobación"
+
+        # Arbitrate endpoint test
+        arb_resp = client.post(f"/api/rfp/{ticket_id}/arbitrate")
+        assert arb_resp.status_code == 200
+        assert "conflict_count" in arb_resp.json()
+
+        # Approve warehouse
+        wh_resp = client.post(
+            f"/api/rfp/{ticket_id}/approval/warehouse",
+            json={"action": "approve", "approver": "Ana Whitfield", "notes": "Aprobado"},
+        )
+        assert wh_resp.status_code == 200
+        assert wh_resp.json()["all_approved"] is False
+
+        # Approve reverse -> triggers final synthesis and 'terminado'
+        rev_resp = client.post(
+            f"/api/rfp/{ticket_id}/approval/reverse",
+            json={"action": "approve", "approver": "Sofía Ramos", "notes": "Aprobado"},
+        )
+        assert rev_resp.status_code == 200
+        assert rev_resp.json()["all_approved"] is True
+        assert rev_resp.json()["ticket_status"] == "terminado"
+
+        # Verify GET /api/rfp/{ticket_id}/final-document
+        doc_resp = client.get(f"/api/rfp/{ticket_id}/final-document")
+        assert doc_resp.status_code == 200
+        doc = doc_resp.json()
+        assert doc["currency"] == "EUR"
+        assert "warehouse" in doc["sections"]["sections"]
     finally:
         saved_pdf.unlink(missing_ok=True)
+
 

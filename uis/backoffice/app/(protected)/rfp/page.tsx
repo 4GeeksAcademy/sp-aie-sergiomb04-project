@@ -70,8 +70,28 @@ type DepartmentSectionRecord = {
   handoff_payload?: Record<string, unknown> | null;
   draft_content?: string | null;
   evaluation_results?: EvaluationResultPayload | null;
-  approval_status?: string | null;
+  approval_status?: "pending" | "approved" | "rejected" | "changes_requested" | string | null;
+  approver?: string | null;
+  approved_at?: string | null;
   updated_at?: string | null;
+};
+
+type FinalDocumentData = {
+  id: string;
+  ticket_id: string;
+  currency: string;
+  generated_at?: string | null;
+  sections?: {
+    consolidated_markdown?: string;
+    sections?: Record<string, unknown>;
+    approvals?: Record<string, unknown>;
+    arbitrations?: Array<{
+      trigger_id: string;
+      arbitrator: string;
+      conflict_detected: string;
+      applied_action: string;
+    }>;
+  };
 };
 
 type RFPTicketBundle = {
@@ -84,6 +104,8 @@ type RFPTicketBundle = {
     | "generando_borrador"
     | "en_evaluación"
     | "needs_human_review"
+    | "esperando_aprobación"
+    | "terminado"
     | string;
   pdf_path: string;
   original_filename?: string | null;
@@ -130,6 +152,14 @@ const STATUS_BADGE_STYLES: Record<string, { label: string; className: string }> 
     label: "Revisión Humana Requerida (Límite agotado)",
     className: "bg-amber-100 text-amber-900 border-amber-400 font-bold",
   },
+  esperando_aprobación: {
+    label: "Esperando Aprobación (HITL)",
+    className: "bg-orange-100 text-orange-900 border-orange-300 font-semibold",
+  },
+  terminado: {
+    label: "Terminado (Propuesta Completa)",
+    className: "bg-emerald-100 text-emerald-900 border-emerald-400 font-bold",
+  },
   descartado: {
     label: "Descartado (No es RFP válida)",
     className: "bg-rose-100 text-rose-800 border-rose-300",
@@ -145,6 +175,9 @@ export default function RFPIntakePage() {
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
   const [ticketDetail, setTicketDetail] = useState<RFPTicketBundle | null>(null);
   const [recentTickets, setRecentTickets] = useState<RFPTicketSummary[]>([]);
+  const [finalDocument, setFinalDocument] = useState<FinalDocumentData | null>(null);
+  const [arbitrationResult, setArbitrationResult] = useState<any | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [polling, setPolling] = useState(false);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -160,6 +193,20 @@ export default function RFPIntakePage() {
     }
   }, []);
 
+  const fetchFinalDoc = useCallback(async (ticketId: string) => {
+    try {
+      const res = await fetch(`/api/rfp/${encodeURIComponent(ticketId)}/final-document`, {
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const doc = (await res.json()) as FinalDocumentData;
+        setFinalDocument(doc);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const fetchTicketDetail = useCallback(
     async (ticketId: string) => {
       try {
@@ -172,12 +219,14 @@ export default function RFPIntakePage() {
         const data = (await res.json()) as RFPTicketBundle;
         setTicketDetail(data);
 
+        if (data.status === "terminado") {
+          void fetchFinalDoc(ticketId);
+        }
+
         // Keep polling during active async steps
         const isStillRunning =
           data.status === "analizando" ||
-          data.status === "generando_borrador" ||
-          (data.status === "en_evaluación" &&
-            data.department_sections?.some((sec) => !sec.draft_content));
+          data.status === "generando_borrador";
 
         if (!isStillRunning) {
           setPolling(false);
@@ -192,7 +241,7 @@ export default function RFPIntakePage() {
         // Keep polling if transient network glitch
       }
     },
-    [fetchRecentTickets]
+    [fetchRecentTickets, fetchFinalDoc]
   );
 
   useEffect(() => {
@@ -209,6 +258,9 @@ export default function RFPIntakePage() {
 
   useEffect(() => {
     if (!activeTicketId) return;
+
+    setFinalDocument(null);
+    setArbitrationResult(null);
 
     const initialFetchTimer = setTimeout(() => {
       void fetchTicketDetail(activeTicketId);
@@ -296,6 +348,70 @@ export default function RFPIntakePage() {
     }
   };
 
+  const handleInitiateApprovals = async () => {
+    if (!ticketDetail) return;
+    setActionLoading("initiate");
+    try {
+      const res = await fetch(`/api/rfp/${encodeURIComponent(ticketDetail.ticket_id)}/approval/initiate`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        void fetchTicketDetail(ticketDetail.ticket_id);
+        void fetchRecentTickets();
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDepartmentDecision = async (
+    deptId: string,
+    action: "approve" | "reject" | "request_changes",
+    approver: string
+  ) => {
+    if (!ticketDetail) return;
+    setActionLoading(`${deptId}-${action}`);
+
+    let notes: string | null = null;
+    if (action === "request_changes") {
+      notes = prompt("Indica las correcciones o ajustes necesarios para este departamento:") || "Ajustes requeridos.";
+    }
+
+    try {
+      const res = await fetch(
+        `/api/rfp/${encodeURIComponent(ticketDetail.ticket_id)}/approval/${encodeURIComponent(deptId)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action, approver, notes }),
+        }
+      );
+
+      if (res.ok) {
+        void fetchTicketDetail(ticketDetail.ticket_id);
+        void fetchRecentTickets();
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRunArbitration = async () => {
+    if (!ticketDetail) return;
+    setActionLoading("arbitrate");
+    try {
+      const res = await fetch(`/api/rfp/${encodeURIComponent(ticketDetail.ticket_id)}/arbitrate`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const arb = await res.json();
+        setArbitrationResult(arb);
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const statusMeta = ticketDetail
     ? STATUS_BADGE_STYLES[ticketDetail.status] || {
         label: ticketDetail.status,
@@ -308,14 +424,14 @@ export default function RFPIntakePage() {
       {/* Header */}
       <div>
         <span className="rounded bg-indigo-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700">
-          TrackFlow Tech · Hito 9
+          TrackFlow Tech · Hito 9 (Partes 1, 2 y 3)
         </span>
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-          Flujo Agéntico de RFPs: Recepción, Enrutamiento y Generación de Respuestas
+          Flujo Agéntico de RFPs: Aprobaciones Humanas (HITL), Arbitraje y Cierre
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Recepción automatizada, triage con clasificador, extracción con MarkItDown,
-          generación de borradores y ciclo de evaluación paralela de legibilidad, pertinencia y cumplimiento (§5).
+          Recepción automatizada, triage con clasificador, generación por departamentos,
+          evaluación en paralelo, aprobación humana aislada (interrupt/resume) y síntesis del documento final (§7).
         </p>
       </div>
 
@@ -488,7 +604,7 @@ export default function RFPIntakePage() {
                 {polling && (
                   <div className="flex items-center gap-1.5 text-xs text-indigo-600">
                     <span className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
-                    <span>Actualizando en tiempo real...</span>
+                    <span>Actualizando...</span>
                   </div>
                 )}
                 {statusMeta && (
@@ -499,7 +615,8 @@ export default function RFPIntakePage() {
                     {statusMeta.label}
                   </span>
                 )}
-                {/* Generation Trigger Button */}
+
+                {/* Part 2: Generation Trigger Button */}
                 {(ticketDetail.status === "analisis_completo" ||
                   ticketDetail.status === "en_evaluación" ||
                   ticketDetail.status === "needs_human_review") && (
@@ -507,24 +624,88 @@ export default function RFPIntakePage() {
                     id="trigger-generate-btn"
                     onClick={() => void handleTriggerGeneration()}
                     disabled={generating || polling}
-                    className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-300"
+                    className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-slate-300"
                   >
                     {generating ? (
                       <>
                         <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        Generando y Evaluando...
+                        Generando...
                       </>
                     ) : (
-                      <>⚡ Generar Propuesta Económica por Departamentos</>
+                      <>⚡ Generar Propuesta Económica</>
                     )}
                   </button>
                 )}
+
+                {/* Part 3: Initiate Approval Cycle Button */}
+                {(ticketDetail.status === "en_evaluación" ||
+                  ticketDetail.status === "needs_human_review") && (
+                  <button
+                    id="trigger-init-approval-btn"
+                    onClick={() => void handleInitiateApprovals()}
+                    disabled={actionLoading === "initiate"}
+                    className="flex items-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-orange-500 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  >
+                    {actionLoading === "initiate" ? "Iniciando..." : "🚀 Iniciar Aprobaciones (HITL)"}
+                  </button>
+                )}
+
+                {/* Arbitration Button */}
+                <button
+                  id="trigger-arbitrate-btn"
+                  onClick={() => void handleRunArbitration()}
+                  disabled={actionLoading === "arbitrate"}
+                  className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                >
+                  {actionLoading === "arbitrate" ? "Verificando..." : "⚖️ Arbitraje (§7)"}
+                </button>
               </div>
             </div>
 
             {generateError && (
               <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
                 {generateError}
+              </div>
+            )}
+
+            {/* Arbitration Result Panel */}
+            {arbitrationResult && (
+              <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/70 p-4 text-xs">
+                <div className="flex items-center justify-between border-b border-indigo-200 pb-2">
+                  <span className="font-bold text-indigo-950">
+                    Resultado de Arbitraje Fijo (§7 BRIEFING): {arbitrationResult.conflict_count} conflictos detectados
+                  </span>
+                  <button
+                    onClick={() => setArbitrationResult(null)}
+                    className="text-slate-400 hover:text-slate-600"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+                {arbitrationResult.conflict_count === 0 ? (
+                  <p className="mt-2 text-indigo-900">
+                    No se detectaron contradicciones estructurales entre departamentos ni de moneda.
+                  </p>
+                ) : (
+                  <div className="mt-2 space-y-2">
+                    {arbitrationResult.resolutions?.map((r: any, idx: number) => (
+                      <div key={idx} className="rounded-lg bg-white p-3 shadow-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono font-bold text-indigo-800">
+                            Trigger: {r.trigger_id}
+                          </span>
+                          <span className="font-semibold text-slate-700">
+                            Árbitro Fijo: {r.arbitrator}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-slate-600">{r.conflict_detected}</p>
+                        <p className="mt-1 font-medium text-emerald-800">
+                          Acción de Resolución: {r.applied_action}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -544,177 +725,69 @@ export default function RFPIntakePage() {
                 </div>
                 <p className="mt-1.5 leading-relaxed text-amber-900">
                   Una o más secciones generadas han agotado el límite de reintentos del ciclo generador-evaluador sin superar la totalidad de los criterios automatizados.
-                  El último borrador generado se ha conservado como <strong>provisional</strong> junto a su reporte de evaluación para que el equipo comercial de Miguel Torres realice los ajustes correspondientes antes del paso a aprobación final. El ticket <strong>no ha sido descartado</strong>.
+                  El último borrador generado se ha conservado como <strong>provisional</strong>. El ticket <strong>no ha sido descartado</strong>.
                 </p>
               </div>
             )}
 
-            {/* Discarded Notice */}
-            {ticketDetail.status === "descartado" && (
+            {/* Finished State Banner */}
+            {ticketDetail.status === "terminado" && (
               <div
-                id="rfp-discarded-banner"
-                className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900"
+                id="rfp-terminado-banner"
+                className="mt-4 rounded-xl border-2 border-emerald-400 bg-emerald-50 p-4 text-xs text-emerald-950 shadow-sm"
               >
-                <p className="font-semibold">
-                  Documento rechazado por el Agente Clasificador (Triage Agent)
-                </p>
-                <p className="mt-1 text-xs text-rose-800">
-                  {ticketDetail.rejection_reason ||
-                    "El documento no corresponde a una solicitud de propuesta (RFP) de cliente para TrackFlow."}
+                <div className="flex items-center gap-2">
+                  <span className="rounded bg-emerald-200 px-2 py-0.5 font-bold text-emerald-900">
+                    🎉 PROPUESTA COMPLETADA
+                  </span>
+                  <p className="font-bold text-emerald-950">
+                    Todos los Departamentos Han Aprobado Formalmente la Propuesta
+                  </p>
+                </div>
+                <p className="mt-1.5 leading-relaxed text-emerald-900">
+                  El documento final consolidado ha sido sintetizado automáticamente y guardado en PostgreSQL (<code>RFPFinalDocument</code>). Listo para entrega formal al cliente.
                 </p>
               </div>
             )}
           </section>
 
-          {/* Metadata & Readability Grid */}
-          {ticketDetail.metadata && (
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              {/* Business Metadata */}
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
-                  Metadatos Extraídos de la RFP
-                </h3>
-                <dl className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <dt className="text-xs text-slate-500">Cliente</dt>
-                    <dd className="font-semibold text-slate-900">
-                      {ticketDetail.metadata.client_name || "No especificado"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-slate-500">País / Moneda Oficial</dt>
-                    <dd className="font-semibold text-slate-900">
-                      {ticketDetail.metadata.client_country || "N/D"} (
-                      <span className="text-indigo-700">
-                        {ticketDetail.metadata.currency || "N/D"}
-                      </span>
-                      )
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-slate-500">Volumen Mensual</dt>
-                    <dd className="font-semibold text-slate-900">
-                      {ticketDetail.metadata.monthly_volume != null
-                        ? `${ticketDetail.metadata.monthly_volume.toLocaleString()} pedidos/mes`
-                        : "No indicado (Pregunta abierta)"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-slate-500">Fecha Límite (Deadline)</dt>
-                    <dd className="font-semibold text-slate-900">
-                      {ticketDetail.metadata.deadline || "No especificada"}
-                    </dd>
-                  </div>
-                  <div className="col-span-2">
-                    <dt className="text-xs text-slate-500">Presupuesto de Referencia</dt>
-                    <dd className="font-semibold text-slate-900">
-                      {ticketDetail.metadata.budget_range || "No especificado"}
-                    </dd>
-                  </div>
-                  <div className="col-span-2">
-                    <dt className="text-xs text-slate-500">
-                      Departamentos Activados por el Orquestador
-                    </dt>
-                    <dd className="mt-1 flex flex-wrap gap-2">
-                      {(ticketDetail.metadata.departments_needed ?? []).length > 0 ? (
-                        ticketDetail.metadata.departments_needed?.map((dept) => (
-                          <span
-                            key={dept}
-                            className="rounded-md bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-800"
-                          >
-                            {dept}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-xs italic text-slate-400">
-                          Ninguno detectado
-                        </span>
-                      )}
-                    </dd>
-                  </div>
-                </dl>
-              </section>
-
-              {/* Readability Metrics Card */}
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">
-                    Métricas de Legibilidad (py-readability-metrics)
-                  </h3>
-                  <span className="text-[11px] text-slate-400">Estimación de coste</span>
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-4 text-xs sm:grid-cols-3">
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-[11px] text-slate-500">Flesch Reading Ease</p>
-                    <p className="mt-1 text-base font-semibold text-slate-800">
-                      {ticketDetail.readability_metrics?.flesch_reading_ease ?? "N/D"}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-[11px] text-slate-500">Flesch-Kincaid Grade</p>
-                    <p className="mt-1 text-base font-semibold text-slate-800">
-                      {ticketDetail.readability_metrics?.flesch_kincaid_grade ?? "N/D"}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-[11px] text-slate-500">Gunning Fog Index</p>
-                    <p className="mt-1 text-base font-semibold text-slate-800">
-                      {ticketDetail.readability_metrics?.gunning_fog ?? "N/D"}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-[11px] text-slate-500">Coleman-Liau</p>
-                    <p className="mt-1 text-base font-semibold text-slate-800">
-                      {ticketDetail.readability_metrics?.coleman_liau ?? "N/D"}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-[11px] text-slate-500">SMOG Score</p>
-                    <p className="mt-1 text-base font-semibold text-slate-800">
-                      {ticketDetail.readability_metrics?.smog ?? "N/D"}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <p className="text-[11px] text-slate-500">Palabras / Oraciones</p>
-                    <p className="mt-1 text-base font-semibold text-slate-800">
-                      {ticketDetail.readability_metrics?.word_count ?? 0} /{" "}
-                      {ticketDetail.readability_metrics?.sentence_count ?? 0}
-                    </p>
-                  </div>
-                </div>
-              </section>
-            </div>
-          )}
-
-          {/* Synthesizer Executive Summary for Sales */}
-          {ticketDetail.executive_summary && (
-            <section className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-indigo-950">
-                  Síntesis para Ventas (Synthesizer Agent): ¿Qué pedirle a qué departamento?
-                </h3>
-                {Boolean(ticketDetail.handoff_payload?.ready_for_part_2) && (
-                  <span className="rounded-md bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">
-                    Handoff Contract Parte 2 Listo
+          {/* Final Document View (when status is terminado) */}
+          {finalDocument && ticketDetail.status === "terminado" && (
+            <section
+              id="rfp-final-document-section"
+              className="rounded-2xl border-2 border-emerald-300 bg-white p-6 shadow-md"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div>
+                  <span className="rounded bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">
+                    RFP Final Document (Consolidado Oficial)
                   </span>
-                )}
+                  <h3 className="mt-1 text-lg font-bold text-slate-900">
+                    Propuesta Económica Lista para Envío Comercial
+                  </h3>
+                </div>
+                <div className="text-right text-xs text-slate-500">
+                  <p>Moneda: <strong>{finalDocument.currency}</strong></p>
+                  <p>Generado: {finalDocument.generated_at ? new Date(finalDocument.generated_at).toLocaleString() : ""}</p>
+                </div>
               </div>
-              <pre className="mt-3 whitespace-pre-wrap font-sans text-sm leading-relaxed text-slate-800">
-                {ticketDetail.executive_summary}
-              </pre>
+
+              <div className="mt-4 rounded-xl bg-slate-50 p-5 font-mono text-xs leading-relaxed text-slate-800 whitespace-pre-wrap max-h-[500px] overflow-y-auto">
+                {finalDocument.sections?.consolidated_markdown || JSON.stringify(finalDocument.sections, null, 2)}
+              </div>
             </section>
           )}
 
-          {/* Department Breakdown & Generated Drafts (Milestone 9 - Part 2) */}
+          {/* Department Breakdown & HITL Approval Gates (Milestone 9 - Part 3) */}
           {ticketDetail.department_sections &&
             ticketDetail.department_sections.length > 0 && (
               <section className="flex flex-col gap-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold text-slate-900">
-                    Propuestas Económicas por Departamento y Evaluación Paralela
+                    Departamentos y Aprobaciones Humanas (HITL Gates)
                   </h3>
                   <span className="text-xs text-slate-500">
-                    Generador individual por departamento · Evaluadores en paralelo
+                    Ana Whitfield · Carlos Vega · Sofía Ramos · Miguel Torres (Arbitraje)
                   </span>
                 </div>
 
@@ -723,14 +796,18 @@ export default function RFPIntakePage() {
                     const ka = sec.key_aspects || {};
                     const ev = sec.evaluation_results;
                     const isDraftReady = Boolean(sec.draft_content);
-                    const isNeedsReview = sec.approval_status === "needs_human_review";
+                    const isApproved = sec.approval_status === "approved";
+                    const isRejected = sec.approval_status === "rejected";
+                    const isChanges = sec.approval_status === "changes_requested";
 
                     return (
                       <div
                         key={sec.id}
                         className={`flex flex-col rounded-2xl border bg-white p-6 shadow-sm ${
-                          isNeedsReview
-                            ? "border-amber-300 ring-2 ring-amber-200"
+                          isApproved
+                            ? "border-emerald-300 ring-2 ring-emerald-100"
+                            : isRejected
+                            ? "border-rose-300 ring-2 ring-rose-100"
                             : "border-slate-200"
                         }`}
                       >
@@ -745,169 +822,107 @@ export default function RFPIntakePage() {
                                 {sec.department}
                               </h4>
                               <p className="text-xs text-slate-500">
-                                Responsable: <strong>{sec.contact_person}</strong>
+                                Responsable Designado: <strong>{sec.contact_person}</strong>
                               </p>
                             </div>
                           </div>
 
+                          {/* Approval Status Badges */}
                           <div className="flex items-center gap-2">
-                            {isNeedsReview && (
-                              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 border border-amber-300">
-                                ⚠️ Requiere Revisión Humana
-                              </span>
-                            )}
-                            {ev && ev.overall_pass && (
+                            {isApproved && (
                               <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 border border-emerald-300">
-                                Evaluación Aprobada ✅
+                                ✅ Aprobado formalmente
                               </span>
                             )}
-                            {!isDraftReady && (
+                            {isRejected && (
+                              <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-800 border border-rose-300">
+                                ❌ Rechazado
+                              </span>
+                            )}
+                            {isChanges && (
+                              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 border border-amber-300">
+                                ⚠️ Cambios Solicitados
+                              </span>
+                            )}
+                            {!isApproved && !isRejected && !isChanges && (
                               <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                                Pendiente de Generación
+                                Pendiente de Aprobación
                               </span>
                             )}
                           </div>
                         </div>
 
-                        {/* Analysis Key Aspects (Part 1 input) */}
-                        <div className="mt-4 rounded-xl bg-slate-50/80 p-4 text-xs text-slate-700">
-                          <p className="font-semibold text-slate-900">
-                            Resumen de Requerimientos Iniciales (Handoff Parte 1):
-                          </p>
-                          <p className="mt-1 leading-relaxed">{ka.summary}</p>
-                          {ka.open_questions && ka.open_questions.length > 0 && (
-                            <div className="mt-2 text-[11px] text-amber-800">
-                              <strong>Preguntas abiertas pendientes:</strong>{" "}
-                              {ka.open_questions.join("; ")}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Generated Draft Section */}
+                        {/* HITL Approval Decision Action Controls */}
                         {isDraftReady && (
-                          <div className="mt-6 flex flex-col gap-4">
-                            <div className="flex items-center justify-between">
-                              <h5 className="text-sm font-bold text-slate-900">
-                                Borrador de la Propuesta Económica Generado
-                              </h5>
-                              {isNeedsReview && (
-                                <span className="text-xs italic text-amber-700">
-                                  (Borrador provisional conservado tras agotar iteraciones)
-                                </span>
-                              )}
+                          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-3.5 border border-slate-200">
+                            <div>
+                              <span className="text-xs font-bold text-slate-900">
+                                Sign-off de {sec.contact_person}:
+                              </span>
+                              <p className="text-[11px] text-slate-500">
+                                Interrupción LangGraph (interrupt/resume). Revisión independiente por departamento.
+                              </p>
                             </div>
-                            <div className="rounded-xl border border-slate-200 bg-slate-900/5 p-4 font-mono text-xs text-slate-800 whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto">
-                              {sec.draft_content}
+
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                onClick={() =>
+                                  void handleDepartmentDecision(
+                                    sec.department_id,
+                                    "approve",
+                                    sec.contact_person
+                                  )
+                                }
+                                disabled={actionLoading != null}
+                                className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-500 disabled:bg-slate-300"
+                              >
+                                {actionLoading === `${sec.department_id}-approve`
+                                  ? "Aprobando..."
+                                  : "✅ Aprobar"}
+                              </button>
+                              <button
+                                onClick={() =>
+                                  void handleDepartmentDecision(
+                                    sec.department_id,
+                                    "request_changes",
+                                    sec.contact_person
+                                  )
+                                }
+                                disabled={actionLoading != null}
+                                className="rounded-lg border border-amber-400 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-100 disabled:bg-slate-300"
+                              >
+                                {actionLoading === `${sec.department_id}-request_changes`
+                                  ? "Enviando..."
+                                  : "⚠️ Solicitar Cambios"}
+                              </button>
+                              <button
+                                onClick={() =>
+                                  void handleDepartmentDecision(
+                                    sec.department_id,
+                                    "reject",
+                                    sec.contact_person
+                                  )
+                                }
+                                disabled={actionLoading != null}
+                                className="rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-50 disabled:bg-slate-300"
+                              >
+                                {actionLoading === `${sec.department_id}-reject`
+                                  ? "Rechazando..."
+                                  : "❌ Rechazar"}
+                              </button>
                             </div>
                           </div>
                         )}
 
-                        {/* Parallel Evaluation Results (Part 2) */}
-                        {ev && (
-                          <div className="mt-6 border-t border-slate-100 pt-5">
-                            <h5 className="text-sm font-bold text-slate-900">
-                              Resultado de la Evaluación Automatizada en Paralelo (EvaluationResult)
+                        {/* Generated Draft Section */}
+                        {isDraftReady && (
+                          <div className="mt-4 flex flex-col gap-2">
+                            <h5 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                              Borrador Económico Propuesto
                             </h5>
-
-                            <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-3">
-                              {/* Readability Card */}
-                              <div
-                                className={`rounded-xl border p-3.5 text-xs ${
-                                  ev.readability?.pass
-                                    ? "border-emerald-200 bg-emerald-50/40"
-                                    : "border-rose-200 bg-rose-50/40"
-                                }`}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <span className="font-bold text-slate-800">
-                                    Legibilidad
-                                  </span>
-                                  <span
-                                    className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                                      ev.readability?.pass
-                                        ? "bg-emerald-200 text-emerald-900"
-                                        : "bg-rose-200 text-rose-900"
-                                    }`}
-                                  >
-                                    {ev.readability?.pass ? "APROBADO" : "FALLO"}
-                                  </span>
-                                </div>
-                                <p className="mt-2 text-[11px] text-slate-600">
-                                  Score Reading Ease:{" "}
-                                  <strong>{ev.readability?.score ?? "N/D"}</strong>
-                                </p>
-                              </div>
-
-                              {/* Relevance Card */}
-                              <div
-                                className={`rounded-xl border p-3.5 text-xs ${
-                                  ev.relevance?.pass
-                                    ? "border-emerald-200 bg-emerald-50/40"
-                                    : "border-rose-200 bg-rose-50/40"
-                                }`}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <span className="font-bold text-slate-800">
-                                    Pertinencia
-                                  </span>
-                                  <span
-                                    className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                                      ev.relevance?.pass
-                                        ? "bg-emerald-200 text-emerald-900"
-                                        : "bg-rose-200 text-rose-900"
-                                    }`}
-                                  >
-                                    {ev.relevance?.pass ? "APROBADO" : "FALLO"}
-                                  </span>
-                                </div>
-                                <p className="mt-2 text-[11px] text-slate-600">
-                                  {ev.relevance?.missing_aspects?.length === 0
-                                    ? "Cubre todos los aspectos requeridos."
-                                    : `Faltan ${ev.relevance?.missing_aspects?.length} aspectos.`}
-                                </p>
-                              </div>
-
-                              {/* Compliance Card */}
-                              <div
-                                className={`rounded-xl border p-3.5 text-xs ${
-                                  ev.compliance?.pass
-                                    ? "border-emerald-200 bg-emerald-50/40"
-                                    : "border-rose-200 bg-rose-50/40"
-                                }`}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <span className="font-bold text-slate-800">
-                                    Lineamientos (§5)
-                                  </span>
-                                  <span
-                                    className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                                      ev.compliance?.pass
-                                        ? "bg-emerald-200 text-emerald-900"
-                                        : "bg-rose-200 text-rose-900"
-                                    }`}
-                                  >
-                                    {ev.compliance?.pass ? "CUMPLE 5/5" : "INFRACCIÓN"}
-                                  </span>
-                                </div>
-                                <p className="mt-2 text-[11px] text-slate-600">
-                                  {ev.compliance?.violations?.length === 0
-                                    ? "Moneda, SLA, devoluciones y descuentos validados."
-                                    : `${ev.compliance?.violations?.length} infracciones detectadas.`}
-                                </p>
-                              </div>
+                            <div className="rounded-xl border border-slate-200 bg-slate-900/5 p-4 font-mono text-xs text-slate-800 whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto">
+                              {sec.draft_content}
                             </div>
-
-                            {/* Detailed Feedback & Violations */}
-                            {ev.feedback_for_generator && (
-                              <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs">
-                                <p className="font-semibold text-slate-800">
-                                  Feedback para el Generador / Observaciones Técnicas:
-                                </p>
-                                <p className="mt-1 whitespace-pre-wrap text-slate-700 leading-relaxed">
-                                  {ev.feedback_for_generator}
-                                </p>
-                              </div>
-                            )}
                           </div>
                         )}
                       </div>

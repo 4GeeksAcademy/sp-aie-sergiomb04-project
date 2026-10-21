@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Query, Response, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Body, File, HTTPException, Query, Response, UploadFile, status
 
 # Ensure project root is importable
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
@@ -16,12 +16,19 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from data.pipelines.rfp_intake import (  # noqa: E402
+    ApprovalActionEnum,
+    ApprovalDecision,
     create_rfp_ticket,
+    detect_and_resolve_conflicts,
+    get_final_document,
     get_rfp_ticket_bundle,
+    initiate_ticket_approval_cycle,
     list_rfp_tickets,
     mark_ticket_discarded,
+    resume_department_approval,
     run_rfp_intake_pipeline,
     run_rfp_response_generation_async,
+    synthesize_final_proposal_document,
     update_rfp_ticket_status,
 )
 from trackflow_api.models import RFPTicketStatusEnum  # noqa: E402
@@ -224,4 +231,131 @@ async def generate_rfp_response(
         "status": RFPTicketStatusEnum.GENERANDO_BORRADOR.value,
         "message": "Generación y evaluación de propuesta económica iniciada en segundo plano.",
     }
+
+
+@router.post(
+    "/{ticket_id}/approval/initiate",
+    status_code=status.HTTP_200_OK,
+    summary="Initiate departmental approval cycle (HITL) and transition to 'esperando_aprobación'",
+)
+async def initiate_approval_cycle(ticket_id: str) -> dict[str, Any]:
+    """Launch LangGraph isolated approval branches with interrupt() gates per department."""
+    bundle = get_rfp_ticket_bundle(ticket_id)
+    if bundle is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No se encontró el ticket RFP con id '{ticket_id}'.",
+        )
+
+    try:
+        res = initiate_ticket_approval_cycle(ticket_id)
+        return res
+    except Exception as exc:
+        logger.error("Error initiating approval cycle for ticket %s: %s", ticket_id, exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error iniciando el ciclo de aprobaciones: {exc}",
+        )
+
+
+@router.post(
+    "/{ticket_id}/approval/{department_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Submit human approval decision (HITL resume) for a department section",
+)
+async def submit_department_approval(
+    ticket_id: str,
+    department_id: str,
+    decision_payload: dict[str, Any] = Body(...),
+) -> dict[str, Any]:
+    """Resume the paused LangGraph gate for this department and check if final document should be generated."""
+    bundle = get_rfp_ticket_bundle(ticket_id)
+    if bundle is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No se encontró el ticket RFP con id '{ticket_id}'.",
+        )
+
+    action_str = decision_payload.get("action", "approve")
+    approver = decision_payload.get("approver", "Responsable")
+    notes = decision_payload.get("notes")
+
+    try:
+        action_enum = ApprovalActionEnum(action_str.lower())
+    except ValueError:
+        action_enum = ApprovalActionEnum.APPROVE
+
+    decision = ApprovalDecision(
+        department_id=department_id,
+        action=action_enum,
+        approver=approver,
+        notes=notes,
+    )
+
+    try:
+        res = resume_department_approval(
+            ticket_id=ticket_id,
+            department_id=department_id,
+            decision=decision,
+        )
+        return res
+    except Exception as exc:
+        logger.error("Error resuming approval for department %s in ticket %s: %s", department_id, ticket_id, exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error registrando aprobación: {exc}",
+        )
+
+
+@router.get(
+    "/{ticket_id}/final-document",
+    status_code=status.HTTP_200_OK,
+    summary="Retrieve final consolidated proposal document (Milestone 9 - Part 3)",
+)
+async def get_ticket_final_document(ticket_id: str) -> dict[str, Any]:
+    """Retrieve the synthesized RFPFinalDocument when the ticket is in 'terminado' status."""
+    bundle = get_rfp_ticket_bundle(ticket_id)
+    if bundle is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No se encontró el ticket RFP con id '{ticket_id}'.",
+        )
+
+    final_doc = get_final_document(ticket_id)
+    if final_doc is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Aún no se ha generado el documento final para el ticket '{ticket_id}'.",
+        )
+    return final_doc
+
+
+@router.post(
+    "/{ticket_id}/arbitrate",
+    status_code=status.HTTP_200_OK,
+    summary="Trigger §7 fixed arbitration conflict check across active department sections",
+)
+async def arbitrate_ticket_conflicts(ticket_id: str) -> dict[str, Any]:
+    """Inspect structured state for volume-vs-capacity, returns-sla-breach, or currency-mismatch triggers."""
+    bundle = get_rfp_ticket_bundle(ticket_id)
+    if bundle is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No se encontró el ticket RFP con id '{ticket_id}'.",
+        )
+
+    metadata = bundle.get("metadata") or {}
+    resolutions, traces = detect_and_resolve_conflicts(
+        client_country=metadata.get("client_country"),
+        department_sections=bundle.get("department_sections") or [],
+        metadata=metadata,
+    )
+
+    return {
+        "ticket_id": ticket_id,
+        "conflict_count": len(resolutions),
+        "resolutions": [r.model_dump() for r in resolutions],
+        "traces": [t.model_dump() for t in traces],
+    }
+
 
