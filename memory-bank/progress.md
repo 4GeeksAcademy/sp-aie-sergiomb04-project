@@ -25,6 +25,19 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
 
 ## Trabajo en curso y recientes entregables
 
+### Implementación Completa de Modo Oscuro en UIs (Backoffice & Website - Completado)
+- Configuración de selector manual en Tailwind v4 mediante `@variant dark (&:where(.dark, .dark *));` en `uis/backoffice/app/globals.css` y `uis/website/app/globals.css`, evitando que `prefers-color-scheme` sobreescriba la preferencia del usuario.
+- Script anti-FOUC en `<head>` para cargar la preferencia `theme` desde `localStorage` sin saltos visuales ni parpadeos.
+- Componente `ThemeToggle` reactivo basado en `useSyncExternalStore` para sincronizar `light` / `dark` en toda la aplicación sin advertencias de renderizado en cascada de React 19 / ESLint.
+- Cobertura completa de modo oscuro en Website (`uis/website`) y Backoffice (`uis/backoffice`), incluyendo vistas protegidas y componentes internos de:
+  - `rfp` (`uis/backoffice/app/(protected)/rfp/page.tsx`): cabeceras, tarjetas de tickets, panel de arbitraje HITL, decisiones departamentales y visor de borradores.
+  - `incidents`: paneles de carga y resumen CSV, formulario de registro, filtros y listado de incidencias con badges de estado y sedes.
+  - `suppliers`: directorio de proveedores, modal de creación, tabla interactiva, edición rápida de tarifas y estados.
+  - `telemetry`: tarjetas KPI de eventos, selectores de rango temporal (24h/7d/30d/personalizado) y tablas métricas de fallos de auth, errores por tipo y latencia por ruta.
+  - `reporting`: cuadro ejecutivo de desempeño semanal, filtros por almacén (Los Ángeles / Zaragoza), búsqueda de marcas clientes y tabla detallada con tasas de discrepancia.
+  - `knowledge`: corregido título en blanco en modo claro/oscuro alineado al diseño global.
+- Verificación exhaustiva: 27/27 tests Jest pasando y compilación de producción Next.js (`npm run build`) exitosa.
+
 ### Telemetría TrackFlow — Pipeline de Análisis y Endpoint de Reporte (Completado)
 - Módulo analítico en `services/telemetry/analysis.py` (y `trackflow_api/telemetry/analysis.py`) con 4 funciones operacionales vectorizadas en Pandas: `events_per_day`, `error_rate_by_type`, `auth_failure_rate` y `latency_by_route`.
 - Filtrado temporal SQL estricto en UTC (`timestamp >= :start AND timestamp < :end`) y extracción de dimensiones desde tags.
@@ -315,6 +328,33 @@ fp_final_documents).
   - 7 pruebas en 	ests/pipelines/test_rfp_approval.py (interrupción, reanudación, paralelismo entre departamentos, 3 triggers de arbitraje y prueba E2E de punta a punta desde Parte 1 hasta Parte 3).
   - 3 pruebas de integración de endpoints en services/api/tests/test_rfp_routes.py.
   - Documentación completa en docs/milestone-9/README_part3.md.
+
+### Modo Oscuro en UIs (Backoffice y Website) y Corrección de Título en /knowledge (En curso en `feat/uis-dark-mode`)
+- **Corrección de título en `/knowledge`**:
+  - Homogeneizado el estilo tipográfico del título a `text-2xl font-semibold tracking-tight text-slate-950 dark:text-white` alineándolo con el resto de secciones operativas como `/products` (`InventoryProductsPanel.tsx`).
+  - Configurado el selector explícito `@variant dark (&:where(.dark, .dark *));` en Tailwind CSS v4 para evitar que la preferencia del sistema operativo (`prefers-color-scheme: dark`) aplique clases `dark:` sobre fondos claros si el modo oscuro no ha sido activado explícitamente.
+- **Implementación de Dark Mode en Backoffice y Website**:
+  - Soporte de variante `dark:` por clase en `uis/backoffice/app/globals.css` y `uis/website/app/globals.css`.
+  - Componente accesible `ThemeToggle` (`useSyncExternalStore` con `MutationObserver`) para alternar temas sin parpadeos ni problemas de renderizado de React 19.
+  - Script anti-FOUC en `<head>` para persistir la preferencia en `localStorage` (`trackflow_theme`) y aplicarla inmediatamente antes de la hidratación.
+  - Integración en cabeceras de navegación (`ProtectedNavLinks`, `layout.tsx` en Backoffice y `Navbar.tsx` en Website), páginas públicas (`/login`, `/register`, `/forgot-password`, `/reset-password`) y secciones clave (`/products`, `/knowledge`, `/application`, etc.).
+  - Verificación exitosa de compilación (`next build`) y pruebas (`jest`) en ambas aplicaciones.
+
+### Renovación Integral y Saneamiento de Landing Page en `uis/website` (Completado)
+- **Saneamiento de navegación y eliminación de rutas 404**:
+  - Reemplazados enlaces rotos (`/projects`, `/tasks`, `/reports`, `/dashboard`) por navegación por anclas (`#servicios`, `#rastreo`, `#operacion`, `#faq`), botón directo a `/application` y enlace al Portal Backoffice.
+- **Widget de Rastreo Multicarrier Demostrativo (`TrackingWidget.tsx`)**:
+  - Basado en datos reales de TrackFlow (Hub Los Ángeles, Hub Zaragoza, UPS, FedEx, SEUR, DHL), con chips de prueba rápida (`TRF-US-8941`, `TRF-ES-3312`, `TRF-INT-502`), estimaciones de entrega según SLA y timeline de eventos operativos.
+- **Flujo Operativo de Extremo a Extremo (`OperationalWorkflow.tsx`)**:
+  - 4 etapas del pipeline logístico: Inbound & Almacén ($m^3$, 30 días gracia), Ingesta & Picking, Smart Carrier Dispatcher y Logística Inversa con IA (<48h).
+- **Base de Conocimiento y FAQ Operativo (`FaqSection.tsx`)**:
+  - Preguntas y respuestas detalladas y accesibles basadas en las políticas oficiales de la compañía (SLAs de entrega, carriers por país, ventana de devolución de 30 días, costes de almacenamiento).
+- **Banner de Conversión y Footer Profesional (`CtaBanner.tsx` y `Footer.tsx`)**:
+  - Rediseño con 4 columnas, cobertura de hubs, contacto verificado y enlaces institucionales.
+- **Formulario de Solicitud Profesional**:
+  - Mensaje de confirmación orientado a respuesta comercial en <24h eliminando notas de simulación incompleta.
+- **Verificación Técnica**:
+  - `next build` en Turbopack superado al 100% con páginas estáticas pre-renderizadas y `eslint` pasando con cero advertencias.
 
 ## Proximos pasos
 1. Pasar a producción el flujo agéntico completo de RFPs en TrackFlow Tech tras revisión con los directores de departamento (Miguel Torres, Ana Whitfield, Carlos Vega, Sofía Ramos).
