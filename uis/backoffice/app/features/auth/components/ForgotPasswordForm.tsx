@@ -35,7 +35,7 @@ export function ForgotPasswordForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="space-y-2">
-        <label htmlFor="email" className="text-sm font-medium text-slate-700">
+        <label htmlFor="email" className="text-sm font-medium text-slate-700 dark:text-slate-300">
           Email
         </label>
         <input
@@ -43,7 +43,7 @@ export function ForgotPasswordForm() {
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-500"
+          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-slate-400"
           placeholder="operator@trackflow.com"
           autoComplete="email"
           required
@@ -52,7 +52,7 @@ export function ForgotPasswordForm() {
       </div>
 
       {message && (
-        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
           {message}
         </p>
       )}
@@ -60,13 +60,13 @@ export function ForgotPasswordForm() {
       <button
         type="submit"
         disabled={isSubmitting || submitted}
-        className="w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-100"
       >
         {isSubmitting ? "Enviando..." : "Enviar enlace de recuperación"}
       </button>
 
-      <p className="text-sm text-slate-600">
-        <Link href="/login" className="font-medium text-slate-900 underline">
+      <p className="text-sm text-slate-600 dark:text-slate-400">
+        <Link href="/login" className="font-medium text-slate-900 underline dark:text-slate-200">
           Volver a iniciar sesión
         </Link>
       </p>

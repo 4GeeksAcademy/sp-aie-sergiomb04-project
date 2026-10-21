@@ -92,7 +92,7 @@ export default function Home() {
         title="Características principales"
         description="Una plataforma diseñada para automatizar y escalar cada parte de tu operación logística."
         items={featureItems}
-        backgroundClassName="bg-white"
+        backgroundClassName="bg-white dark:bg-slate-900"
         borderedCards
       />
 
@@ -101,7 +101,7 @@ export default function Home() {
         title="Por qué elegir TrackFlow?"
         description="Más eficiencia, menos errores y una mejor experiencia para tus clientes."
         items={benefitItems}
-        backgroundClassName="bg-gray-100"
+        backgroundClassName="bg-gray-100 dark:bg-slate-950"
       />
     </main>
   );

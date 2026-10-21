@@ -11,13 +11,13 @@ function getStockVisualState(stock: number): { label: string; className: string 
   if (stock <= 10) {
     return {
       label: "Stock bajo",
-      className: "border-amber-200 bg-amber-50 text-amber-700",
+      className: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300",
     };
   }
 
   return {
     label: "Stock normal",
-    className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    className: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300",
   };
 }
 
@@ -63,26 +63,26 @@ export function InventoryProductsPanel() {
   );
 
   return (
-    <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-950">SKU Inventory</h1>
-          <p className="mt-2 text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold text-slate-950 dark:text-white">SKU Inventory</h1>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
             Vista unificada de SKU por almacén (LA y ZGZ) con current_stock calculado desde StockEntry y StockExit.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <span className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+          <span className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
             Total SKU: {products.length}
           </span>
-          <span className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+          <span className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
             Stock bajo: {lowStockCount}
           </span>
           <button
             type="button"
             onClick={() => void loadProducts()}
-            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
           >
             Refrescar
           </button>
@@ -98,9 +98,9 @@ export function InventoryProductsPanel() {
           Cargando SKU...
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50 text-left text-slate-700">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+          <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
+            <thead className="bg-slate-50 text-left text-slate-700 dark:bg-slate-800 dark:text-slate-300">
               <tr>
                 <th className="px-4 py-3 font-semibold">Identificador</th>
                 <th className="px-4 py-3 font-semibold">SKU</th>
@@ -112,21 +112,21 @@ export function InventoryProductsPanel() {
                 <th className="px-4 py-3 font-semibold">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
+            <tbody className="divide-y divide-slate-100 bg-white dark:divide-slate-800 dark:bg-slate-900">
               {products.map((product) => {
                 const stockVisual = getStockVisualState(product.current_stock);
 
                 return (
                   <tr key={product.id}>
-                    <td className="px-4 py-3 text-slate-700">{product.id}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-slate-700">{product.sku}</td>
-                    <td className="px-4 py-3 text-slate-900">{product.name}</td>
-                    <td className="px-4 py-3 text-slate-700">{product.client_name}</td>
-                    <td className="px-4 py-3 text-slate-700">{getCategoryLabel(product.category)}</td>
-                    <td className="px-4 py-3 text-slate-700">{product.warehouse}</td>
+                    <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{product.id}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-slate-700 dark:text-slate-300">{product.sku}</td>
+                    <td className="px-4 py-3 text-slate-900 dark:text-slate-100">{product.name}</td>
+                    <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{product.client_name}</td>
+                    <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{getCategoryLabel(product.category)}</td>
+                    <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{product.warehouse}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-slate-900">{product.current_stock}</span>
+                        <span className="font-semibold text-slate-900 dark:text-slate-100">{product.current_stock}</span>
                         <span className={`rounded-full border px-2 py-1 text-xs font-medium whitespace-nowrap shrink-0 ${stockVisual.className}`}>
                           {stockVisual.label}
                         </span>
@@ -136,13 +136,13 @@ export function InventoryProductsPanel() {
                       <div className="flex flex-wrap gap-2">
                         <Link
                           href={`/backoffice/inventory/orders/inbound?sku_id=${product.id}`}
-                          className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                          className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-950/70"
                         >
                           + StockEntry
                         </Link>
                         <Link
                           href={`/backoffice/inventory/orders/outbound?sku_id=${product.id}`}
-                          className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                          className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-950/70"
                         >
                           - StockExit
                         </Link>

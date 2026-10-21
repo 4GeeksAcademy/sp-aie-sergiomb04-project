@@ -22,7 +22,7 @@ export function FormStepIndicator({ currentStep }: FormStepIndicatorProps) {
             aria-current={isCurrent ? "step" : undefined}
             className={[
               "rounded-full px-3 py-1",
-              isCurrent ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700",
+              isCurrent ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700 dark:bg-slate-800 dark:text-slate-300",
             ].join(" ")}
           >
             {item.label}

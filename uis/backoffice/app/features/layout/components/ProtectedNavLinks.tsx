@@ -19,7 +19,7 @@ export function ProtectedNavLinks({ mobile = false }: ProtectedNavLinksProps) {
   return (
     <nav
       className={[
-        "items-center gap-3 text-sm font-medium text-slate-600",
+        "items-center gap-3 text-sm font-medium text-slate-600 dark:text-slate-300",
         mobile ? "mt-4 flex gap-2 md:hidden" : "hidden md:flex",
       ].join(" ")}
       aria-label={mobile ? "Navegacion principal movil" : "Navegacion principal"}
@@ -29,7 +29,7 @@ export function ProtectedNavLinks({ mobile = false }: ProtectedNavLinksProps) {
           key={item.href}
           href={item.href}
           prefetch={false}
-          className="rounded-lg px-3 py-2 hover:bg-slate-100"
+          className="rounded-lg px-3 py-2 transition hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white"
         >
           {item.label}
         </Link>

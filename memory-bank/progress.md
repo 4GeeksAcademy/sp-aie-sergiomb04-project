@@ -316,6 +316,17 @@ fp_final_documents).
   - 3 pruebas de integración de endpoints en services/api/tests/test_rfp_routes.py.
   - Documentación completa en docs/milestone-9/README_part3.md.
 
+### Modo Oscuro en UIs (Backoffice y Website) y Corrección de Título en /knowledge (En curso en `feat/uis-dark-mode`)
+- **Corrección de título en `/knowledge`**:
+  - Homogeneizado el estilo tipográfico del título a `text-2xl font-semibold tracking-tight text-slate-950 dark:text-white` alineándolo con el resto de secciones operativas como `/products` (`InventoryProductsPanel.tsx`).
+  - Configurado el selector explícito `@variant dark (&:where(.dark, .dark *));` en Tailwind CSS v4 para evitar que la preferencia del sistema operativo (`prefers-color-scheme: dark`) aplique clases `dark:` sobre fondos claros si el modo oscuro no ha sido activado explícitamente.
+- **Implementación de Dark Mode en Backoffice y Website**:
+  - Soporte de variante `dark:` por clase en `uis/backoffice/app/globals.css` y `uis/website/app/globals.css`.
+  - Componente accesible `ThemeToggle` (`useSyncExternalStore` con `MutationObserver`) para alternar temas sin parpadeos ni problemas de renderizado de React 19.
+  - Script anti-FOUC en `<head>` para persistir la preferencia en `localStorage` (`trackflow_theme`) y aplicarla inmediatamente antes de la hidratación.
+  - Integración en cabeceras de navegación (`ProtectedNavLinks`, `layout.tsx` en Backoffice y `Navbar.tsx` en Website), páginas públicas (`/login`, `/register`, `/forgot-password`, `/reset-password`) y secciones clave (`/products`, `/knowledge`, `/application`, etc.).
+  - Verificación exitosa de compilación (`next build`) y pruebas (`jest`) en ambas aplicaciones.
+
 ## Proximos pasos
 1. Pasar a producción el flujo agéntico completo de RFPs en TrackFlow Tech tras revisión con los directores de departamento (Miguel Torres, Ana Whitfield, Carlos Vega, Sofía Ramos).
 2. Integrar el pipeline con el sistema de mensajería/email saliente para el envío automatizado de la propuesta económica final a los clientes potenciales.

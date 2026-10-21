@@ -21,11 +21,13 @@ function FeatureCard({ title, description, bordered = false }: FeatureCardProps)
     <article
       className={[
         "rounded-xl p-6",
-        bordered ? "border border-gray-200 transition hover:shadow-md" : "",
+        bordered
+          ? "border border-gray-200 bg-white transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
+          : "bg-white/60 dark:bg-slate-900/60",
       ].join(" ")}
     >
-      <h3 className="mb-2 text-xl font-semibold text-gray-900">{title}</h3>
-      <p className="text-gray-600">{description}</p>
+      <h3 className="mb-2 text-xl font-semibold text-gray-900 dark:text-white">{title}</h3>
+      <p className="text-gray-600 dark:text-slate-300">{description}</p>
     </article>
   );
 }
@@ -35,16 +37,16 @@ export function Features({
   title,
   description,
   items,
-  backgroundClassName = "bg-white",
+  backgroundClassName = "bg-white dark:bg-slate-900",
   borderedCards = false,
 }: FeaturesProps) {
   return (
     <section aria-labelledby={headingId} className={`${backgroundClassName} px-6 py-20`}>
       <div className="mx-auto max-w-6xl text-center">
-        <h2 id={headingId} className="mb-4 text-3xl font-bold text-gray-900">
+        <h2 id={headingId} className="mb-4 text-3xl font-bold text-gray-900 dark:text-white">
           {title}
         </h2>
-        <p className="mx-auto mb-12 max-w-2xl text-gray-600">{description}</p>
+        <p className="mx-auto mb-12 max-w-2xl text-gray-600 dark:text-slate-300">{description}</p>
 
         <div className="grid gap-8 text-left md:grid-cols-3">
           {items.map((item) => (

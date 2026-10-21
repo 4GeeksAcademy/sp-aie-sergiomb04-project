@@ -67,13 +67,12 @@ export function RegisterForm() {
       return;
     }
 
-    const registerPayload = toRegisterRequestPayload(form);
-
     try {
-      await register(registerPayload);
+      await register(toRegisterRequestPayload(form));
+
       await login({
-        email: registerPayload.email,
-        password: registerPayload.password,
+        email: form.email.trim(),
+        password: form.password,
       });
 
       startTransition(() => {
@@ -82,28 +81,29 @@ export function RegisterForm() {
       });
     } catch (unknownError: unknown) {
       setSubmitError(
-        unknownError instanceof Error ? unknownError.message : "No se pudo completar el registro"
+        unknownError instanceof Error
+          ? unknownError.message
+          : "No se pudo completar el registro"
       );
     }
   };
 
   const handleChange = (field: keyof RegisterPayload, value: string) => {
     setForm((prevState) => ({ ...prevState, [field]: value }));
-    setErrors((prevErrors) => {
-      if (!prevErrors[field]) {
-        return prevErrors;
-      }
 
-      const nextErrors = { ...prevErrors };
-      delete nextErrors[field];
-      return nextErrors;
-    });
+    if (errors[field]) {
+      setErrors((prevErrors) => {
+        const updatedErrors = { ...prevErrors };
+        delete updatedErrors[field];
+        return updatedErrors;
+      });
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <label htmlFor="email" className="text-sm font-medium text-slate-700">
+        <label htmlFor="email" className="text-sm font-medium text-slate-700 dark:text-slate-300">
           Email
         </label>
         <input
@@ -111,16 +111,16 @@ export function RegisterForm() {
           type="email"
           value={form.email}
           onChange={(event) => handleChange("email", event.target.value)}
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-500"
+          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-slate-400"
           placeholder="operator@trackflow.com"
           autoComplete="email"
           required
         />
-        {errors.email && <p className="text-xs text-rose-700">{errors.email}</p>}
+        {errors.email && <p className="text-xs text-rose-700 dark:text-rose-400">{errors.email}</p>}
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="password" className="text-sm font-medium text-slate-700">
+        <label htmlFor="password" className="text-sm font-medium text-slate-700 dark:text-slate-300">
           Contraseña
         </label>
         <input
@@ -128,16 +128,16 @@ export function RegisterForm() {
           type="password"
           value={form.password}
           onChange={(event) => handleChange("password", event.target.value)}
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-500"
+          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-slate-400"
           placeholder="Mínimo 8 caracteres"
           autoComplete="new-password"
           required
         />
-        {errors.password && <p className="text-xs text-rose-700">{errors.password}</p>}
+        {errors.password && <p className="text-xs text-rose-700 dark:text-rose-400">{errors.password}</p>}
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="name" className="text-sm font-medium text-slate-700">
+        <label htmlFor="name" className="text-sm font-medium text-slate-700 dark:text-slate-300">
           Nombre (opcional)
         </label>
         <input
@@ -145,14 +145,14 @@ export function RegisterForm() {
           type="text"
           value={form.name}
           onChange={(event) => handleChange("name", event.target.value)}
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-500"
+          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-slate-400"
           placeholder="Nombre completo"
         />
-        {errors.name && <p className="text-xs text-rose-700">{errors.name}</p>}
+        {errors.name && <p className="text-xs text-rose-700 dark:text-rose-400">{errors.name}</p>}
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="phone" className="text-sm font-medium text-slate-700">
+        <label htmlFor="phone" className="text-sm font-medium text-slate-700 dark:text-slate-300">
           Teléfono (opcional)
         </label>
         <input
@@ -160,13 +160,13 @@ export function RegisterForm() {
           type="text"
           value={form.phone}
           onChange={(event) => handleChange("phone", event.target.value)}
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-500"
+          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-slate-400"
           placeholder="+34 600 000 000"
         />
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="address" className="text-sm font-medium text-slate-700">
+        <label htmlFor="address" className="text-sm font-medium text-slate-700 dark:text-slate-300">
           Dirección (opcional)
         </label>
         <input
@@ -174,13 +174,13 @@ export function RegisterForm() {
           type="text"
           value={form.address}
           onChange={(event) => handleChange("address", event.target.value)}
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-500"
+          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-slate-400"
           placeholder="Calle, ciudad, país"
         />
       </div>
 
       {submitError && (
-        <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300">
           {submitError}
         </p>
       )}
@@ -188,14 +188,14 @@ export function RegisterForm() {
       <button
         type="submit"
         disabled={isPending || hasErrors}
-        className="w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-100"
       >
         {isPending ? "Creando cuenta..." : "Crear cuenta"}
       </button>
 
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-slate-600 dark:text-slate-400">
         ¿Ya tienes cuenta?{" "}
-        <Link href="/login" className="font-medium text-slate-900 underline">
+        <Link href="/login" className="font-medium text-slate-900 underline dark:text-slate-200">
           Inicia sesión
         </Link>
       </p>

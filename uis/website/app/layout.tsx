@@ -52,8 +52,16 @@ export default function RootLayout({
     <html
       lang="es"
       className={`${geistSans.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full bg-gray-100 font-sans text-gray-800">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('trackflow_theme');var d=window.matchMedia('(prefers-color-scheme: dark)').matches;if(t==='dark'||(!t&&d)){document.documentElement.classList.add('dark')}else{document.documentElement.classList.remove('dark')}}catch(e){}})()`,
+          }}
+        />
+      </head>
+      <body className="min-h-full bg-gray-100 font-sans text-gray-800 transition-colors duration-150 dark:bg-slate-950 dark:text-slate-100">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
