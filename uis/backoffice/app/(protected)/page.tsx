@@ -1,3 +1,5 @@
+import { getSessionToken } from "@/app/features/auth/server/session";
+import { RfpDashboardNotifications } from "@/app/features/rfp/components/RfpDashboardNotifications";
 import { businessLogicSnapshot } from "../../../../src/demo";
 
 function formatCurrency(value: number) {
@@ -27,7 +29,14 @@ const getValidationStatus = (element: ValidationResult) => {
   return `Invalido: ${element.errors.join(", ")}`;
 };
 
-export default function Home() {
+export default async function Home() {
+  let sessionToken: string | null = null;
+  try {
+    sessionToken = await getSessionToken();
+  } catch {
+    sessionToken = null;
+  }
+
   const categoryEntries = Object.entries(businessLogicSnapshot.categoryCounts);
   const shipmentStatusEntries = Object.entries(businessLogicSnapshot.shipmentsByStatus);
 
@@ -42,11 +51,15 @@ export default function Home() {
             Dashboard operativo
           </h1>
           <p className="max-w-2xl text-slate-600 dark:text-slate-400">
-            El acceso autenticado habilita la operativa interna de incidencias, proveedores y
-            seguimiento del estado del negocio desde un único panel.
+            El acceso autenticado habilita la operativa interna de incidencias, proveedores,
+            notificaciones comerciales de RFPs en tiempo real (SSE) y seguimiento del estado del
+            negocio desde un único panel.
           </p>
         </div>
       </section>
+
+      {/* Real-time SSE RFP Notifications Panel (visually distinguishable from operational metrics) */}
+      <RfpDashboardNotifications initialToken={sessionToken} />
 
       <section className="grid gap-6 md:grid-cols-3">
         <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
