@@ -181,31 +181,31 @@ export function StockExitFormPanel() {
   };
 
   return (
-    <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <header>
-        <h1 className="text-2xl font-semibold text-slate-950">Registrar StockExit</h1>
-        <p className="mt-2 text-sm text-slate-600">
+        <h1 className="text-2xl font-semibold text-slate-950 dark:text-white">Registrar StockExit</h1>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
           Registra despacho (dispatch) o baja por pérdida (loss) usando current_stock reactivo.
         </p>
       </header>
 
       {error && (
-        <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>
+        <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300">{error}</p>
       )}
 
       {success && (
-        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
           {success}
         </p>
       )}
 
       <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2 text-sm md:col-span-2">
-          <span className="font-medium text-slate-700">SKU (selección por nombre)</span>
+          <span className="font-medium text-slate-700 dark:text-slate-300">SKU (selección por nombre)</span>
           <select
             value={form.sku_id}
             onChange={(event) => setForm((prev) => ({ ...prev, sku_id: event.target.value }))}
-            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700"
+            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             disabled={isLoadingProducts || isSubmitting}
             required
           >
@@ -218,28 +218,28 @@ export function StockExitFormPanel() {
           </select>
         </label>
 
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-          current_stock disponible: <span className="font-semibold">{selectedProduct?.current_stock ?? "-"}</span>
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-300">
+          current_stock disponible: <span className="font-semibold text-slate-900 dark:text-slate-100">{selectedProduct?.current_stock ?? "-"}</span>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-          warehouse asignado automáticamente según SKU: {selectedProduct?.warehouse ?? "-"}
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-300">
+          warehouse asignado automáticamente según SKU: <span className="font-semibold text-slate-900 dark:text-slate-100">{selectedProduct?.warehouse ?? "-"}</span>
         </div>
 
         <label className="space-y-2 text-sm">
-          <span className="font-medium text-slate-700">quantity</span>
+          <span className="font-medium text-slate-700 dark:text-slate-300">quantity</span>
           <input
             type="number"
             min={1}
             value={form.quantity}
             onChange={(event) => setForm((prev) => ({ ...prev, quantity: event.target.value }))}
-            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-700"
+            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             required
           />
         </label>
 
         <label className="space-y-2 text-sm">
-          <span className="font-medium text-slate-700">exit_type</span>
+          <span className="font-medium text-slate-700 dark:text-slate-300">exit_type</span>
           <select
             value={form.exit_type}
             onChange={(event) =>
@@ -249,7 +249,7 @@ export function StockExitFormPanel() {
                 tracking_number: event.target.value === "loss" ? "" : prev.tracking_number,
               }))
             }
-            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700"
+            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             required
           >
             <option value="dispatch">dispatch</option>
@@ -258,12 +258,12 @@ export function StockExitFormPanel() {
         </label>
 
         <label className="space-y-2 text-sm md:col-span-2">
-          <span className="font-medium text-slate-700">tracking_number</span>
+          <span className="font-medium text-slate-700 dark:text-slate-300">tracking_number</span>
           <input
             type="text"
             value={form.tracking_number}
             onChange={(event) => setForm((prev) => ({ ...prev, tracking_number: event.target.value }))}
-            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-700"
+            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 placeholder:text-slate-400 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:disabled:bg-slate-800/40"
             placeholder="1Z999AA10123456784"
             required={form.exit_type === "dispatch"}
             disabled={form.exit_type === "loss"}
@@ -271,7 +271,7 @@ export function StockExitFormPanel() {
         </label>
 
         {exceedsStock && (
-          <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700 md:col-span-2">
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300 md:col-span-2">
             Advertencia: la cantidad solicitada supera el current_stock disponible.
           </p>
         )}
@@ -280,7 +280,7 @@ export function StockExitFormPanel() {
           <button
             type="submit"
             disabled={isSubmitting || isLoadingProducts || exceedsStock}
-            className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
           >
             {isSubmitting ? "Guardando..." : "Registrar StockExit"}
           </button>
