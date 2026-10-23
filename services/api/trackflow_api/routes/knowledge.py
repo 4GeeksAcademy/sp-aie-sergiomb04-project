@@ -59,3 +59,23 @@ async def query_knowledge_base(payload: KnowledgeQueryRequest) -> KnowledgeQuery
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error processing knowledge base query.",
         )
+
+
+
+# ── Real-Time WebSocket Streaming Alias for Knowledge Assistant ──
+from fastapi import WebSocket
+from trackflow_api.ws_chat import handle_agent_websocket
+
+
+@router.websocket("/ws")
+async def knowledge_chat_websocket(websocket: WebSocket) -> None:
+    """WebSocket alias for knowledge/support assistant streaming."""
+    await handle_agent_websocket(websocket)
+
+
+@router.websocket("/ws/{session_id}")
+async def knowledge_chat_websocket_with_session(
+    websocket: WebSocket, session_id: str
+) -> None:
+    """WebSocket alias for knowledge/support assistant streaming bound to `session_id`."""
+    await handle_agent_websocket(websocket, path_session_id=session_id)
