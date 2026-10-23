@@ -36,6 +36,7 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
   - `telemetry`: tarjetas KPI de eventos, selectores de rango temporal (24h/7d/30d/personalizado) y tablas métricas de fallos de auth, errores por tipo y latencia por ruta.
   - `reporting`: cuadro ejecutivo de desempeño semanal, filtros por almacén (Los Ángeles / Zaragoza), búsqueda de marcas clientes y tabla detallada con tasas de discrepancia.
   - `knowledge`: corregido título en blanco en modo claro/oscuro alineado al diseño global.
+  - `inventory`: soporte completo de modo oscuro en formularios de "Registrar StockEntry" (`StockEntryFormPanel`), "Registrar StockExit" (`StockExitFormPanel`), historial de movimientos (`InventoryOrdersHistoryPanel`), páginas contenedoras y controles asociados (inputs, selects, badges de warehouse/stock, banners de error/éxito y botones de acción).
 - Verificación exhaustiva: 27/27 tests Jest pasando y compilación de producción Next.js (`npm run build`) exitosa.
 
 ### Telemetría TrackFlow — Pipeline de Análisis y Endpoint de Reporte (Completado)
