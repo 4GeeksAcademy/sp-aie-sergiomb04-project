@@ -133,8 +133,8 @@ export function buildAgentWebSocketUrl(params: {
 }
 
 /**
- * Merge server-rehydrated messages with local messages without losing interrupted partial messages
- * or duplicating existing turns.
+ * Merge server-rehydrated messages with local messages without losing interrupted partial messages,
+ * rolling back completed/longer local messages with stale snapshots, or duplicating existing turns.
  */
 export function mergeRehydratedMessages(
   localMessages: ChatMessage[],
@@ -159,13 +159,40 @@ export function mergeRehydratedMessages(
           ? "streaming"
           : "completed";
 
-    byId.set(key, {
-      ...srv,
-      id: key,
-      message_id: key,
-      status: normalizedStatus,
-      interrupted: normalizedStatus === "interrupted",
-    });
+    const existing = byId.get(key);
+    if (existing) {
+      // Never roll back a locally completed or interrupted message to a stale "streaming" snapshot
+      if (
+        (existing.status === "completed" || existing.status === "interrupted") &&
+        normalizedStatus === "streaming"
+      ) {
+        continue;
+      }
+      // Preserve longer accumulated content if the incoming snapshot is still streaming
+      const preservedContent =
+        normalizedStatus === "streaming" &&
+        (existing.content || "").length > (srv.content || "").length
+          ? existing.content
+          : srv.content;
+
+      byId.set(key, {
+        ...existing,
+        ...srv,
+        id: key,
+        message_id: key,
+        content: preservedContent,
+        status: normalizedStatus,
+        interrupted: normalizedStatus === "interrupted",
+      });
+    } else {
+      byId.set(key, {
+        ...srv,
+        id: key,
+        message_id: key,
+        status: normalizedStatus,
+        interrupted: normalizedStatus === "interrupted",
+      });
+    }
   }
 
   return Array.from(byId.values());

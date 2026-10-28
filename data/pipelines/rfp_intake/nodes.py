@@ -38,13 +38,17 @@ def ingest_document_node(state: RFPIntakeState) -> dict[str, Any]:
     pdf_path = state.get("pdf_path", "")
     raw_markdown = state.get("raw_markdown") or ""
 
+    preextracted_metadata = state.get("metadata") or {}
+    preextracted_readability = state.get("readability_metrics") or {}
+    needs_persistence = not (raw_markdown and preextracted_metadata and preextracted_readability)
+
     if not raw_markdown and pdf_path:
         raw_markdown = convert_pdf_to_markdown(pdf_path)
 
-    readability_metrics = compute_readability_metrics(raw_markdown)
-    metadata = extract_base_metadata(raw_markdown)
+    readability_metrics = preextracted_readability or compute_readability_metrics(raw_markdown)
+    metadata = preextracted_metadata or extract_base_metadata(raw_markdown)
 
-    if ticket_id:
+    if ticket_id and needs_persistence:
         upsert_rfp_metadata(
             ticket_id=ticket_id,
             raw_markdown=raw_markdown,

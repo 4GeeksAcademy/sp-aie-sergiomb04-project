@@ -9,7 +9,6 @@ from typing import Any, Dict, List, Optional
 
 from mcps.trackflow_mcp.auth import (
     SCOPE_INCIDENTS_READ,
-    SCOPE_INCIDENTS_WRITE,
     SCOPE_INVENTORY_READ,
     create_mcp_access_token,
     mcp_auth,
@@ -30,11 +29,11 @@ logger = logging.getLogger("trackflow.agent.mcp_client")
 
 
 def _get_authenticated_token() -> str:
-    """Generate signed OAuth 2.1 access token with required scopes for the agent."""
+    """Generate signed OAuth 2.1 access token with strictly read-only scopes for the support agent."""
     return create_mcp_access_token(
         subject="support-agent-langgraph",
         client_id="trackflow-support-agent",
-        scopes=[SCOPE_INCIDENTS_READ, SCOPE_INCIDENTS_WRITE, SCOPE_INVENTORY_READ],
+        scopes=[SCOPE_INCIDENTS_READ, SCOPE_INVENTORY_READ],
         expires_in_minutes=120,
     )
 

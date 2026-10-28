@@ -3,6 +3,7 @@
 Implements Part 2 of the Real-Time Systems architecture:
 - Persistent bidirectional WebSocket channel per chat session (`session_id` / `thread_id`).
 - Backoffice JWT authentication via handshake query string (`?token=...`) or initial `auth` frame.
+- Session and thread ownership authorization bound to the authenticated user (`owner_id` / `owner_email`).
 - Producer/Consumer (Pub/Sub) decoupling between LangGraph agent execution and WebSocket subscribers.
 - Token-by-token streaming (`token_chunk`) with genuine mid-stream task cancellation on client interrupt.
 - Preservation of partial assistant responses marked as `interrupted` (`generation_interrupted`),
@@ -121,9 +122,17 @@ class ChatMessageRecord:
 class ChatSessionChannel:
     """Per-session state and Pub/Sub channel decoupling agent generation from WebSocket connections."""
 
-    def __init__(self, session_id: str, thread_id: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        session_id: str,
+        thread_id: Optional[str] = None,
+        owner_id: Optional[str] = None,
+        owner_email: Optional[str] = None,
+    ) -> None:
         self.session_id: str = session_id
         self.thread_id: str = thread_id or session_id
+        self.owner_id: Optional[str] = owner_id
+        self.owner_email: Optional[str] = owner_email
         self.messages: list[ChatMessageRecord] = []
         self.subscribers: set[asyncio.Queue[dict[str, Any]]] = set()
         self.active_producer_task: Optional[asyncio.Task[None]] = None
@@ -134,6 +143,22 @@ class ChatSessionChannel:
         self.created_at: str = _utc_now_iso()
         self.updated_at: str = self.created_at
         self._lock = asyncio.Lock()
+
+    def is_owned_by(
+        self, owner_id: Optional[str] = None, owner_email: Optional[str] = None
+    ) -> bool:
+        """Return True if the session has no owner yet or matches the given user identity."""
+        if self.owner_id is None and self.owner_email is None:
+            return True
+        if owner_id and self.owner_id and owner_id == self.owner_id:
+            return True
+        if owner_email and self.owner_email and owner_email == self.owner_email:
+            return True
+        if owner_id and self.owner_email and owner_id == self.owner_email:
+            return True
+        if owner_email and self.owner_id and owner_email == self.owner_id:
+            return True
+        return False
 
     def subscribe(self) -> asyncio.Queue[dict[str, Any]]:
         queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
@@ -158,21 +183,110 @@ class ChatSessionPubSubManager:
 
     def __init__(self, token_delay_seconds: float = 0.025) -> None:
         self._sessions: dict[str, ChatSessionChannel] = {}
+        self._thread_owners: dict[str, tuple[Optional[str], Optional[str]]] = {}
         self.token_delay_seconds: float = token_delay_seconds
 
+    def _verify_thread_ownership(
+        self,
+        thread_id: str,
+        owner_id: Optional[str] = None,
+        owner_email: Optional[str] = None,
+    ) -> None:
+        """Ensure `thread_id` is not bound to a different authenticated user."""
+        if not owner_id and not owner_email:
+            return
+
+        # 1. Check recorded thread owner map
+        recorded = self._thread_owners.get(thread_id)
+        if recorded is not None:
+            rec_id, rec_email = recorded
+            temp_channel = ChatSessionChannel(
+                session_id=thread_id,
+                thread_id=thread_id,
+                owner_id=rec_id,
+                owner_email=rec_email,
+            )
+            if not temp_channel.is_owned_by(owner_id=owner_id, owner_email=owner_email):
+                raise PermissionError(
+                    "No tienes permisos para acceder al hilo de conversación de otro usuario."
+                )
+
+        # 2. Check any other active session referencing this thread_id
+        for existing_sess in self._sessions.values():
+            if existing_sess.thread_id == thread_id:
+                if not existing_sess.is_owned_by(
+                    owner_id=owner_id, owner_email=owner_email
+                ):
+                    raise PermissionError(
+                        "No tienes permisos para acceder al hilo de conversación de otro usuario."
+                    )
+
+        # 3. Check LangGraph checkpoint state if it records a session_user
+        try:
+            app = get_compiled_agent()
+            config = {"configurable": {"thread_id": thread_id}}
+            snapshot = app.get_state(config)
+            if snapshot and snapshot.values:
+                ckpt_user = snapshot.values.get("session_user")
+                if (
+                    isinstance(ckpt_user, str)
+                    and ckpt_user.strip()
+                    and ckpt_user.strip() not in {owner_id or "", owner_email or ""}
+                ):
+                    raise PermissionError(
+                        "No tienes permisos para acceder al hilo de conversación de otro usuario."
+                    )
+        except PermissionError:
+            raise
+        except Exception as exc:
+            logger.debug("Checkpoint ownership check skipped for %s: %s", thread_id, exc)
+
     def get_or_create_session(
-        self, session_id: str, thread_id: Optional[str] = None
+        self,
+        session_id: str,
+        thread_id: Optional[str] = None,
+        owner_id: Optional[str] = None,
+        owner_email: Optional[str] = None,
     ) -> ChatSessionChannel:
         canonical_id = session_id.strip()
-        effective_thread_id = (thread_id or canonical_id).strip()
         session = self._sessions.get(canonical_id)
-        if session is None:
+        effective_thread_id = (
+            (thread_id or (session.thread_id if session else None) or canonical_id).strip()
+        )
+
+        if session is not None:
+            if (owner_id or owner_email) and not session.is_owned_by(
+                owner_id=owner_id, owner_email=owner_email
+            ):
+                raise PermissionError(
+                    "No tienes permisos para acceder a la sesión de conversación de otro usuario."
+                )
+            self._verify_thread_ownership(
+                effective_thread_id, owner_id=owner_id, owner_email=owner_email
+            )
+            if thread_id and thread_id.strip():
+                session.thread_id = effective_thread_id
+            if owner_id and not session.owner_id:
+                session.owner_id = owner_id
+            if owner_email and not session.owner_email:
+                session.owner_email = owner_email
+        else:
+            self._verify_thread_ownership(
+                effective_thread_id, owner_id=owner_id, owner_email=owner_email
+            )
             session = ChatSessionChannel(
-                session_id=canonical_id, thread_id=effective_thread_id
+                session_id=canonical_id,
+                thread_id=effective_thread_id,
+                owner_id=owner_id,
+                owner_email=owner_email,
             )
             self._sessions[canonical_id] = session
-        elif thread_id and thread_id.strip():
-            session.thread_id = thread_id.strip()
+
+        if session.owner_id or session.owner_email:
+            self._thread_owners[session.thread_id] = (
+                session.owner_id,
+                session.owner_email,
+            )
 
         self._sync_from_langgraph_checkpoint(session)
         return session
@@ -185,6 +299,7 @@ class ChatSessionPubSubManager:
             if session.active_producer_task and not session.active_producer_task.done():
                 session.active_producer_task.cancel()
         self._sessions.clear()
+        self._thread_owners.clear()
 
     def _sync_from_langgraph_checkpoint(self, session: ChatSessionChannel) -> dict[str, Any]:
         """Inspect LangGraph MemorySaver checkpoint and rehydrate messages if session history is empty."""
@@ -710,7 +825,7 @@ async def handle_agent_websocket(
     websocket: WebSocket,
     path_session_id: Optional[str] = None,
 ) -> None:
-    """Core WebSocket handler enforcing JWT auth, `session_id` binding, Pub/Sub streaming, and mid-stream abort."""
+    """Core WebSocket handler enforcing JWT auth, `session_id` ownership binding, Pub/Sub streaming, and mid-stream abort."""
     session_id, thread_id = _extract_session_and_thread_id(websocket, path_session_id)
     handshake_token = _extract_handshake_token(websocket)
 
@@ -791,10 +906,21 @@ async def handle_agent_websocket(
         )
         return
 
-    # 4. Bind socket to the session channel & subscribe to Pub/Sub events
-    session = chat_pubsub_manager.get_or_create_session(
-        session_id=session_id, thread_id=thread_id
-    )
+    # 4. Bind socket to the session channel (enforcing user ownership) & subscribe to Pub/Sub events
+    try:
+        session = chat_pubsub_manager.get_or_create_session(
+            session_id=session_id,
+            thread_id=thread_id,
+            owner_id=authenticated_user.id,
+            owner_email=authenticated_user.email,
+        )
+    except PermissionError as exc:
+        await websocket.close(
+            code=status.WS_1008_POLICY_VIOLATION,
+            reason=str(exc),
+        )
+        return
+
     subscriber_queue = session.subscribe()
 
     # 5. Immediately send `session_rehydrated` snapshot so reconnections restore full history/checkpoint

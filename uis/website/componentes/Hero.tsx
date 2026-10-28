@@ -38,8 +38,8 @@ export function Hero({ stats }: HeroProps) {
 
         <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
           <Link
-            href="/dashboard"
-            className="rounded-lg bg-blue-600 px-6 py-3 font-medium !text-white transition hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+            href="/application"
+            className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-6 py-3 font-medium !text-white transition hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
           >
             Solicitar Propuesta
             <svg className="ml-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -60,9 +60,6 @@ export function Hero({ stats }: HeroProps) {
 
         <div className="mt-16 grid grid-cols-2 gap-6 rounded-2xl border border-gray-200/80 bg-white/70 p-6 shadow-sm backdrop-blur-sm sm:grid-cols-4 dark:border-slate-800 dark:bg-slate-900/60">
           {stats.map((stat) => (
-            <div key={stat.label}>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white">{stat.value}</p>
-              <p className="text-gray-500 dark:text-slate-400">{stat.label}</p>
             <div key={stat.label} className="p-2">
               <p className="text-3xl font-extrabold text-blue-600 dark:text-blue-400">{stat.value}</p>
               <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{stat.label}</p>
