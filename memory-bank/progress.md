@@ -25,6 +25,20 @@ Estado general: en ejecucion de Hito 4 (Next.js), con base previa establecida en
 
 ## Trabajo en curso y recientes entregables
 
+### Implementación Completa de Modo Oscuro en UIs (Backoffice & Website - Completado)
+- Configuración de selector manual en Tailwind v4 mediante `@variant dark (&:where(.dark, .dark *));` en `uis/backoffice/app/globals.css` y `uis/website/app/globals.css`, evitando que `prefers-color-scheme` sobreescriba la preferencia del usuario.
+- Script anti-FOUC en `<head>` para cargar la preferencia `theme` desde `localStorage` sin saltos visuales ni parpadeos.
+- Componente `ThemeToggle` reactivo basado en `useSyncExternalStore` para sincronizar `light` / `dark` en toda la aplicación sin advertencias de renderizado en cascada de React 19 / ESLint.
+- Cobertura completa de modo oscuro en Website (`uis/website`) y Backoffice (`uis/backoffice`), incluyendo vistas protegidas y componentes internos de:
+  - `rfp` (`uis/backoffice/app/(protected)/rfp/page.tsx`): cabeceras, tarjetas de tickets, panel de arbitraje HITL, decisiones departamentales y visor de borradores.
+  - `incidents`: paneles de carga y resumen CSV, formulario de registro, filtros y listado de incidencias con badges de estado y sedes.
+  - `suppliers`: directorio de proveedores, modal de creación, tabla interactiva, edición rápida de tarifas y estados.
+  - `telemetry`: tarjetas KPI de eventos, selectores de rango temporal (24h/7d/30d/personalizado) y tablas métricas de fallos de auth, errores por tipo y latencia por ruta.
+  - `reporting`: cuadro ejecutivo de desempeño semanal, filtros por almacén (Los Ángeles / Zaragoza), búsqueda de marcas clientes y tabla detallada con tasas de discrepancia.
+  - `knowledge`: corregido título en blanco en modo claro/oscuro alineado al diseño global.
+  - `inventory`: soporte completo de modo oscuro en formularios de "Registrar StockEntry" (`StockEntryFormPanel`), "Registrar StockExit" (`StockExitFormPanel`), historial de movimientos (`InventoryOrdersHistoryPanel`), páginas contenedoras y controles asociados (inputs, selects, badges de warehouse/stock, banners de error/éxito y botones de acción).
+- Verificación exhaustiva: 27/27 tests Jest pasando y compilación de producción Next.js (`npm run build`) exitosa.
+
 ### Telemetría TrackFlow — Pipeline de Análisis y Endpoint de Reporte (Completado)
 - Módulo analítico en `services/telemetry/analysis.py` (y `trackflow_api/telemetry/analysis.py`) con 4 funciones operacionales vectorizadas en Pandas: `events_per_day`, `error_rate_by_type`, `auth_failure_rate` y `latency_by_route`.
 - Filtrado temporal SQL estricto en UTC (`timestamp >= :start AND timestamp < :end`) y extracción de dimensiones desde tags.
@@ -315,6 +329,33 @@ fp_final_documents).
   - 7 pruebas en 	ests/pipelines/test_rfp_approval.py (interrupción, reanudación, paralelismo entre departamentos, 3 triggers de arbitraje y prueba E2E de punta a punta desde Parte 1 hasta Parte 3).
   - 3 pruebas de integración de endpoints en services/api/tests/test_rfp_routes.py.
   - Documentación completa en docs/milestone-9/README_part3.md.
+
+### Modo Oscuro en UIs (Backoffice y Website) y Corrección de Título en /knowledge (En curso en `feat/uis-dark-mode`)
+- **Corrección de título en `/knowledge`**:
+  - Homogeneizado el estilo tipográfico del título a `text-2xl font-semibold tracking-tight text-slate-950 dark:text-white` alineándolo con el resto de secciones operativas como `/products` (`InventoryProductsPanel.tsx`).
+  - Configurado el selector explícito `@variant dark (&:where(.dark, .dark *));` en Tailwind CSS v4 para evitar que la preferencia del sistema operativo (`prefers-color-scheme: dark`) aplique clases `dark:` sobre fondos claros si el modo oscuro no ha sido activado explícitamente.
+- **Implementación de Dark Mode en Backoffice y Website**:
+  - Soporte de variante `dark:` por clase en `uis/backoffice/app/globals.css` y `uis/website/app/globals.css`.
+  - Componente accesible `ThemeToggle` (`useSyncExternalStore` con `MutationObserver`) para alternar temas sin parpadeos ni problemas de renderizado de React 19.
+  - Script anti-FOUC en `<head>` para persistir la preferencia en `localStorage` (`trackflow_theme`) y aplicarla inmediatamente antes de la hidratación.
+  - Integración en cabeceras de navegación (`ProtectedNavLinks`, `layout.tsx` en Backoffice y `Navbar.tsx` en Website), páginas públicas (`/login`, `/register`, `/forgot-password`, `/reset-password`) y secciones clave (`/products`, `/knowledge`, `/application`, etc.).
+  - Verificación exitosa de compilación (`next build`) y pruebas (`jest`) en ambas aplicaciones.
+
+### Corrección de Aprobaciones Departamentales (HITL) en Propuestas Económicas de RFPs (Completado)
+- **Diagnóstico de causa raíz del error HTTP 500**:
+  - En entornos Dockerizados con bind mounts de host, `sqlite3.connect` y `SqliteSaver.setup()` lanzaban `sqlite3.OperationalError: unable to open database file` al intentar abrir de forma bloqueada el archivo `rfp_approval.db`.
+  - La restricción de versión `langgraph-checkpoint-sqlite<3` en `services/requirements.txt` (2.0.10) presentaba incompatibilidad de serialización (`AttributeError: 'JsonPlusSerializer' object has no attribute 'dumps'`) con `langgraph-checkpoint>=4.3.0`.
+- **Implementación resiliente del Checkpointer en `data/pipelines/rfp_intake/approval_flow.py`**:
+  - Mecanismo multiruta en `get_default_checkpointer()`: evalúa variable de entorno `RFP_APPROVAL_DB_PATH`, candidatos en `data/checkpoints/rfp_checkpoints.sqlite`, `data/checkpoints/rfp_approval.db`, `/tmp/rfp_checkpoints.sqlite` y fallback automático y seguro a `MemorySaver` en memoria ante cualquier fallo de sistema de archivos o lock.
+  - Implementación singleton de `_default_checkpointer` evitando reapertura continua de conexiones SQLite y reejecución redundante de scripts DDL.
+  - Actualización de dependencia en `services/requirements.txt` a `langgraph-checkpoint-sqlite>=3.1.2`, alineada con `services/api/pyproject.toml`.
+- **Mejora en UX y Manejo de Errores en Backoffice UI (`uis/backoffice/app/(protected)/rfp/page.tsx`)**:
+  - Incorporación de estado `approvalError` con banner de error visible y descartable en la interfaz para acciones de "Aprobar", "Solicitar Cambios" y "Rechazar", evitando fallos silenciosos ante problemas de red o backend.
+  - Tipado estricto en interfaces de arbitraje (`ArbitrationResponse`, `ArbitrationResolution`) eliminando tipos `any` y warnings de React 19 / ESLint.
+- **Verificación Exhaustiva**:
+  - Validación E2E mediante invocaciones reales HTTP POST vía port 5001 y port 8000 para "approve", "request_changes" y "reject" confirmando respuestas HTTP 200 OK y transición de tickets a `esperando_aprobación` y `terminado` con `RFPFinalDocument` sintetizado.
+  - 30/30 tests automatizados de backend pasando al 100% (`pytest`).
+  - 27/27 tests de frontend pasando (`jest`), ESLint sin errores ni warnings y compilación de producción Next.js (`npm run build`) exitosa.
 
 ## Proximos pasos
 1. Pasar a producción el flujo agéntico completo de RFPs en TrackFlow Tech tras revisión con los directores de departamento (Miguel Torres, Ana Whitfield, Carlos Vega, Sofía Ramos).

@@ -55,10 +55,10 @@ function renderRows(
   return Object.entries(counts).map(([key, value]) => (
     <li
       key={key}
-      className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3"
+      className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700/60 dark:bg-slate-800"
     >
-      <span className="font-medium text-slate-700">{getDisplayLabel(key, labels)}</span>
-      <span className="text-slate-700">
+      <span className="font-medium text-slate-700 dark:text-slate-200">{getDisplayLabel(key, labels)}</span>
+      <span className="text-slate-700 dark:text-slate-300">
         {value}
         {percentages ? ` (${(percentages[key] ?? 0).toFixed(1)}%)` : ""}
       </span>
@@ -70,66 +70,66 @@ export function IncidentSummary({ result }: IncidentSummaryProps) {
   return (
     <section className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-3">
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total</p>
-          <p className="mt-2 text-3xl font-semibold text-slate-950">{result.total_records}</p>
+        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Total</p>
+          <p className="mt-2 text-3xl font-semibold text-slate-950 dark:text-white">{result.total_records}</p>
         </article>
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Validos</p>
-          <p className="mt-2 text-3xl font-semibold text-emerald-700">{result.valid_records}</p>
+        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Validos</p>
+          <p className="mt-2 text-3xl font-semibold text-emerald-700 dark:text-emerald-400">{result.valid_records}</p>
         </article>
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Invalidos</p>
-          <p className="mt-2 text-3xl font-semibold text-rose-700">{result.invalid_records}</p>
+        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Invalidos</p>
+          <p className="mt-2 text-3xl font-semibold text-rose-700 dark:text-rose-400">{result.invalid_records}</p>
         </article>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900">Registros invalidos por tipo</h3>
+        <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Registros invalidos por tipo</h3>
           <ul className="mt-4 space-y-2">
             {Object.entries(result.invalid_breakdown).map(([rule, count]) => (
               <li
                 key={rule}
-                className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3"
+                className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700/60 dark:bg-slate-800"
               >
-                <span className="text-slate-700">{INVALID_RULE_LABELS[rule] ?? rule}</span>
-                <span className="font-semibold text-slate-900">{count}</span>
+                <span className="text-slate-700 dark:text-slate-300">{INVALID_RULE_LABELS[rule] ?? rule}</span>
+                <span className="font-semibold text-slate-900 dark:text-white">{count}</span>
               </li>
             ))}
           </ul>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900">Desglose por categoria</h3>
+        <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Desglose por categoria</h3>
           <ul className="mt-4 space-y-2">
             {renderRows(result.by_category, result.category_percentages, CATEGORY_LABELS)}
           </ul>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900">Desglose por estado</h3>
+        <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Desglose por estado</h3>
           <ul className="mt-4 space-y-2">
             {renderRows(result.by_status, result.status_percentages, STATUS_LABELS)}
           </ul>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900">Indice de satisfaccion</h3>
-          <p className="mt-3 text-sm text-slate-700">
+        <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Indice de satisfaccion</h3>
+          <p className="mt-3 text-sm text-slate-700 dark:text-slate-300">
             Incidencias puntuadas: {result.satisfaction.scored_incidents} de {result.satisfaction.closed_incidents}
           </p>
-          <p className="text-sm text-slate-700">
+          <p className="text-sm text-slate-700 dark:text-slate-300">
             Promedio: {result.satisfaction.average.toFixed(2)} / 5.00
           </p>
           <ul className="mt-4 grid gap-2 sm:grid-cols-2">
             {Object.entries(result.satisfaction.counts).map(([score, count]) => (
               <li
                 key={score}
-                className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3"
+                className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700/60 dark:bg-slate-800"
               >
-                <span>Score {score}</span>
-                <span className="font-semibold text-slate-900">{count}</span>
+                <span className="text-slate-700 dark:text-slate-300">Score {score}</span>
+                <span className="font-semibold text-slate-900 dark:text-white">{count}</span>
               </li>
             ))}
           </ul>

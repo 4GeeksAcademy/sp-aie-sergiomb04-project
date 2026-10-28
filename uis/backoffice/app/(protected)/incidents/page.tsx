@@ -7,8 +7,8 @@ const IncidentUploadPanel = dynamic(
   () => import("@/app/features/incidents/components/IncidentUploadPanel").then((mod) => mod.IncidentUploadPanel),
   {
     loading: () => (
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-slate-500">Cargando módulo de análisis CSV...</p>
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <p className="text-sm text-slate-500 dark:text-slate-400">Cargando módulo de análisis CSV...</p>
       </section>
     ),
   }
@@ -18,8 +18,8 @@ const IncidentSummaryPanel = dynamic(
   () => import("@/app/features/incidents/components/IncidentSummaryPanel").then((mod) => mod.IncidentSummaryPanel),
   {
     loading: () => (
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-slate-500">Cargando resumen de incidencias...</p>
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <p className="text-sm text-slate-500 dark:text-slate-400">Cargando resumen de incidencias...</p>
       </section>
     ),
   }

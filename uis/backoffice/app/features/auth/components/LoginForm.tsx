@@ -65,7 +65,7 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="space-y-2">
-        <label htmlFor="email" className="text-sm font-medium text-slate-700">
+        <label htmlFor="email" className="text-sm font-medium text-slate-700 dark:text-slate-300">
           Email
         </label>
         <input
@@ -73,7 +73,7 @@ export function LoginForm() {
           type="email"
           value={form.email}
           onChange={(event) => setForm((prevState) => ({ ...prevState, email: event.target.value }))}
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-500"
+          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-slate-400"
           placeholder="operator@trackflow.com"
           autoComplete="email"
           required
@@ -81,7 +81,7 @@ export function LoginForm() {
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="password" className="text-sm font-medium text-slate-700">
+        <label htmlFor="password" className="text-sm font-medium text-slate-700 dark:text-slate-300">
           Contraseña
         </label>
         <input
@@ -91,7 +91,7 @@ export function LoginForm() {
           onChange={(event) =>
             setForm((prevState) => ({ ...prevState, password: event.target.value }))
           }
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-500"
+          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-slate-400"
           placeholder="Introduce tu contraseña"
           autoComplete="current-password"
           required
@@ -99,7 +99,7 @@ export function LoginForm() {
       </div>
 
       {error && (
-        <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300">
           {error}
         </p>
       )}
@@ -107,20 +107,20 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={isPending}
-        className="w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-100"
       >
         {isPending ? "Accediendo..." : "Iniciar sesión"}
       </button>
 
-      <p className="text-sm text-slate-600">
-        <Link href="/forgot-password" className="font-medium text-slate-900 underline">
+      <p className="text-sm text-slate-600 dark:text-slate-400">
+        <Link href="/forgot-password" className="font-medium text-slate-900 underline dark:text-slate-200">
           ¿Olvidaste tu contraseña?
         </Link>
       </p>
 
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-slate-600 dark:text-slate-400">
         ¿No tienes cuenta?{" "}
-        <Link href="/register" className="font-medium text-slate-900 underline">
+        <Link href="/register" className="font-medium text-slate-900 underline dark:text-slate-200">
           Regístrate aquí
         </Link>
       </p>

@@ -35,16 +35,18 @@ type TextareaFieldProps = BaseFieldProps & {
 type FormFieldProps = InputFieldProps | SelectFieldProps | TextareaFieldProps;
 
 const baseControlClassName =
-  "mt-1 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500";
+  "mt-1 w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 dark:bg-slate-800 dark:text-white dark:focus:ring-blue-400";
 
 export function FormField(props: FormFieldProps) {
   const { id, label, required = false, error } = props;
   const describedBy = error ? `${id}-error` : undefined;
-  const controlClassName = `${baseControlClassName} ${error ? "border-red-500" : "border-gray-300"}`;
+  const controlClassName = `${baseControlClassName} ${
+    error ? "border-red-500 dark:border-red-500" : "border-gray-300 dark:border-slate-700"
+  }`;
 
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-gray-700">
+      <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-slate-300">
         {label}
         {required ? " *" : ""}
       </label>
@@ -58,7 +60,7 @@ export function FormField(props: FormFieldProps) {
           {...props.selectProps}
         >
           {props.options.map((option) => (
-            <option key={option.value} value={option.value}>
+            <option key={option.value} value={option.value} className="dark:bg-slate-800 dark:text-white">
               {option.label}
             </option>
           ))}
@@ -86,7 +88,7 @@ export function FormField(props: FormFieldProps) {
       ) : null}
 
       {error ? (
-        <p id={`${id}-error`} role="alert" className="mt-1 text-sm text-red-500">
+        <p id={`${id}-error`} role="alert" className="mt-1 text-sm text-red-500 dark:text-red-400">
           {error}
         </p>
       ) : null}

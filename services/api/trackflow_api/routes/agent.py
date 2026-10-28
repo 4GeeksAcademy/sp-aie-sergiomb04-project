@@ -270,3 +270,56 @@ async def consolidate_agent_memory() -> Dict[str, Any]:
     """Execute memory consolidation and cleanup."""
     report = memory_consolidator.run_consolidation()
     return report.model_dump()
+
+
+
+# ── Real-Time WebSocket Streaming & Session Rehydration (Part 2) ──
+from fastapi import Depends, WebSocket
+from trackflow_api.auth import get_current_user
+from trackflow_api.models import UserRecord
+from trackflow_api.ws_chat import chat_pubsub_manager, handle_agent_websocket
+
+
+@router.websocket("/ws")
+async def agent_chat_websocket(websocket: WebSocket) -> None:
+    """Persistent bidirectional WebSocket stream for TrackFlow Support Agent chat."""
+    await handle_agent_websocket(websocket)
+
+
+@router.websocket("/ws/{session_id}")
+async def agent_chat_websocket_with_session(
+    websocket: WebSocket, session_id: str
+) -> None:
+    """Persistent bidirectional WebSocket stream bound to `session_id`."""
+    await handle_agent_websocket(websocket, path_session_id=session_id)
+
+
+@router.websocket("/chat")
+async def agent_chat_websocket_alias(websocket: WebSocket) -> None:
+    """Alias WebSocket route for `/agent/chat`."""
+    await handle_agent_websocket(websocket)
+
+
+@router.websocket("/chat/{session_id}")
+async def agent_chat_websocket_session_alias(
+    websocket: WebSocket, session_id: str
+) -> None:
+    """Alias WebSocket route for `/agent/chat/{session_id}`."""
+    await handle_agent_websocket(websocket, path_session_id=session_id)
+
+
+@router.get(
+    "/sessions/{session_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Rehydrate chat session messages and LangGraph checkpoint state",
+)
+async def get_chat_session_state(
+    session_id: str,
+    thread_id: Optional[str] = None,
+    _current_user: UserRecord = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Return persisted messages and LangGraph checkpoint state for `session_id`."""
+    session = chat_pubsub_manager.get_or_create_session(
+        session_id=session_id, thread_id=thread_id
+    )
+    return chat_pubsub_manager.build_rehydration_payload(session)
