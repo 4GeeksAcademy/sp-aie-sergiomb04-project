@@ -120,6 +120,8 @@ def run_rfp_intake_pipeline(
     pdf_path: str | Path | None = None,
     raw_markdown: str | None = None,
     original_filename: str | None = None,
+    preextracted_metadata: dict[str, Any] | None = None,
+    preextracted_readability: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Execute the end-to-end RFP Intake & Routing pipeline and persist state in PostgreSQL/SQLModel."""
     tid = ticket_id or str(uuid4())
@@ -129,6 +131,7 @@ def run_rfp_intake_pipeline(
         ticket_id=tid,
         pdf_path=pdf_str,
         original_filename=original_filename,
+        allow_existing=True,
     )
 
     app = compile_rfp_intake_graph()
@@ -137,8 +140,8 @@ def run_rfp_intake_pipeline(
         "rfp_id": ticket.rfp_id,
         "pdf_path": pdf_str,
         "raw_markdown": raw_markdown or "",
-        "readability_metrics": {},
-        "metadata": {},
+        "readability_metrics": dict(preextracted_readability or {}),
+        "metadata": dict(preextracted_metadata or {}),
         "is_valid_rfp": False,
         "classification": {},
         "rejection_reason": None,

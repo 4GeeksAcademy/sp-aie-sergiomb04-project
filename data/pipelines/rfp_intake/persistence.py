@@ -39,8 +39,13 @@ def create_rfp_ticket(
     ticket_id: str | None = None,
     pdf_path: str,
     original_filename: str | None = None,
+    allow_existing: bool = False,
 ) -> RFPTicket:
-    """Create a new RFPTicket record in PostgreSQL/SQLModel with status='analizando'."""
+    """Create a new RFPTicket record in PostgreSQL/SQLModel with status='analizando'.
+
+    By default (`allow_existing=False`), rejects duplicate `ticket_id` values with
+    `FileExistsError` so caller-supplied IDs cannot reset existing tickets or overwrite metadata.
+    """
     ensure_rfp_tables()
     tid = ticket_id or str(uuid4())
     now = now_utc()
@@ -56,15 +61,10 @@ def create_rfp_ticket(
     with Session(get_inventory_engine()) as session:
         existing = session.get(RFPTicket, tid)
         if existing is not None:
-            existing.status = RFPTicketStatusEnum.ANALIZANDO.value
-            existing.pdf_path = pdf_path
-            if original_filename:
-                existing.original_filename = original_filename
-            existing.rejection_reason = None
-            existing.updated_at = now
-            session.add(existing)
-            session.commit()
-            session.refresh(existing)
+            if not allow_existing:
+                raise FileExistsError(
+                    f"El ticket RFP con id '{tid}' ya existe y no puede ser reiniciado."
+                )
             return existing
 
         session.add(ticket)
@@ -326,28 +326,63 @@ def get_rfp_ticket_bundle(ticket_id: str) -> dict[str, Any] | None:
 
 
 def list_rfp_tickets(limit: int = 50) -> list[dict[str, Any]]:
-    """List recent RFP tickets with summary metadata for the Backoffice UI."""
+    """List recent RFP tickets with summary metadata for the Backoffice UI using a single batch query."""
     ensure_rfp_tables()
     with Session(get_inventory_engine()) as session:
         stmt = select(RFPTicket).order_by(RFPTicket.created_at.desc()).limit(limit)
         tickets = session.exec(stmt).all()
+        if not tickets:
+            return []
+
+        ticket_ids = [t.id for t in tickets]
+        meta_stmt = select(RFPMetadata).where(RFPMetadata.ticket_id.in_(ticket_ids))
+        meta_rows = session.exec(meta_stmt).all()
+        meta_by_ticket_id: dict[str, RFPMetadata] = {
+            m.ticket_id: m for m in meta_rows
+        }
 
         results: list[dict[str, Any]] = []
         for t in tickets:
-            meta_stmt = select(RFPMetadata).where(RFPMetadata.ticket_id == t.id)
-            meta = session.exec(meta_stmt).first()
+            meta = meta_by_ticket_id.get(t.id)
+            meta_json = dict(meta.metadata_json or {}) if meta else {}
+            pdf_path = str(t.pdf_path or f"data/raw/{t.id}.pdf")
             results.append(
                 {
                     "ticket_id": t.id,
                     "rfp_id": t.rfp_id,
                     "status": t.status,
-                    "pdf_path": t.pdf_path,
+                    "pdf_path": pdf_path,
+                    "raw_pdf_path": pdf_path,
                     "original_filename": t.original_filename,
                     "rejection_reason": t.rejection_reason,
-                    "client_name": meta.client_name if meta else None,
-                    "client_country": meta.client_country if meta else None,
-                    "currency": meta.currency if meta else None,
-                    "departments_needed": list(meta.departments_needed or []) if meta else [],
+                    "client_name": (
+                        meta.client_name if meta and meta.client_name else meta_json.get("client_name")
+                    ),
+                    "client_country": (
+                        meta.client_country if meta and meta.client_country else meta_json.get("client_country")
+                    ),
+                    "currency": (
+                        meta.currency if meta and meta.currency else meta_json.get("currency")
+                    ),
+                    "services_requested": list(
+                        (meta.services_requested if meta and meta.services_requested else meta_json.get("services_requested"))
+                        or []
+                    ),
+                    "monthly_volume": (
+                        meta.monthly_volume
+                        if meta and meta.monthly_volume is not None
+                        else meta_json.get("monthly_volume")
+                    ),
+                    "deadline": (
+                        meta.deadline if meta and meta.deadline else meta_json.get("deadline")
+                    ),
+                    "budget_range": (
+                        meta.budget_range if meta and meta.budget_range else meta_json.get("budget_range")
+                    ),
+                    "departments_needed": list(
+                        (meta.departments_needed if meta and meta.departments_needed else meta_json.get("departments_needed"))
+                        or []
+                    ),
                     "created_at": t.created_at.isoformat() if t.created_at else None,
                     "updated_at": t.updated_at.isoformat() if t.updated_at else None,
                 }
@@ -513,5 +548,3 @@ def get_final_document(ticket_id: str) -> dict[str, Any] | None:
             "currency": record.currency,
             "generated_at": record.generated_at.isoformat() if record.generated_at else None,
         }
-
-

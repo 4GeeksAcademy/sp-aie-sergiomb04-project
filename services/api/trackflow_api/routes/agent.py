@@ -6,7 +6,7 @@ import logging
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, status
 from pydantic import BaseModel, Field
 
 # Ensure project root is available in sys.path
@@ -22,6 +22,9 @@ from services.agent import (
     run_support_agent,
     trace_store,
 )
+from trackflow_api.auth import get_current_user
+from trackflow_api.models import UserRecord
+from trackflow_api.ws_chat import chat_pubsub_manager, handle_agent_websocket
 
 logger = logging.getLogger("trackflow_api.agent")
 
@@ -272,12 +275,7 @@ async def consolidate_agent_memory() -> Dict[str, Any]:
     return report.model_dump()
 
 
-
 # ── Real-Time WebSocket Streaming & Session Rehydration (Part 2) ──
-from fastapi import Depends, WebSocket
-from trackflow_api.auth import get_current_user
-from trackflow_api.models import UserRecord
-from trackflow_api.ws_chat import chat_pubsub_manager, handle_agent_websocket
 
 
 @router.websocket("/ws")
@@ -316,10 +314,19 @@ async def agent_chat_websocket_session_alias(
 async def get_chat_session_state(
     session_id: str,
     thread_id: Optional[str] = None,
-    _current_user: UserRecord = Depends(get_current_user),
+    current_user: UserRecord = Depends(get_current_user),
 ) -> Dict[str, Any]:
-    """Return persisted messages and LangGraph checkpoint state for `session_id`."""
-    session = chat_pubsub_manager.get_or_create_session(
-        session_id=session_id, thread_id=thread_id
-    )
+    """Return persisted messages and LangGraph checkpoint state for `session_id` after verifying user ownership."""
+    try:
+        session = chat_pubsub_manager.get_or_create_session(
+            session_id=session_id,
+            thread_id=thread_id,
+            owner_id=current_user.id,
+            owner_email=current_user.email,
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
     return chat_pubsub_manager.build_rehydration_payload(session)

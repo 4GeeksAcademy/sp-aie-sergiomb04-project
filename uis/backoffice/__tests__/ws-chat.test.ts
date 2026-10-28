@@ -178,7 +178,7 @@ describe("TrackFlow WebSocket Chat Client & State Reducer (Part 2)", () => {
     expect(state.messages[3].content).toBe("La tarifa express es 9.90 EUR.");
   });
 
-  test("rehydrates conversation history and checkpoint on reconnect without duplicating messages", () => {
+  test("rehydrates conversation history and checkpoint on reconnect without duplicating messages or rolling back newer local state", () => {
     let state = createInitialState("sess-rehydrate-99");
 
     state = applyWsServerEvent(state, {
@@ -226,5 +226,22 @@ describe("TrackFlow WebSocket Chat Client & State Reducer (Part 2)", () => {
     // Re-applying the same rehydration snapshot deduplicates cleanly
     const mergedAgain = mergeRehydratedMessages(state.messages, state.messages);
     expect(mergedAgain).toHaveLength(2);
+
+    // Late stale HTTP snapshot with "streaming" status and shorter content must NOT overwrite interrupted/completed local message
+    const afterStaleSnapshot = mergeRehydratedMessages(state.messages, [
+      {
+        id: "msg_a1",
+        message_id: "msg_a1",
+        turn_id: "turn_1",
+        session_id: "sess-rehydrate-99",
+        thread_id: "sess-rehydrate-99",
+        role: "assistant",
+        content: "Respuesta",
+        status: "streaming",
+        created_at: "2026-10-23T18:00:01Z",
+      },
+    ]);
+    expect(afterStaleSnapshot[1].status).toBe("interrupted");
+    expect(afterStaleSnapshot[1].content).toBe("Respuesta parcial cortada");
   });
 });

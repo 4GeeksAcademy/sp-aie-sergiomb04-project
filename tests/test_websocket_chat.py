@@ -3,7 +3,7 @@
 Validates:
 1. Backoffice JWT authentication on WebSocket handshake (`?token=...` and first `auth` frame)
    and rejection of unauthenticated sockets before any chat event.
-2. Mandatory `session_id` / `thread_id` binding.
+2. Mandatory `session_id` / `thread_id` binding and strict per-user session/thread ownership ACL.
 3. Event contract (`session_rehydrated`, `user_message`, `token_chunk`, `generation_interrupted`,
    `generation_completed`).
 4. Genuine mid-stream interruption (`interrupt` with `new_input`): stops further `token_chunk`
@@ -45,6 +45,16 @@ def reset_chat_sessions(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
             "created_at": "2026-01-01T00:00:00+00:00",
         }
     )
+    db.table("users").insert(
+        {
+            "id": "usr-ws-002",
+            "email": "otro.usuario@trackflow.com",
+            "hashed_password": "hashed-test-password",
+            "is_active": True,
+            "role": "manager",
+            "created_at": "2026-01-01T00:00:00+00:00",
+        }
+    )
     db.close()
     chat_pubsub_manager.reset()
     yield
@@ -60,6 +70,12 @@ def client() -> TestClient:
 def valid_jwt() -> str:
     """Create a valid JWT for the seeded backoffice support user (`usr-ws-001`)."""
     return create_access_token(subject="usr-ws-001")
+
+
+@pytest.fixture
+def second_user_jwt() -> str:
+    """Create a valid JWT for a different backoffice user (`usr-ws-002`)."""
+    return create_access_token(subject="usr-ws-002")
 
 
 def test_websocket_rejects_unauthenticated_connection(client: TestClient) -> None:
@@ -101,6 +117,59 @@ def test_websocket_accepts_first_frame_auth(
         assert rehydrated["session_id"] == "sess-frame-auth"
         assert rehydrated["thread_id"] == "sess-frame-auth"
         assert rehydrated["messages"] == []
+
+
+def test_websocket_and_http_reject_cross_user_session_and_thread_access(
+    client: TestClient, valid_jwt: str, second_user_jwt: str
+) -> None:
+    """Another authenticated user must NOT be able to read or subscribe to a session_id or thread_id owned by user 1."""
+    session_id = "sess-private-owner-001"
+    thread_id = "thread-private-owner-001"
+
+    # User 1 opens and owns the session/thread
+    with client.websocket_connect(
+        f"/agent/ws/{session_id}?thread_id={thread_id}&token={valid_jwt}"
+    ) as ws_owner:
+        rehydrated = ws_owner.receive_json()
+        assert rehydrated["event"] == "session_rehydrated"
+        assert rehydrated["session_id"] == session_id
+
+    # User 1 can fetch their own session state over HTTP
+    own_http = client.get(
+        f"/agent/sessions/{session_id}?thread_id={thread_id}",
+        headers={"Authorization": f"Bearer {valid_jwt}"},
+    )
+    assert own_http.status_code == 200
+
+    # User 2 attempting HTTP GET on User 1's session -> 403 Forbidden
+    other_http = client.get(
+        f"/agent/sessions/{session_id}?thread_id={thread_id}",
+        headers={"Authorization": f"Bearer {second_user_jwt}"},
+    )
+    assert other_http.status_code == 403
+
+    # User 2 attempting HTTP GET with a new session_id but User 1's thread_id -> 403 Forbidden
+    hijack_thread_http = client.get(
+        f"/agent/sessions/sess-attacker-new?thread_id={thread_id}",
+        headers={"Authorization": f"Bearer {second_user_jwt}"},
+    )
+    assert hijack_thread_http.status_code == 403
+
+    # User 2 attempting WebSocket connection on User 1's session_id -> rejected with 1008
+    with pytest.raises(WebSocketDisconnect) as exc_ws_session:
+        with client.websocket_connect(
+            f"/agent/ws/{session_id}?token={second_user_jwt}"
+        ) as ws_other:
+            ws_other.receive_json()
+    assert exc_ws_session.value.code == 1008
+
+    # User 2 attempting WebSocket connection with a different session_id but User 1's thread_id -> rejected with 1008
+    with pytest.raises(WebSocketDisconnect) as exc_ws_thread:
+        with client.websocket_connect(
+            f"/agent/ws/sess-attacker-ws?thread_id={thread_id}&token={second_user_jwt}"
+        ) as ws_other_thread:
+            ws_other_thread.receive_json()
+    assert exc_ws_thread.value.code == 1008
 
 
 def test_websocket_streams_token_chunks_and_completes(
