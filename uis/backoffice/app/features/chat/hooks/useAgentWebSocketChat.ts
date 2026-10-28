@@ -107,13 +107,13 @@ export function useAgentWebSocketChat(
         `/api/agent/sessions/${encodeURIComponent(sid)}?thread_id=${encodeURIComponent(tid)}`,
         { method: "GET", cache: "no-store" }
       );
-      if (!res.ok) return;
+      if (!res.ok || unmountedRef.current || isRehydratedRef.current) return;
       const payload = (await res.json()) as WsServerEvent;
+      if (unmountedRef.current || isRehydratedRef.current) return;
       if (
         payload &&
         (payload.event === "session_rehydrated" || Array.isArray(payload.messages))
       ) {
-        isRehydratedRef.current = true;
         setChatState((prev) =>
           applyWsServerEvent(prev, {
             ...payload,
@@ -150,8 +150,12 @@ export function useAgentWebSocketChat(
     const sid = sessionIdRef.current;
     const tid = threadIdRef.current;
 
+    isRehydratedRef.current = false;
+    pendingEventsBeforeRehydrationRef.current = [];
+
     if (currentAttempt > 0) {
-      void rehydrateViaHttpFallback(sid, tid);
+      await rehydrateViaHttpFallback(sid, tid);
+      if (unmountedRef.current) return;
     }
 
     const wsUrl = buildAgentWebSocketUrl({

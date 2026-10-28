@@ -7,11 +7,16 @@ type NavigationItem = {
 };
 
 const navigationItems: NavigationItem[] = [
-  { label: "Servicios", href: "#servicios" },
-  { label: "Rastreo", href: "#rastreo" },
-  { label: "Operaciones", href: "#operacion" },
-  { label: "Preguntas Frecuentes", href: "#faq" },
+  { label: "Servicios", href: "/#servicios" },
+  { label: "Rastreo", href: "/#rastreo" },
+  { label: "Operaciones", href: "/#operacion" },
+  { label: "Preguntas Frecuentes", href: "/#faq" },
 ];
+
+const backofficeUrl =
+  process.env.NEXT_PUBLIC_BACKOFFICE_URL ||
+  process.env.NEXT_PUBLIC_TRACKFLOW_BACKOFFICE_URL ||
+  "http://localhost:3001";
 
 export function Navbar() {
   return (
@@ -49,7 +54,7 @@ export function Navbar() {
 
           <div className="flex items-center gap-3">
             <a
-              href="http://localhost:3001"
+              href={backofficeUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="hidden sm:inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 dark:hover:text-white"
@@ -67,6 +72,8 @@ export function Navbar() {
             >
               Solicitar Propuesta
             </Link>
+
+            <ThemeToggle />
           </div>
         </div>
       </div>

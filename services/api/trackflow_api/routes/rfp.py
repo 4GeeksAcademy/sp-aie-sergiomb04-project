@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import sys
 from pathlib import Path
@@ -85,13 +86,19 @@ def _execute_rfp_pipeline_background(
     ticket_id: str,
     pdf_path: str,
     original_filename: str | None = None,
+    raw_markdown: str | None = None,
+    preextracted_metadata: dict[str, Any] | None = None,
+    preextracted_readability: dict[str, Any] | None = None,
 ) -> None:
     """Background worker wrapper that executes the LangGraph RFP intake pipeline safely."""
     try:
         run_rfp_intake_pipeline(
             ticket_id=ticket_id,
             pdf_path=pdf_path,
+            raw_markdown=raw_markdown,
             original_filename=original_filename,
+            preextracted_metadata=preextracted_metadata,
+            preextracted_readability=preextracted_readability,
         )
         bundle = get_rfp_ticket_bundle(ticket_id)
         if bundle is not None:
@@ -107,6 +114,42 @@ def _execute_rfp_pipeline_background(
             ticket_id,
             f"Error procesando el archivo PDF en el pipeline: {exc}",
         )
+
+
+def _persist_and_extract_uploaded_pdf(
+    ticket_id: str,
+    relative_pdf_path: str,
+    absolute_pdf_path: Path,
+    filename: str,
+    content: bytes,
+) -> tuple[Any, str, dict[str, Any], dict[str, Any]]:
+    """Synchronous helper executed in a worker thread to avoid blocking the async event loop."""
+    absolute_pdf_path.parent.mkdir(parents=True, exist_ok=True)
+    absolute_pdf_path.write_bytes(content)
+
+    ticket = create_rfp_ticket(
+        ticket_id=ticket_id,
+        pdf_path=relative_pdf_path,
+        original_filename=filename,
+    )
+
+    raw_md = ""
+    extracted_meta: dict[str, Any] = {}
+    extracted_readability: dict[str, Any] = {}
+    try:
+        raw_md = convert_pdf_to_markdown(absolute_pdf_path)
+        extracted_meta = extract_base_metadata(raw_md)
+        extracted_readability = compute_readability_metrics(raw_md)
+        upsert_rfp_metadata(
+            ticket_id=ticket.id,
+            raw_markdown=raw_md,
+            metadata=extracted_meta,
+            readability_metrics=extracted_readability,
+        )
+    except Exception as exc:
+        logger.debug("Initial PDF metadata extraction skipped or deferred for ticket %s: %s", ticket.id, exc)
+
+    return ticket, raw_md, extracted_meta, extracted_readability
 
 
 @router.get(
@@ -168,30 +211,15 @@ async def upload_rfp_pdf(
     ticket_id = str(uuid4())
     relative_pdf_path = f"data/raw/{ticket_id}.pdf"
     absolute_pdf_path = PROJECT_ROOT / "data" / "raw" / f"{ticket_id}.pdf"
-    absolute_pdf_path.parent.mkdir(parents=True, exist_ok=True)
-    absolute_pdf_path.write_bytes(content)
 
-    ticket = create_rfp_ticket(
-        ticket_id=ticket_id,
-        pdf_path=relative_pdf_path,
-        original_filename=filename,
+    ticket, raw_md, extracted_meta, extracted_readability = await asyncio.to_thread(
+        _persist_and_extract_uploaded_pdf,
+        ticket_id,
+        relative_pdf_path,
+        absolute_pdf_path,
+        filename,
+        content,
     )
-
-    # Extract deterministic base metadata for immediate structured SSE emission (no LLM calls)
-    extracted_meta: dict[str, Any] = {}
-    extracted_readability: dict[str, Any] = {}
-    try:
-        raw_md = convert_pdf_to_markdown(absolute_pdf_path)
-        extracted_meta = extract_base_metadata(raw_md)
-        extracted_readability = compute_readability_metrics(raw_md)
-        upsert_rfp_metadata(
-            ticket_id=ticket.id,
-            raw_markdown=raw_md,
-            metadata=extracted_meta,
-            readability_metrics=extracted_readability,
-        )
-    except Exception as exc:
-        logger.debug("Initial PDF metadata extraction skipped or deferred for ticket %s: %s", ticket.id, exc)
 
     sse_payload = rfp_sse_broker.publish_ticket_created(
         ticket=ticket,
@@ -204,6 +232,9 @@ async def upload_rfp_pdf(
         ticket_id=ticket.id,
         pdf_path=relative_pdf_path,
         original_filename=filename,
+        raw_markdown=raw_md or None,
+        preextracted_metadata=extracted_meta or None,
+        preextracted_readability=extracted_readability or None,
     )
 
     return {
@@ -238,6 +269,7 @@ async def upload_rfp_pdf(
 )
 async def register_rfp_ticket(
     payload: RFPTicketCreatePayload,
+    _current_user: UserRecord = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Create a new RFP Ticket in PostgreSQL/SQLModel and immediately emit an `rfp_ticket_created` SSE event."""
     ticket_id = payload.ticket_id or str(uuid4())
@@ -246,11 +278,19 @@ async def register_rfp_ticket(
         or payload.pdf_path
         or f"data/raw/{ticket_id}.pdf"
     )
-    ticket = create_rfp_ticket(
-        ticket_id=ticket_id,
-        pdf_path=raw_pdf_path,
-        original_filename=payload.original_filename or f"{ticket_id}.pdf",
-    )
+    try:
+        ticket = await asyncio.to_thread(
+            create_rfp_ticket,
+            ticket_id=ticket_id,
+            pdf_path=raw_pdf_path,
+            original_filename=payload.original_filename or f"{ticket_id}.pdf",
+            allow_existing=False,
+        )
+    except FileExistsError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
 
     country = payload.client_country
     currency = payload.currency
@@ -272,7 +312,8 @@ async def register_rfp_ticket(
     }
     readability_dict = compute_readability_metrics(payload.raw_markdown or "")
 
-    upsert_rfp_metadata(
+    await asyncio.to_thread(
+        upsert_rfp_metadata,
         ticket_id=ticket.id,
         raw_markdown=payload.raw_markdown or "",
         metadata=meta_dict,
@@ -296,31 +337,7 @@ async def get_all_rfp_tickets(
     limit: int = Query(default=50, ge=1, le=200),
 ) -> list[dict[str, Any]]:
     """Return recent RFP tickets ordered by creation time with briefing metadata fields."""
-    raw_list = list_rfp_tickets(limit=limit)
-    enriched: list[dict[str, Any]] = []
-    for item in raw_list:
-        tid = str(item.get("ticket_id") or "")
-        bundle = get_rfp_ticket_bundle(tid) if tid else None
-        meta = (bundle.get("metadata") if bundle else None) or {}
-        pdf_path = str(item.get("pdf_path") or f"data/raw/{tid}.pdf")
-        enriched.append(
-            {
-                **item,
-                "raw_pdf_path": pdf_path,
-                "pdf_path": pdf_path,
-                "client_name": item.get("client_name") or meta.get("client_name"),
-                "client_country": item.get("client_country") or meta.get("client_country"),
-                "currency": item.get("currency") or meta.get("currency"),
-                "services_requested": list(meta.get("services_requested") or []),
-                "monthly_volume": meta.get("monthly_volume"),
-                "deadline": meta.get("deadline"),
-                "budget_range": meta.get("budget_range"),
-                "departments_needed": list(
-                    item.get("departments_needed") or meta.get("departments_needed") or []
-                ),
-            }
-        )
-    return enriched
+    return await asyncio.to_thread(list_rfp_tickets, limit=limit)
 
 
 @router.get(
@@ -330,7 +347,7 @@ async def get_all_rfp_tickets(
 )
 async def get_rfp_ticket(ticket_id: str) -> dict[str, Any]:
     """Retrieve the current status and full breakdown for a given RFP ticket_id."""
-    bundle = get_rfp_ticket_bundle(ticket_id)
+    bundle = await asyncio.to_thread(get_rfp_ticket_bundle, ticket_id)
     if bundle is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -341,7 +358,6 @@ async def get_rfp_ticket(ticket_id: str) -> dict[str, Any]:
 
 def _execute_rfp_generation_background(ticket_id: str, max_iterations: int = 3) -> None:
     """Background worker wrapper that executes the response generation and evaluation loop."""
-    import asyncio
     try:
         asyncio.run(
             run_rfp_response_generation_async(
@@ -372,7 +388,7 @@ async def generate_rfp_response(
     max_iterations: int = Query(default=3, ge=1, le=10, description="Max generator-evaluator iterations"),
 ) -> dict[str, Any]:
     """Consume Part 1 handoff payload, run generator agents per department, and execute parallel evaluation loop."""
-    bundle = get_rfp_ticket_bundle(ticket_id)
+    bundle = await asyncio.to_thread(get_rfp_ticket_bundle, ticket_id)
     if bundle is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -396,7 +412,7 @@ async def generate_rfp_response(
         )
 
     # Immediately mark as generando_borrador
-    update_rfp_ticket_status(ticket_id, RFPTicketStatusEnum.GENERANDO_BORRADOR.value)
+    await asyncio.to_thread(update_rfp_ticket_status, ticket_id, RFPTicketStatusEnum.GENERANDO_BORRADOR.value)
 
     if sync:
         try:
@@ -405,7 +421,7 @@ async def generate_rfp_response(
                 max_iterations=max_iterations,
             )
             response.status_code = status.HTTP_200_OK
-            updated_bundle = get_rfp_ticket_bundle(ticket_id)
+            updated_bundle = await asyncio.to_thread(get_rfp_ticket_bundle, ticket_id)
             return {
                 "ticket_id": ticket_id,
                 "status": result.get("status"),
@@ -414,7 +430,7 @@ async def generate_rfp_response(
             }
         except Exception as exc:
             logger.error("Error in sync response generation: %s", exc, exc_info=True)
-            update_rfp_ticket_status(ticket_id, RFPTicketStatusEnum.NEEDS_HUMAN_REVIEW.value)
+            await asyncio.to_thread(update_rfp_ticket_status, ticket_id, RFPTicketStatusEnum.NEEDS_HUMAN_REVIEW.value)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error durante la generación de la propuesta: {exc}",
@@ -441,7 +457,7 @@ async def generate_rfp_response(
 )
 async def initiate_approval_cycle(ticket_id: str) -> dict[str, Any]:
     """Launch LangGraph isolated approval branches with interrupt() gates per department."""
-    bundle = get_rfp_ticket_bundle(ticket_id)
+    bundle = await asyncio.to_thread(get_rfp_ticket_bundle, ticket_id)
     if bundle is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -449,7 +465,7 @@ async def initiate_approval_cycle(ticket_id: str) -> dict[str, Any]:
         )
 
     try:
-        res = initiate_ticket_approval_cycle(ticket_id)
+        res = await asyncio.to_thread(initiate_ticket_approval_cycle, ticket_id)
         return res
     except Exception as exc:
         logger.error("Error initiating approval cycle for ticket %s: %s", ticket_id, exc, exc_info=True)
@@ -470,7 +486,7 @@ async def submit_department_approval(
     decision_payload: dict[str, Any] = Body(...),
 ) -> dict[str, Any]:
     """Resume the paused LangGraph gate for this department and check if final document should be generated."""
-    bundle = get_rfp_ticket_bundle(ticket_id)
+    bundle = await asyncio.to_thread(get_rfp_ticket_bundle, ticket_id)
     if bundle is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -494,7 +510,8 @@ async def submit_department_approval(
     )
 
     try:
-        res = resume_department_approval(
+        res = await asyncio.to_thread(
+            resume_department_approval,
             ticket_id=ticket_id,
             department_id=department_id,
             decision=decision,
@@ -515,14 +532,14 @@ async def submit_department_approval(
 )
 async def get_ticket_final_document(ticket_id: str) -> dict[str, Any]:
     """Retrieve the synthesized RFPFinalDocument when the ticket is in 'terminado' status."""
-    bundle = get_rfp_ticket_bundle(ticket_id)
+    bundle = await asyncio.to_thread(get_rfp_ticket_bundle, ticket_id)
     if bundle is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No se encontró el ticket RFP con id '{ticket_id}'.",
         )
 
-    final_doc = get_final_document(ticket_id)
+    final_doc = await asyncio.to_thread(get_final_document, ticket_id)
     if final_doc is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -538,7 +555,7 @@ async def get_ticket_final_document(ticket_id: str) -> dict[str, Any]:
 )
 async def arbitrate_ticket_conflicts(ticket_id: str) -> dict[str, Any]:
     """Inspect structured state for volume-vs-capacity, returns-sla-breach, or currency-mismatch triggers."""
-    bundle = get_rfp_ticket_bundle(ticket_id)
+    bundle = await asyncio.to_thread(get_rfp_ticket_bundle, ticket_id)
     if bundle is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -546,7 +563,8 @@ async def arbitrate_ticket_conflicts(ticket_id: str) -> dict[str, Any]:
         )
 
     metadata = bundle.get("metadata") or {}
-    resolutions, traces = detect_and_resolve_conflicts(
+    resolutions, traces = await asyncio.to_thread(
+        detect_and_resolve_conflicts,
         client_country=metadata.get("client_country"),
         department_sections=bundle.get("department_sections") or [],
         metadata=metadata,

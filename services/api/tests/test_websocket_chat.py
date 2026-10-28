@@ -3,7 +3,9 @@
 from tests.test_websocket_chat import (  # noqa: F401
     client,
     reset_chat_sessions,
+    second_user_jwt,
     test_websocket_accepts_first_frame_auth,
+    test_websocket_and_http_reject_cross_user_session_and_thread_access,
     test_websocket_interrupt_aborts_stream_and_starts_new_turn_with_new_input,
     test_websocket_pubsub_broadcasts_to_multiple_subscribers,
     test_websocket_reconnection_rehydrates_conversation_and_checkpoint,

@@ -6,6 +6,7 @@ Validates:
 3. Explicit event name (`event: rfp_ticket_created`).
 4. Structured JSON payload in `data:` aligned with `company-BRIEFING.md` (`trackflow-BRIEFING.es.md`).
 5. Missed event recovery via `Last-Event-ID` without duplication.
+6. Mandatory JWT authentication and `409 Conflict` duplicate ID protection on `POST /api/rfp/tickets`.
 """
 
 from __future__ import annotations
@@ -136,6 +137,43 @@ def test_sse_stream_requires_valid_backoffice_jwt(client: TestClient) -> None:
         headers={"Authorization": "Bearer invalid.jwt.token"},
     )
     assert invalid_resp.status_code == 401
+
+
+def test_register_rfp_ticket_requires_jwt_and_rejects_duplicate_ticket_id(
+    client: TestClient,
+    backoffice_jwt: str,
+) -> None:
+    """POST /api/rfp/tickets must reject unauthenticated callers (401) and duplicate ticket_id (409)."""
+    payload = {
+        "ticket_id": "rfp-immutable-001",
+        "client_name": "ModaViva",
+        "client_country": "Spain",
+        "currency": "EUR",
+        "services_requested": ["warehousing"],
+        "monthly_volume": 12000,
+        "departments_needed": ["warehouse"],
+    }
+
+    # 1. Unauthenticated request -> 401 Unauthorized
+    unauth_resp = client.post("/api/rfp/tickets", json=payload)
+    assert unauth_resp.status_code == 401
+
+    # 2. Authenticated first creation -> 201 Created
+    first_resp = client.post(
+        "/api/rfp/tickets",
+        json=payload,
+        headers={"Authorization": f"Bearer {backoffice_jwt}"},
+    )
+    assert first_resp.status_code == 201
+    assert first_resp.json()["ticket_id"] == "rfp-immutable-001"
+
+    # 3. Duplicate ticket_id -> 409 Conflict (must NOT overwrite existing ticket)
+    dup_resp = client.post(
+        "/api/rfp/tickets",
+        json={**payload, "client_name": "Attacker Overwrite"},
+        headers={"Authorization": f"Bearer {backoffice_jwt}"},
+    )
+    assert dup_resp.status_code == 409
 
 
 def test_sse_stream_headers_event_name_and_payload_structure_on_ticket_creation(
