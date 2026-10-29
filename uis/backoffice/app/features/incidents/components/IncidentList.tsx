@@ -59,6 +59,16 @@ export function IncidentList() {
     fetchIncidents();
   }, [fetchIncidents]);
 
+  useEffect(() => {
+    const handleIncidentsUpdated = () => {
+      void fetchIncidents();
+    };
+    window.addEventListener("trackflow:incidents-updated", handleIncidentsUpdated);
+    return () => {
+      window.removeEventListener("trackflow:incidents-updated", handleIncidentsUpdated);
+    };
+  }, [fetchIncidents]);
+
   const handleStatusChange = useCallback(
     async (incidentId: string, newStatus: IncidentStatus) => {
       // Optimistic update
@@ -73,6 +83,9 @@ export function IncidentList() {
 
       try {
         await updateIncidentStatus(incidentId, { status: newStatus });
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("trackflow:incidents-updated"));
+        }
       } catch (err: unknown) {
         // Rollback on failure
         setIncidents(previousIncidents);
