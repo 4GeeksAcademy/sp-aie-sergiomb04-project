@@ -15,7 +15,7 @@
 // ─── Configuration ────────────────────────────────────────────────────────────
 
 const TELEMETRY_ENDPOINT =
-  process.env.NEXT_PUBLIC_TELEMETRY_ENDPOINT ?? "http://localhost:8000/telemetry/events";
+  process.env.NEXT_PUBLIC_TELEMETRY_ENDPOINT ?? "/api/telemetry/events";
 
 const BATCH_SIZE = 20;
 const FLUSH_INTERVAL_MS = 10_000;

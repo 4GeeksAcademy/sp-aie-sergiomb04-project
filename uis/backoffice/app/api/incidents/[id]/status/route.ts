@@ -29,7 +29,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  const authHeaders = await getAuthorizedSessionHeaders();
+  const authHeaders = await getAuthorizedSessionHeaders({
+    "Content-Type": "application/json",
+  });
   if (!authHeaders) {
     return Response.json({ detail: "Unauthorized" }, { status: 401 });
   }
@@ -39,7 +41,7 @@ export async function PATCH(
 
   try {
     const upstreamResponse = await fetch(
-      buildTrackflowApiUrl(`/api/incidents/${id}/status`),
+      buildTrackflowApiUrl(`/api/incidents/${encodeURIComponent(id)}/status`),
       {
         method: "PATCH",
         headers: authHeaders,

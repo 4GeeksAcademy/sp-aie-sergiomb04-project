@@ -38,7 +38,7 @@ export async function GET(
 
   try {
     const upstreamResponse = await fetch(
-      buildTrackflowApiUrl(`/api/incidents/${id}`),
+      buildTrackflowApiUrl(`/api/incidents/${encodeURIComponent(id)}`),
       {
         method: "GET",
         headers: authHeaders,

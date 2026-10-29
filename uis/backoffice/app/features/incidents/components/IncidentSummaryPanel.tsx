@@ -40,6 +40,16 @@ export function IncidentSummaryPanel() {
     fetchSummary();
   }, [fetchSummary]);
 
+  useEffect(() => {
+    const handleIncidentsUpdated = () => {
+      void fetchSummary();
+    };
+    window.addEventListener("trackflow:incidents-updated", handleIncidentsUpdated);
+    return () => {
+      window.removeEventListener("trackflow:incidents-updated", handleIncidentsUpdated);
+    };
+  }, [fetchSummary]);
+
   if (isLoading) {
     return (
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
