@@ -1,4 +1,4 @@
-# Progress Report - TrackFlow Project
+﻿# Progress Report - TrackFlow Project
 
 ## Estado actual del proyecto
 El repositorio ya supero la fase de plantilla y tiene entregables funcionales en frontend y programacion, ademas de una aplicacion Next.js en desarrollo activo para el hito actual.
@@ -356,6 +356,18 @@ fp_final_documents).
   - Validación E2E mediante invocaciones reales HTTP POST vía port 5001 y port 8000 para "approve", "request_changes" y "reject" confirmando respuestas HTTP 200 OK y transición de tickets a `esperando_aprobación` y `terminado` con `RFPFinalDocument` sintetizado.
   - 30/30 tests automatizados de backend pasando al 100% (`pytest`).
   - 27/27 tests de frontend pasando (`jest`), ESLint sin errores ni warnings y compilación de producción Next.js (`npm run build`) exitosa.
+
+### Corrección de Rutas Proxy del Frontend hacia Backend Python (ix/frontend-api-routes - Completado)
+- **Diagnóstico de causa raíz en actualización de estado de incidencias (PATCH /api/incidents/[id]/status)**:
+  - En uis/backoffice/app/api/incidents/[id]/status/route.ts, getAuthorizedSessionHeaders() se invocaba sin { "Content-Type": "application/json" }. Al enviar ody: JSON.stringify(body) con Node etch, la cabecera por defecto Content-Type: text/plain;charset=UTF-8 provocaba que FastAPI (patch_incident_status) no parseara el cuerpo como JSON y lanzara RequestValidationError HTTP 400 ("Input should be a valid dictionary or object to extract fields from").
+- **Corrección y estandarización de rutas proxy en uis/backoffice**:
+  - uis/backoffice/app/api/incidents/[id]/status/route.ts: Añadido { "Content-Type": "application/json" } en getAuthorizedSessionHeaders y encodeURIComponent(id).
+  - uis/backoffice/app/api/incidents/route.ts y uis/backoffice/app/api/incidents/[id]/route.ts: Estandarizado el envío de cabeceras autenticadas con Content-Type: application/json en POST y codificación segura de id.
+  - uis/backoffice/app/api/telemetry/events/route.ts y uis/backoffice/app/services/telemetry.ts: Creada ruta proxy /api/telemetry/events hacia /telemetry/events del backend Python, evitando fallos de conexión directa a localhost:8000 desde el navegador en despliegues contenedorizados.
+- **Sincronización reactiva de interfaz en /incidents**:
+  - Eventos 	rackflow:incidents-updated emitidos en IncidentRegistrationForm.tsx e IncidentList.tsx y suscritos en IncidentList.tsx e IncidentSummaryPanel.tsx para refrescar listado y métricas al crear o actualizar incidencias sin recargar la página.
+- **Verificación**:
+  - Nuevos tests unitarios en uis/backoffice/__tests__/incident-routes.test.ts validando cabeceras Content-Type: application/json y Authorization (6 suites / 39 tests pasando en Jest, ESLint limpio sin errores).
 
 ## Proximos pasos
 1. Pasar a producción el flujo agéntico completo de RFPs en TrackFlow Tech tras revisión con los directores de departamento (Miguel Torres, Ana Whitfield, Carlos Vega, Sofía Ramos).

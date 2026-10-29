@@ -71,6 +71,9 @@ export function IncidentRegistrationForm() {
         await createIncident(form);
         setForm({ ...INITIAL_STATE });
         setSuccess("Incidencia registrada correctamente");
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("trackflow:incidents-updated"));
+        }
       } catch (err: unknown) {
         const message =
           err instanceof Error ? err.message : "Error al registrar la incidencia";
