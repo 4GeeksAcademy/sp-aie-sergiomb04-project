@@ -67,8 +67,8 @@ class JailbreakSecurityGuard:
         r"olvida\s+que\s+trabajas\s+para\s+(?:la\s+empresa|trackflow)",
         r"forget\s+(?:that\s+)?you\s+work\s+for\s+trackflow",
         # System prompt leakage / exfiltration
-        r"(?:muestra|dime|revela|expon|print)\s+(?:tu\s+)?system\s*prompt",
-        r"(?:revela|muestra)\s+(?:tus\s+)?instrucciones\s+(?:internas|del\s+sistema)",
+        r"(?:muestra|dime|revela|expon|print|show|reveal)\s+(?:tu\s+|your\s+)?system\s*prompt",
+        r"(?:revela|muestra|reveal|show|print)\s+(?:tus\s+|your\s+)?(?:instrucciones|instructions)\s*(?:internas|del\s+sistema|internal)?",
         r"repeat\s+the\s+(?:text|instructions)\s+above",
         # Developer mode bypass
         r"(?:modo\s+desarrollador|developer\s+mode)\s+(?:activado|enabled|on)",
