@@ -104,7 +104,7 @@ async def http_exception_handler(_request: Request, exc: HTTPException) -> JSONR
     content = exc.detail
     if isinstance(content, str):
         content = {"detail": content}
-    return JSONResponse(status_code=exc.status_code, content=content)
+    return JSONResponse(status_code=exc.status_code, content=content, headers=exc.headers)
 
 
 @app.exception_handler(Exception)

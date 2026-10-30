@@ -32,7 +32,8 @@ class TestGetPasswordResetBaseUrl:
         monkeypatch.setenv("PASSWORD_RESET_BASE_URL", "https://example.com/reset")
         assert get_password_reset_base_url() == "https://example.com/reset"
 
-    def test_returns_default_when_not_set(self) -> None:
+    def test_returns_default_when_not_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("PASSWORD_RESET_BASE_URL", raising=False)
         assert get_password_reset_base_url() == "http://localhost:3000/reset-password"
 
 
