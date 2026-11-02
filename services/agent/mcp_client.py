@@ -20,6 +20,8 @@ from services.agent.tools.incidents import (
     IncidentToolOutput,
     _extract_ticket_id,
 )
+from services.security.tool_call_validator import validate_tool_call
+from services.agent.guardrails.sanitizer import wrap_untrusted_tool_result
 from services.agent.tools.inventory import (
     DEFAULT_INVENTORY_TIMEOUT_SECONDS,
     InventoryToolOutput,
@@ -61,11 +63,24 @@ def execute_mcp_incident_query(
         # Invoke MCP tool 'manage_incidents' through FastMCP server handler
         from mcps.trackflow_mcp.tools.incidents import manage_incidents
 
+        # Validate tool call schema & safety before execution
+        val = validate_tool_call("manage_incidents", {"action": "get", "incident_id": extracted_id})
+        if not val.allowed:
+            return IncidentToolOutput(
+                success=False,
+                ticket_id=extracted_id,
+                message="Consulta denegada por reglas de validación de herramientas.",
+                error="; ".join(val.errors),
+                is_fallback=True,
+                duration_ms=0.0,
+            )
+
         # First attempt targeted query by ID
-        result = manage_incidents(
+        raw_result = manage_incidents(
             action="get",
             incident_id=extracted_id,
         )
+        result = wrap_untrusted_tool_result("manage_incidents", raw_result)
 
         duration_ms = (time.perf_counter() - t0) * 1000.0
 
@@ -146,12 +161,26 @@ def execute_mcp_inventory_query(
     try:
         from mcps.trackflow_mcp.tools.inventory import query_inventory
 
-        result = query_inventory(
+        # Validate tool call schema & safety before execution
+        val = validate_tool_call("query_inventory", {"query": clean_query, "warehouse": warehouse, "action": "read", "mutate": False})
+        if not val.allowed:
+            return InventoryToolOutput(
+                success=False,
+                product_query=clean_query,
+                products=[],
+                message="Consulta denegada por reglas de validación de herramientas.",
+                error="; ".join(val.errors),
+                is_fallback=True,
+                duration_ms=0.0,
+            )
+
+        raw_result = query_inventory(
             query=clean_query,
             warehouse=warehouse,
             action="read",
             mutate=False,
         )
+        result = wrap_untrusted_tool_result("query_inventory", raw_result)
 
         duration_ms = (time.perf_counter() - t0) * 1000.0
 

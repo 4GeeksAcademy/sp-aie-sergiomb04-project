@@ -56,11 +56,10 @@ SUPPORTED_SCOPES = [
 ]
 
 
+from services.security.secret_store import get_required_secret
+
 def get_secret_key() -> str:
-    """Return configured secret key with minimum 32-character requirement."""
-    secret = os.getenv("SECRET_KEY", DEFAULT_SECRET_KEY)
-    if len(secret) < 32:
-        return secret.ljust(32, "#")
+    return get_required_secret("SECRET_KEY", min_length=32).ljust(32, "#")
     return secret
 
 

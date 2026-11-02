@@ -36,3 +36,6 @@ PullRequest.md
 data/checkpoints/
 *.db
 *.sqlite3
+
+.vs/
+trackflow_api/

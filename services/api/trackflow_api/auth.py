@@ -18,8 +18,10 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
+from services.security.secret_store import get_required_secret
+
 def get_secret_key() -> str:
-    return os.getenv("SECRET_KEY", "trackflow-dev-secret-key")
+    return get_required_secret("SECRET_KEY", min_length=16)
 
 
 def get_access_token_expire_minutes() -> int:

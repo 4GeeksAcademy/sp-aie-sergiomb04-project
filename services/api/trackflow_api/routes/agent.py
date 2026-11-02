@@ -24,6 +24,8 @@ from services.agent import (
 )
 from trackflow_api.auth import get_current_user
 from trackflow_api.models import UserRecord
+from services.security.rate_limiter import agent_rate_limiter, estimate_tokens
+from services.security.input_sanitizer import sanitize_user_input, InputValidationError
 from trackflow_api.ws_chat import chat_pubsub_manager, handle_agent_websocket
 
 logger = logging.getLogger("trackflow_api.agent")
@@ -118,11 +120,25 @@ async def query_support_agent(payload: AgentQueryRequest) -> AgentQueryResponse:
     The endpoint contains zero business logic; it strictly orchestrates
     agent invocation and provides safe error boundaries.
     """
-    clean_question = payload.question.strip() if payload.question else ""
-    if not clean_question:
+    # 1. Input sanitization & validation (NIST Protect)
+    try:
+        sanitized = sanitize_user_input(payload.question)
+        clean_question = sanitized.text
+    except InputValidationError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="La pregunta no puede estar vacía o contener solo espacios.",
+            detail=str(exc),
+        )
+
+    # 2. Rate limiting & token budget enforcement (NIST Protect)
+    rate_key = payload.session_user or payload.thread_id or "anonymous"
+    token_est = estimate_tokens(clean_question)
+    rate_decision = agent_rate_limiter.check(rate_key, tokens=token_est)
+    if not rate_decision.allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Límite de peticiones o tokens excedido ({rate_decision.reason}). Reintenta en {rate_decision.retry_after_seconds}s.",
+            headers={"Retry-After": str(rate_decision.retry_after_seconds)},
         )
 
     try:

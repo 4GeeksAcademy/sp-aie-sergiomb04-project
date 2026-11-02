@@ -1,4 +1,4 @@
-﻿# Progress Report - TrackFlow Project
+# Progress Report - TrackFlow Project
 
 ## Estado actual del proyecto
 El repositorio ya supero la fase de plantilla y tiene entregables funcionales en frontend y programacion, ademas de una aplicacion Next.js en desarrollo activo para el hito actual.
@@ -396,3 +396,23 @@ fp_final_documents).
 - **Verificación Técnica**:
   - Backend: 23/23 tests pasando en `pytest` (incluyendo nuevos tests de aislamiento de sesiones/threads, auth/409 en RFP tickets, mínimo privilegio MCP e inyección indirecta).
   - Frontend: 36/36 tests pasando en `jest` (`uis/backoffice`) y builds de producción Next.js verificados.
+
+
+### Auditoría e Implementación de Prácticas de Seguridad IA NIST (`feature/nist-security-practices` - Completado)
+- **Marco de Seguridad IA NIST AI RMF / CSF 2.0 y Auditoría (`docs/NIST-AUDIT.md`)**:
+  - Evaluación rigurosa bajo los marcos regulatorios vinculantes: **RGPD (España / UE)** con notificación obligatoria a la AEPD en **<72 horas**, y **CCPA/CPRA (California, EE. UU.)** con derechos de acceso, rectificación y eliminación para consumidores.
+  - Inventario formal de 6 componentes de IA (Agente CX 24/7, Motor de Carrier, RAG, Motor de Devoluciones, Servidor MCP OAuth 2.1, Flujo de RFPs) con responsable interno, proveedor externo y responsable de control de terceros asignado.
+  - Mapeo completo de 5 puntos de entrada de datos (entradas directas de usuario, base vectorial Qdrant, payloads MCP, notas de operadores de almacén, y documentos PDF de RFPs).
+  - Evaluación estructurada sobre los 6 pilares de NIST: `Govern`, `Identify`, `Protect`, `Detect`, `Respond`, `Recover` con acciones concretas implementadas en el código base.
+  - Registro de brechas y riesgos residuales con planes de mitigación explícitos (Rate limiter distribuido en Redis, rotación dinámica de secretos con Vault, LLM fuzzing continuo en CI/CD, cifrado de PII a nivel de columna).
+- **Hardening Técnico en Código (`services/security/` y `services/logistics/`)**:
+  - **Gestión de Secretos (`services/security/secret_store.py`)**: Eliminación de credenciales hardcodeadas; carga estricta desde `.env`/Vault con fallo cerrado (`MissingSecretError`) en producción si faltan claves o no cumplen longitud mínima.
+  - **Sanitización Robusta de Entradas (`services/security/input_sanitizer.py`)**: Normalización Unicode NFKC, eliminación de caracteres invisibles (`\u200b`, soft hyphens, bidi overrides), y neutralización de delimitadores de prompt (`<<<SYSTEM_INSTRUCTIONS>>>`).
+  - **Separación Arquitectónica de Prompts (`services/agent/prompts.py`)**: Aislamiento estricto de directivas del sistema frente a datos de usuario y fuentes no confiables.
+  - **Defensa contra Injection Indirecta (`services/agent/guardrails/sanitizer.py`)**: Aislamiento de RAG y herramientas en etiquetas XML `<untrusted_external_content executable="false" role="reference_only">` y neutralización de instrucciones incrustadas.
+  - **Validación de Salidas y Herramientas (`services/security/tool_call_validator.py`)**: Esquemas Pydantic estrictos con `extra="forbid"`, validación de SQL de solo lectura (un solo `SELECT`) y bloqueo total de ejecución de código.
+  - **Rate Limiting y Presupuesto de Tokens (`services/security/rate_limiter.py`)**: Ventana deslizante para limitar peticiones y estimación de tokens con respuesta HTTP 429 Too Many Requests y cabecera `Retry-After`.
+  - **Telemetría y Logs del Agente (`services/security/agent_telemetry.py`)**: Registro estructurado en JSON de razonamiento, pasos y llamadas a tools con redacción automática de PII (`[EMAIL_REDACTED]`, `[PHONE_REDACTED]`, `[ADDRESS_REDACTED]`).
+  - **Control Human-in-the-Loop (HITL) (`services/security/hitl.py`, `carrier_engine.py`, `returns_engine.py`)**: Compuerta obligatoria que impide la ejecución autónoma de acciones irreversibles (aprobación de devoluciones de alto valor, despacho de envíos de alto valor, cambio de carrier en tránsito, y compartición de datos B2B), exigiendo principio de cuatro ojos y prohibiendo firmas por agentes automáticos.
+- **Suite de Pruebas Automatizadas (`tests/security/`)**:
+  - 19 pruebas pasando al 100% cubriendo prompt injection directo/indirecto (`tests/security/test_prompt_injection.py`), rate limiting (`tests/security/test_rate_limiting.py`) y compuertas HITL/validación de tools (`tests/security/test_hitl_and_tools.py`).

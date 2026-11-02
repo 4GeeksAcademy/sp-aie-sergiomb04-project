@@ -33,6 +33,8 @@ from services.agent.memory import (
     memory_store,
 )
 from services.agent.state import AgentState
+from services.security.input_sanitizer import sanitize_user_input, InputValidationError
+from services.security.agent_telemetry import log_agent_event
 
 logger = logging.getLogger("trackflow.agent.nodes")
 
@@ -64,7 +66,16 @@ def receive_question(state: AgentState) -> Dict[str, Any]:
     """
     t0 = time.perf_counter()
     raw_question = state.get("question", "")
-    clean_question = raw_question.strip() if isinstance(raw_question, str) else ""
+    sanitized_flags = []
+    if isinstance(raw_question, str) and raw_question.strip():
+        try:
+            san_res = sanitize_user_input(raw_question, allow_empty=True)
+            clean_question = san_res.text
+            sanitized_flags = san_res.flags
+        except InputValidationError:
+            clean_question = raw_question.strip()
+    else:
+        clean_question = ""
 
     thread_id = state.get("thread_id", "")
     session_user = state.get("session_user")
@@ -228,6 +239,24 @@ def receive_question(state: AgentState) -> Dict[str, Any]:
             "is_blocked": is_blocked,
         },
     )
+
+    log_agent_event(
+        "agent.step",
+        thread_id=thread_id,
+        node="receive_question",
+        is_valid=is_valid,
+        guardrail_action=guardrail_action,
+        is_blocked=is_blocked,
+        sanitized_flags=sanitized_flags,
+    )
+    if is_blocked:
+        log_agent_event(
+            "agent.guardrail",
+            thread_id=thread_id,
+            action="BLOCKED",
+            guardrail_reason=guardrail_reason,
+            failure_type=guardrail_failure_type,
+        )
 
     return {
         "question": clean_question,
